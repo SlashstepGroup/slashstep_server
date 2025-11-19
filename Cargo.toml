@@ -1,0 +1,14 @@
+[package]
+name = "slashstep_server_resources"
+version = "0.1.0"
+edition = "2024"
+description = "Required resources for a Slashstep server."
+readme = "README.md"
+homepage = "https://slashstep.com"
+repository = "https://github.com/SlashstepGroup/server"
+license = "MPL-2.0"
+keywords = ["project management", "problem management", "issue tracking"]
+publish = false
+
+[dependencies]
+postgres = "0.19.12"
