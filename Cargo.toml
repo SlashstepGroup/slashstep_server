@@ -11,8 +11,10 @@ keywords = ["project management", "problem management", "issue tracking"]
 publish = false
 
 [dependencies]
+pg_escape = "0.1.1"
 postgres = { version = "0.19.12", features = ["with-uuid-1"] }
 postgres-types = { version = "0.2.11", features = ["derive"] }
+regex = "1.12.2"
 uuid = { version = "1.18.1", features = ["v7"] }
 
 [dev-dependencies]

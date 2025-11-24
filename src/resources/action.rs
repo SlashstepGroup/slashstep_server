@@ -39,8 +39,8 @@ pub struct InitialActionProperties {
 }
 
 #[derive(Debug)]
-pub enum ActionCreationError<'a> {
-  ResourceAlreadyExistsError(ResourceAlreadyExistsError<'a>),
+pub enum ActionCreationError {
+  ResourceAlreadyExistsError(ResourceAlreadyExistsError),
   String(String),
   PostgresError(postgres::Error)
 }
@@ -48,7 +48,7 @@ pub enum ActionCreationError<'a> {
 impl Action {
 
   /// Creates a new action.
-  pub fn create<'a>(initial_properties: &'a InitialActionProperties, postgres_client: &mut postgres::Client) -> Result<Self, ActionCreationError<'a>> {
+  pub fn create(initial_properties: &InitialActionProperties, postgres_client: &mut postgres::Client) -> Result<Self, ActionCreationError> {
 
     // Insert the access policy into the database.
     let query = include_str!("../queries/actions/insert-action-row.sql");
@@ -88,7 +88,7 @@ impl Action {
             &SqlState::UNIQUE_VIOLATION => {
 
               let resource_already_exists_error = ResourceAlreadyExistsError {
-                resource_type: "Action"
+                resource_type: "Action".to_string()
               };
 
               Err(ActionCreationError::ResourceAlreadyExistsError(resource_already_exists_error))

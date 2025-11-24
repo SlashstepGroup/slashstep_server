@@ -57,8 +57,8 @@ pub struct InitialUserProperties {
 }
 
 #[derive(Debug)]
-pub enum UserCreationError<'a> {
-  ResourceAlreadyExistsError(ResourceAlreadyExistsError<'a>),
+pub enum UserCreationError {
+  ResourceAlreadyExistsError(ResourceAlreadyExistsError),
   String(String),
   PostgresError(postgres::Error)
 }
@@ -66,7 +66,7 @@ pub enum UserCreationError<'a> {
 impl User {
 
   /// Creates a new user.
-  pub fn create<'a>(initial_properties: &'a InitialUserProperties, postgres_client: &mut postgres::Client) -> Result<Self, UserCreationError<'a>> {
+  pub fn create(initial_properties: &InitialUserProperties, postgres_client: &mut postgres::Client) -> Result<Self, UserCreationError> {
 
     // Insert the access policy into the database.
     let query = include_str!("../queries/users/insert-user-row.sql");
@@ -108,7 +108,7 @@ impl User {
             &SqlState::UNIQUE_VIOLATION => {
 
               let resource_already_exists_error = ResourceAlreadyExistsError {
-                resource_type: "Action"
+                resource_type: "Action".to_string()
               };
 
               Err(UserCreationError::ResourceAlreadyExistsError(resource_already_exists_error))

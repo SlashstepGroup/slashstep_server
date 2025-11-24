@@ -91,6 +91,18 @@ fn initialize_required_tables(postgres_client: &mut postgres::Client) {
 
 }
 
+/// Verifies that an access_policies table can be initialized.
+#[test]
+fn initialize_access_policies_table() {
+
+  let mut test_postgres_environment = create_test_postgres_environment();
+  initialize_required_tables(&mut test_postgres_environment.postgres_client);
+
+  AccessPolicy::initialize_access_policies_table(&mut test_postgres_environment.postgres_client).unwrap();
+
+}
+
+/// Verifies that an access policy can be created.
 #[test]
 fn create_access_policy() {
 
@@ -140,5 +152,103 @@ fn create_access_policy() {
   assert_eq!(access_policy.scoped_project_id, access_policy_properties.scoped_project_id);
   assert_eq!(access_policy.scoped_role_id, access_policy_properties.scoped_role_id);
   assert_eq!(access_policy.scoped_user_id, access_policy_properties.scoped_user_id);
+
+}
+
+/// Verifies that an access policy can be retrieved by its ID.
+#[test]
+fn get_access_policy_by_id() {
+
+  // Create the access policy.
+  let mut test_postgres_environment = create_test_postgres_environment();
+  initialize_required_tables(&mut test_postgres_environment.postgres_client);
+  let action = create_random_action(&mut test_postgres_environment.postgres_client);
+  let user = create_random_user(&mut test_postgres_environment.postgres_client);
+  let access_policy_properties = InitialAccessPolicyProperties {
+    action_id: action.id,
+    permission_level: AccessPolicyPermissionLevel::User,
+    inheritance_level: AccessPolicyInheritanceLevel::Enabled,
+    principal_type: AccessPolicyPrincipalType::User,
+    principal_user_id: Some(user.id),
+    principal_group_id: None,
+    principal_role_id: None,
+    principal_app_id: None,
+    scoped_resource_type: AccessPolicyScopedResourceType::Instance,
+    scoped_action_id: None,
+    scoped_app_id: None,
+    scoped_group_id: None,
+    scoped_item_id: None,
+    scoped_milestone_id: None,
+    scoped_project_id: None,
+    scoped_role_id: None,
+    scoped_user_id: None,
+    scoped_workspace_id: None
+  };
+  let created_access_policy = AccessPolicy::create(&access_policy_properties, &mut test_postgres_environment.postgres_client).unwrap();
+
+  let retrieved_access_policy = AccessPolicy::get_by_id(&created_access_policy.id, &mut test_postgres_environment.postgres_client).unwrap();
+
+  assert_eq!(created_access_policy.id, retrieved_access_policy.id);
+  assert_eq!(created_access_policy.action_id, retrieved_access_policy.action_id);
+  assert_eq!(created_access_policy.permission_level, retrieved_access_policy.permission_level);
+  assert_eq!(created_access_policy.inheritance_level, retrieved_access_policy.inheritance_level);
+  assert_eq!(created_access_policy.principal_type, retrieved_access_policy.principal_type);
+  assert_eq!(created_access_policy.principal_user_id, retrieved_access_policy.principal_user_id);
+  assert_eq!(created_access_policy.principal_group_id, retrieved_access_policy.principal_group_id);
+  assert_eq!(created_access_policy.principal_role_id, retrieved_access_policy.principal_role_id);
+  assert_eq!(created_access_policy.principal_app_id, retrieved_access_policy.principal_app_id);
+  assert_eq!(created_access_policy.scoped_resource_type, retrieved_access_policy.scoped_resource_type);
+  assert_eq!(created_access_policy.scoped_action_id, retrieved_access_policy.scoped_action_id);
+  assert_eq!(created_access_policy.scoped_app_id, retrieved_access_policy.scoped_app_id);
+  assert_eq!(created_access_policy.scoped_group_id, retrieved_access_policy.scoped_group_id);
+  assert_eq!(created_access_policy.scoped_item_id, retrieved_access_policy.scoped_item_id);
+  assert_eq!(created_access_policy.scoped_milestone_id, retrieved_access_policy.scoped_milestone_id);
+  assert_eq!(created_access_policy.scoped_project_id, retrieved_access_policy.scoped_project_id);
+  assert_eq!(created_access_policy.scoped_role_id, retrieved_access_policy.scoped_role_id);
+  assert_eq!(created_access_policy.scoped_user_id, retrieved_access_policy.scoped_user_id);
+
+}
+
+/// Verifies that a list of access policies can be retrieved without a query.
+#[test]
+fn list_access_policies_without_query() {
+
+
+
+}
+
+/// Verifies that a list of access policies can be retrieved with a query.
+#[test]
+fn list_access_policies_with_query() {
+
+}
+
+/// Verifies that the implementation can return up to a maximum number of access policies by default.
+#[test]
+fn list_access_policies_with_default_limit() {
+
+}
+
+/// Verifies that the implementation can return an accurate count of access policies.
+#[test]
+fn count_access_policies() {
+
+}
+
+/// Verifies that the implementation can return a list of access policies in the proper order given a hierarchy.
+#[test]
+fn list_access_policies_by_hierarchy() {
+
+}
+
+/// Verifies that the implementation can delete an access policy.
+#[test]
+fn delete_access_policy() {
+
+}
+
+/// Verifies that the implementation can update an access policy.
+#[test]
+fn update_access_policy() {
 
 }
