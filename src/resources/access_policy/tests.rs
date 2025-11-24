@@ -16,7 +16,18 @@ use testcontainers_modules::{testcontainers::runners::SyncRunner};
 use testcontainers::{ImageExt};
 use uuid::Uuid;
 
-fn create_test_postgres_environment() -> (postgres::Client, testcontainers::Container<testcontainers_modules::postgres::Postgres>) {
+struct TestPostgresEnvironment {
+  
+  postgres_client: postgres::Client,
+
+  // This is required to prevent the compiler from complaining about unused fields.
+  // We need a wrapper struct to fix lifetime issues, but we don't need to use the container for any test right now.
+  #[allow(dead_code)]
+  postgres_container: testcontainers::Container<testcontainers_modules::postgres::Postgres>
+
+}
+
+fn create_test_postgres_environment() -> TestPostgresEnvironment {
 
   let postgres_container = testcontainers_modules::postgres::Postgres::default()
     .with_tag("18")
@@ -27,7 +38,10 @@ fn create_test_postgres_environment() -> (postgres::Client, testcontainers::Cont
   let postgres_connection_string = format!("postgres://postgres:postgres@{}:{}", postgres_host, postgres_port);
   let postgres_client = postgres::Client::connect(&postgres_connection_string, postgres::NoTls).unwrap();
 
-  return (postgres_client, postgres_container);
+  return TestPostgresEnvironment {
+    postgres_client,
+    postgres_container: postgres_container
+  };
 
 }
 
@@ -85,7 +99,8 @@ fn initialize_required_tables(postgres_client: &mut postgres::Client) {
 #[test]
 fn initialize_access_policies_table() {
 
-  let (mut postgres_client, _) = create_test_postgres_environment();
+  let test_postgres_environment = create_test_postgres_environment();
+  let mut postgres_client = test_postgres_environment.postgres_client;
   initialize_required_tables(&mut postgres_client);
 
   AccessPolicy::initialize_access_policies_table(&mut postgres_client).unwrap();
@@ -96,7 +111,8 @@ fn initialize_access_policies_table() {
 #[test]
 fn create_access_policy() {
 
-  let (mut postgres_client, _) = create_test_postgres_environment();
+  let test_postgres_environment = create_test_postgres_environment();
+  let mut postgres_client = test_postgres_environment.postgres_client;
   initialize_required_tables(&mut postgres_client);
 
   // Create the access policy.
@@ -150,7 +166,8 @@ fn create_access_policy() {
 fn get_access_policy_by_id() {
 
   // Create the access policy.
-  let (mut postgres_client, _) = create_test_postgres_environment();
+  let test_postgres_environment = create_test_postgres_environment();
+  let mut postgres_client = test_postgres_environment.postgres_client;
   initialize_required_tables(&mut postgres_client);
   let action = create_random_action(&mut postgres_client);
   let user = create_random_user(&mut postgres_client);
