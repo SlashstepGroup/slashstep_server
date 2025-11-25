@@ -15,7 +15,15 @@ use pg_escape::quote_literal;
 use postgres::{error::SqlState, types::ToSql};
 use postgres_types::FromSql;
 use uuid::Uuid;
-use crate::{errors::resource_already_exists_error::ResourceAlreadyExistsError, utilities::slashstepql::{SlashstepQLFilterSanitizer, SlashstepQLSanitizeError, SlashstepQLSanitizeFunctionOptions}};
+use crate::{
+  errors::resource_already_exists_error::ResourceAlreadyExistsError, 
+  utilities::slashstepql::{
+    SlashstepQLFilterSanitizer, 
+    SlashstepQLParameterType, 
+    SlashstepQLSanitizeError, 
+    SlashstepQLSanitizeFunctionOptions
+  }
+};
 
 pub const ALLOWED_QUERY_KEYS: &[&str] = &[
   "id",
@@ -286,7 +294,8 @@ pub enum AccessPolicyCreationError {
 #[derive(Debug)]
 pub enum AccessPolicyListError {
   PostgresError(postgres::Error),
-  SlashstepQLSanitizeError(SlashstepQLSanitizeError)
+  SlashstepQLSanitizeError(SlashstepQLSanitizeError),
+  SlashstepQLParseError(SlashstepQLParseError)
 }
 
 impl From<postgres::Error> for AccessPolicyListError {
@@ -298,6 +307,44 @@ impl From<postgres::Error> for AccessPolicyListError {
 impl From<SlashstepQLSanitizeError> for AccessPolicyListError {
   fn from(error: SlashstepQLSanitizeError) -> Self {
     AccessPolicyListError::SlashstepQLSanitizeError(error)
+  }
+}
+
+impl From<SlashstepQLParseError> for AccessPolicyListError {
+  fn from(error: SlashstepQLParseError) -> Self {
+    AccessPolicyListError::SlashstepQLParseError(error)
+  }
+}
+
+#[derive(Debug)]
+pub enum SlashstepQLParseError {
+  PostgresError(postgres::Error),
+  SlashstepQLSanitizeError(SlashstepQLSanitizeError),
+  UUIDError(uuid::Error),
+  String(String)
+}
+
+impl From<postgres::Error> for SlashstepQLParseError {
+  fn from(error: postgres::Error) -> Self {
+    SlashstepQLParseError::PostgresError(error)
+  }
+}
+
+impl From<SlashstepQLSanitizeError> for SlashstepQLParseError {
+  fn from(error: SlashstepQLSanitizeError) -> Self {
+    SlashstepQLParseError::SlashstepQLSanitizeError(error)
+  }
+}
+
+impl From<uuid::Error> for SlashstepQLParseError {
+  fn from(error: uuid::Error) -> Self {
+    SlashstepQLParseError::UUIDError(error)
+  }
+}
+
+impl From<String> for SlashstepQLParseError {
+  fn from(error: String) -> Self {
+    SlashstepQLParseError::String(error)
   }
 }
 
@@ -400,8 +447,7 @@ impl AccessPolicy {
       default_limit: None,
       maximum_limit: None,
       should_ignore_limit: true,
-      should_ignore_offset: true,
-      uuid_fields: UUID_QUERY_KEYS.into_iter().map(|string| string.to_string()).collect()
+      should_ignore_offset: true
     };
     let sanitized_filter = SlashstepQLFilterSanitizer::sanitize(&sanitizer_options)?;
     let where_clause = sanitized_filter.where_clause.and_then(|string| Some(format!(" where {}", string))).unwrap_or("".to_string());
@@ -557,9 +603,88 @@ impl AccessPolicy {
 
   }
 
+  fn parse_slashstepql_parameters(slashstepql_parameters: &Vec<(String, SlashstepQLParameterType)>) -> Result<Vec<Box<dyn ToSql + Sync + '_>>, SlashstepQLParseError> {
+
+    let mut parameters: Vec<Box<dyn ToSql + Sync>> = Vec::new();
+
+    for (key, value) in slashstepql_parameters {
+
+      match value {
+
+        SlashstepQLParameterType::String(string_value) => {
+
+          if UUID_QUERY_KEYS.contains(&key.as_str()) {
+
+            let uuid = Uuid::parse_str(string_value)?;
+            parameters.push(Box::new(uuid));
+
+          } else {
+
+            match key.as_str() {
+
+              "scoped_resource_type" => {
+
+                let scoped_resource_type = AccessPolicyScopedResourceType::from_str(string_value)?;
+                parameters.push(Box::new(scoped_resource_type));
+
+              },
+              
+              "principal_type" => {
+
+                let principal_type = AccessPolicyPrincipalType::from_str(string_value)?;
+                parameters.push(Box::new(principal_type));
+
+              },
+
+              "inheritance_level" => {
+
+                let inheritance_level = AccessPolicyInheritanceLevel::from_str(string_value)?;
+                parameters.push(Box::new(inheritance_level));
+
+              },
+
+              "permission_level" => {
+
+                let permission_level = AccessPolicyPermissionLevel::from_str(string_value)?;
+                parameters.push(Box::new(permission_level));
+
+              },
+
+              _ => {
+
+                parameters.push(Box::new(string_value));
+
+              }
+
+            }
+
+          }
+          
+        },
+
+        SlashstepQLParameterType::Number(number_value) => {
+
+          parameters.push(Box::new(number_value));
+
+        },
+
+        SlashstepQLParameterType::Boolean(boolean_value) => {
+
+          parameters.push(Box::new(boolean_value));
+
+        }
+
+      }
+
+    }
+
+    return Ok(parameters);
+
+  }
+
   /// Returns a list of access policies based on a query.
   pub fn list(query: &str, postgres_client: &mut postgres::Client) -> Result<Vec<Self>, AccessPolicyListError> {
-
+                            
     // Prepare the query.
     let sanitizer_options = SlashstepQLSanitizeFunctionOptions {
       filter: query.to_string(),
@@ -567,8 +692,7 @@ impl AccessPolicy {
       default_limit: Some(DEFAULT_ACCESS_POLICY_LIST_LIMIT),
       maximum_limit: None,
       should_ignore_limit: false,
-      should_ignore_offset: false,
-      uuid_fields: UUID_QUERY_KEYS.into_iter().map(|string| string.to_string()).collect()
+      should_ignore_offset: false
     };
     let sanitized_filter = SlashstepQLFilterSanitizer::sanitize(&sanitizer_options)?;
     let where_clause = sanitized_filter.where_clause.and_then(|string| Some(format!(" where {}", string))).unwrap_or("".to_string());
@@ -577,7 +701,8 @@ impl AccessPolicy {
     let query = format!("select * from hydrated_access_policies{}{}{}", where_clause, limit_clause, offset_clause);
 
     // Execute the query.
-    let parameters = sanitized_filter.parameters.iter().map(|parameter| parameter.as_ref()).collect::<Vec<&(dyn ToSql + Sync)>>();
+    let parsed_parameters = Self::parse_slashstepql_parameters(&sanitized_filter.parameters)?;
+    let parameters = parsed_parameters.iter().map(|parameter| parameter.as_ref()).collect::<Vec<&(dyn ToSql + Sync)>>();
     println!("{}", query);
     println!("{:?}", parameters);
     let rows = postgres_client.query(&query, &parameters)?;
