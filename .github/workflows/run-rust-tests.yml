@@ -5,11 +5,13 @@ on:
       - src/**
       - Cargo.toml
       - Cargo.lock
+      - .github/workflows/run-rust-tests.yml
   pull_request:
     paths: 
       - src/**
       - Cargo.toml
       - Cargo.lock
+      - .github/workflows/run-rust-tests.yml
   workflow_dispatch:
 
 jobs:
