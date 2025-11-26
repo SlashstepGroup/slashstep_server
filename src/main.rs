@@ -3,6 +3,7 @@
 pub mod resources;
 pub mod errors;
 pub mod utilities;
+pub mod middleware;
 mod routes;
 
 use local_ip_address::local_ip;
