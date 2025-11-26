@@ -15,3 +15,7 @@ pub fn get_router() -> Router {
   return router;
 
 }
+
+#[cfg(test)]
+#[path = "./access-policies.tests.rs"]
+mod tests;

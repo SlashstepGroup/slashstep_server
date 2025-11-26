@@ -1,4 +1,4 @@
-use axum::Router;
+use axum::{Router, http::StatusCode};
 
 async fn get_access_policy() {
 
@@ -22,3 +22,7 @@ pub fn get_router() -> Router {
   return router;
 
 }
+
+#[cfg(test)]
+#[path = "./{access_policy_id}.tests.rs"]
+mod tests;

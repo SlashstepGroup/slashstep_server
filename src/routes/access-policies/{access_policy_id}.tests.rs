@@ -1,0 +1,81 @@
+/// Verifies that the router can return a 200 status code and the requested access policy.
+#[test]
+fn get_access_policy_by_id() {
+
+}
+
+/// Verifies that the router can return a 400 if the access policy ID is not a UUID.
+#[test]
+fn verify_uuid_when_getting_access_policy_by_id() {
+
+}
+
+/// Verifies that the router can return a 401 status code if the user needs authentication.
+#[test]
+fn verify_authentication_when_getting_access_policy_by_id() {
+
+}
+
+/// Verifies that the router can return a 403 status code if the user does not have permission to view the access policy.
+#[test]
+fn verify_permission_when_getting_access_policy_by_id() {
+
+}
+
+/// Verifies that the router can return a 404 status code if the requested access policy doesn't exist
+#[test]
+fn verify_not_found_when_getting_access_policy_by_id() {
+
+}
+
+/// Verifies that the router can return a 204 status code if the access policy is successfully deleted.
+#[test]
+fn verify_successful_deletion_when_deleting_access_policy_by_id() {
+
+}
+
+/// Verifies that the router can return a 400 status code if the access policy ID is not a UUID.
+#[test]
+fn verify_uuid_when_deleting_access_policy_by_id() {
+
+}
+
+#[test]
+fn verify_authentication_when_deleting_access_policy_by_id() {
+
+}
+
+#[test]
+fn verify_permission_when_deleting_access_policy_by_id() {
+
+}
+
+#[test]
+fn verify_access_policy_exists_when_deleting_access_policy_by_id() {
+
+}
+
+#[test]
+fn patch_access_policy() {
+
+}
+
+#[test]
+fn verify_uuid_when_patching_access_policy() {
+
+}
+
+#[test]
+fn verify_authentication_when_patching_access_policy() {
+
+}
+
+#[test]
+fn verify_permission_when_patching_access_policy() {
+
+}
+
+#[test]
+fn verify_access_policy_exists_when_patching_access_policy() {
+
+}

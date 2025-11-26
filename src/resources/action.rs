@@ -138,4 +138,5 @@ impl Action {
 }
 
 #[cfg(test)]
+#[path = "./action.tests.rs"]
 mod tests;

@@ -1,3 +1,4 @@
+
 /**
  * 
  * This module defines the implementation and types of an access policy.
@@ -805,4 +806,5 @@ impl AccessPolicy {
 
 /// To reduce line count, tests are in a separate module.
 #[cfg(test)]
+#[path = "./access_policy.tests.rs"]
 mod tests;
