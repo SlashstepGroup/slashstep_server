@@ -1,5 +1,7 @@
 /**
  * 
+ * This module contains tests for the access_policy module.
+ * 
  * Programmers: 
  * - Christian Toney (https://christiantoney.com)
  * 

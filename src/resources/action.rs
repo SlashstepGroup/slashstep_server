@@ -1,3 +1,14 @@
+/**
+ * 
+ * This module defines the implementation and types of an action.
+ * 
+ * Programmers: 
+ * - Christian Toney (https://christiantoney.com)
+ * 
+ * © 2025 Beastslash LLC
+ * 
+ */
+
 use postgres::error::SqlState;
 use postgres_types::ToSql;
 use uuid::Uuid;
@@ -125,3 +136,6 @@ impl Action {
   }
 
 }
+
+#[cfg(test)]
+mod tests;
