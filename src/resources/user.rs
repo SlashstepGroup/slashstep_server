@@ -1,11 +1,3 @@
-use std::net::IpAddr;
-
-use postgres::error::SqlState;
-use postgres_types::ToSql;
-use uuid::Uuid;
-
-use crate::errors::resource_already_exists_error::ResourceAlreadyExistsError;
-
 /**
  * 
  * Programmers: 
@@ -14,6 +6,14 @@ use crate::errors::resource_already_exists_error::ResourceAlreadyExistsError;
  * © 2025 Beastslash LLC
  * 
  */
+
+use std::net::IpAddr;
+use anyhow::{Result, anyhow};
+use postgres::error::SqlState;
+use postgres_types::ToSql;
+use uuid::Uuid;
+
+use crate::HTTPError;
 
 pub struct User {
 
@@ -56,17 +56,10 @@ pub struct InitialUserProperties {
 
 }
 
-#[derive(Debug)]
-pub enum UserCreationError {
-  ResourceAlreadyExistsError(ResourceAlreadyExistsError),
-  String(String),
-  PostgresError(postgres::Error)
-}
-
 impl User {
 
   /// Creates a new user.
-  pub fn create(initial_properties: &InitialUserProperties, postgres_client: &mut postgres::Client) -> Result<Self, UserCreationError> {
+  pub async fn create(initial_properties: &InitialUserProperties, postgres_client: &mut deadpool_postgres::Client) -> Result<Self> {
 
     // Insert the access policy into the database.
     let query = include_str!("../queries/users/insert-user-row.sql");
@@ -77,69 +70,39 @@ impl User {
       &initial_properties.is_anonymous,
       &initial_properties.ip_address
     ];
-    let rows = postgres_client.query(query, parameters);
+    let row = postgres_client.query_one(query, parameters).await.map_err(|error| match error.as_db_error() {
 
-    // Return the action.
-    match rows {
+      Some(db_error) => match db_error.code() {
 
-      Ok(rows) => {
-
-        let row = rows.get(0).ok_or(UserCreationError::String("Client did not return a row.".to_string()))?;
-        let user = User {
-          id: row.get("id"),
-          username: row.get("username"),
-          display_name: row.get("display_name"),
-          hashed_password: row.get("hashed_password"),
-          is_anonymous: row.get("is_anonymous"),
-          ip_address: row.get("ip_address")
-        };
-
-        return Ok(user);
+        &SqlState::UNIQUE_VIOLATION => anyhow!(HTTPError::ConflictError(Some(String::from("A user with the same username already exists.")))),
         
+        _ => anyhow!(error)
+
       },
 
-      Err(error) => match error.as_db_error() {
+      None => anyhow!(error)
 
-        Some(db_error) => {
+    })?;
 
-          let error_code = db_error.code();
-          match error_code {
+    // Return the action.
+    let user = User {
+      id: row.get("id"),
+      username: row.get("username"),
+      display_name: row.get("display_name"),
+      hashed_password: row.get("hashed_password"),
+      is_anonymous: row.get("is_anonymous"),
+      ip_address: row.get("ip_address")
+    };
 
-            &SqlState::UNIQUE_VIOLATION => {
-
-              let resource_already_exists_error = ResourceAlreadyExistsError {
-                resource_type: "Action".to_string()
-              };
-
-              Err(UserCreationError::ResourceAlreadyExistsError(resource_already_exists_error))
-
-            },
-            
-            _ => {
-              Err(UserCreationError::PostgresError(error))
-            }
-
-          }
-
-        },
-
-        None => {
-
-          Err(UserCreationError::PostgresError(error))
-
-        }
-
-      }
-
-    }
+    return Ok(user);
 
   }
 
   /// Initializes the users table.
-  pub fn initialize_users_table(postgres_client: &mut postgres::Client) -> Result<(), postgres::Error> {
+  pub async fn initialize_users_table(postgres_client: &mut deadpool_postgres::Client) -> Result<()> {
 
     let query = include_str!("../queries/users/initialize-users-table.sql");
-    postgres_client.execute(query, &[])?;
+    postgres_client.execute(query, &[]).await?;
     return Ok(());
 
   }

@@ -1,5 +1,8 @@
+use std::{error::Error, fmt};
+
 use pg_escape::quote_identifier;
 use regex::Regex;
+use thiserror::Error;
 
 use crate::errors::slashstepql_invalid_limit_error::SlashstepQLInvalidLimitError;
 
@@ -18,8 +21,8 @@ pub enum SlashstepQLParameterType {
 
 pub struct SlashstepQLFilterSanitizer;
 
-#[derive(Debug)]
-pub enum SlashstepQLSanitizeError {
+#[derive(Debug, Error)]
+pub enum SlashstepQLError {
   InvalidFilterSyntaxError(String),
   InvalidQueryError(()),
   InvalidFieldError(String),
@@ -29,15 +32,23 @@ pub enum SlashstepQLSanitizeError {
   SlashstepQLInvalidLimitError(SlashstepQLInvalidLimitError)
 }
 
-impl From<std::num::ParseIntError> for SlashstepQLSanitizeError {
+impl fmt::Display for SlashstepQLError {
+
+  fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+    write!(f, "{}", self)
+  }
+  
+}
+
+impl From<std::num::ParseIntError> for SlashstepQLError {
   fn from(error: std::num::ParseIntError) -> Self {
-    SlashstepQLSanitizeError::ParseIntError(error)
+    SlashstepQLError::ParseIntError(error)
   }
 }
 
-impl From<regex::Error> for SlashstepQLSanitizeError {
+impl From<regex::Error> for SlashstepQLError {
   fn from(error: regex::Error) -> Self {
-    SlashstepQLSanitizeError::RegexError(error)
+    SlashstepQLError::RegexError(error)
   }
 }
 
@@ -52,7 +63,7 @@ pub struct SlashstepQLSanitizeFunctionOptions {
 
 impl SlashstepQLFilterSanitizer {
 
-  pub fn sanitize(options: &SlashstepQLSanitizeFunctionOptions) -> Result<SlashstepQLSanitizedFilter, SlashstepQLSanitizeError> {
+  pub fn sanitize(options: &SlashstepQLSanitizeFunctionOptions) -> Result<SlashstepQLSanitizedFilter, SlashstepQLError> {
 
     let mut parameters = Vec::new();
     let mut where_clause = String::new();
@@ -99,7 +110,7 @@ impl SlashstepQLFilterSanitizer {
             let field = original_key.as_str().to_string();
             if !options.allowed_fields.contains(&field) {
 
-              return Err(SlashstepQLSanitizeError::InvalidFieldError(field));
+              return Err(SlashstepQLError::InvalidFieldError(field));
 
             }
 
@@ -157,7 +168,7 @@ impl SlashstepQLFilterSanitizer {
                     limit_string: limit_string.as_str().to_string(),
                     maximum_limit: maximum_limit_result
                   };
-                  return Err(SlashstepQLSanitizeError::SlashstepQLInvalidLimitError(error));
+                  return Err(SlashstepQLError::SlashstepQLInvalidLimitError(error));
 
                 }
 
@@ -173,7 +184,7 @@ impl SlashstepQLFilterSanitizer {
                 limit_string: limit_string.as_str().to_string(),
                 maximum_limit: maximum_limit_result
               };
-              return Err(SlashstepQLSanitizeError::SlashstepQLInvalidLimitError(error));
+              return Err(SlashstepQLError::SlashstepQLInvalidLimitError(error));
 
             }
 
@@ -190,7 +201,7 @@ impl SlashstepQLFilterSanitizer {
 
             } else {
 
-              return Err(SlashstepQLSanitizeError::InvalidOffsetError(format!("Invalid offset \"{}\" in filter query. It must be a non-negative integer.", offset_string.as_str())));
+              return Err(SlashstepQLError::InvalidOffsetError(format!("Invalid offset \"{}\" in filter query. It must be a non-negative integer.", offset_string.as_str())));
 
             }
 
@@ -198,13 +209,13 @@ impl SlashstepQLFilterSanitizer {
 
         } else {
 
-          return Err(SlashstepQLSanitizeError::InvalidQueryError(()));
+          return Err(SlashstepQLError::InvalidQueryError(()));
 
         }
 
       } else {
 
-        return Err(SlashstepQLSanitizeError::InvalidQueryError(()));
+        return Err(SlashstepQLError::InvalidQueryError(()));
 
       }
 

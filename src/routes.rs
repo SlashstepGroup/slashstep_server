@@ -1,20 +1,20 @@
 #[path = "./routes/access-policies.rs"]
 mod access_policies;
 
-use axum::{Json, Router, http::{StatusCode}, response::IntoResponse};
-use crate::errors::not_found_error::NotFoundError;
+use axum::{Router, response::IntoResponse};
+use crate::{AppState, HTTPError};
 
 async fn fallback() -> impl IntoResponse {
 
-  return (StatusCode::NOT_FOUND, Json(NotFoundError::new(None)));
+  return HTTPError::NotFoundError(None);
 
 }
 
-pub fn get_router() -> Router {
+pub fn get_router() -> Router<AppState> {
 
-  let mut router = Router::new();
-  router = router.merge(access_policies::get_router());
-  router = router.fallback(fallback);
+  let router = Router::<AppState>::new()
+    .nest("/access-policies", access_policies::get_router())
+    .fallback(fallback);
   return router;
 
 }

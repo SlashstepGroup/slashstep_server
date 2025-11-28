@@ -1,7 +1,7 @@
 /// Verifies that the router can return a 200 status code and the requested access policy.
 #[test]
 fn get_access_policy_by_id() {
-
+  
 }
 
 /// Verifies that the router can return a 400 if the access policy ID is not a UUID.
