@@ -25,7 +25,7 @@ async fn get_access_policy_by_id() -> Result<()> {
   let test_server = TestServer::new(router)?;
 
   let response = test_server.get("/access-policies/00000000-0000-0000-0000-000000000000").await;
-  println!("{}", response.text());
+  assert_eq!(response.status_code(), 200);
   return Ok(());
   
 }

@@ -1,7 +1,7 @@
 use std::net::SocketAddr;
 
 use anyhow::Result;
-use axum::{body::Body, extract::{ConnectInfo, Request, State}, middleware::Next, response::{Response, IntoResponse}, http::StatusCode};
+use axum::{body::Body, extract::{ConnectInfo, Request, State}, middleware::Next, response::{Response, IntoResponse}};
 use chrono::{Duration, Utc};
 use crate::{AppState, HTTPError, resources::{http_request::{HTTPRequest, InitialHTTPRequestProperties}, server_log_entry::ServerLogEntry}};
 use colored::Colorize;
