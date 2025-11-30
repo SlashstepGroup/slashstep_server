@@ -1,11 +1,3 @@
-use std::net::IpAddr;
-
-use postgres::error::SqlState;
-use postgres_types::ToSql;
-use uuid::Uuid;
-
-use crate::errors::resource_already_exists_error::ResourceAlreadyExistsError;
-
 /**
  * 
  * Programmers: 
@@ -15,6 +7,25 @@ use crate::errors::resource_already_exists_error::ResourceAlreadyExistsError;
  * 
  */
 
+use std::net::IpAddr;
+use postgres::error::SqlState;
+use postgres_types::ToSql;
+use uuid::Uuid;
+use thiserror::Error;
+
+#[derive(Debug, Error)]
+pub enum UserError {
+  #[error("A user with the ID \"{0}\" does not exist.")]
+  NotFoundError(Uuid),
+
+  #[error("A user with the username \"{0}\" already exists.")]
+  ConflictError(String),
+
+  #[error(transparent)]
+  PostgresError(#[from] postgres::Error)
+}
+
+#[derive(Debug, Clone)]
 pub struct User {
 
   /// The user's ID.
@@ -56,17 +67,10 @@ pub struct InitialUserProperties {
 
 }
 
-#[derive(Debug)]
-pub enum UserCreationError {
-  ResourceAlreadyExistsError(ResourceAlreadyExistsError),
-  String(String),
-  PostgresError(postgres::Error)
-}
-
 impl User {
 
   /// Creates a new user.
-  pub fn create(initial_properties: &InitialUserProperties, postgres_client: &mut postgres::Client) -> Result<Self, UserCreationError> {
+  pub async fn create(initial_properties: &InitialUserProperties, postgres_client: &mut deadpool_postgres::Client) -> Result<Self, UserError> {
 
     // Insert the access policy into the database.
     let query = include_str!("../queries/users/insert-user-row.sql");
@@ -77,69 +81,88 @@ impl User {
       &initial_properties.is_anonymous,
       &initial_properties.ip_address
     ];
-    let rows = postgres_client.query(query, parameters);
+    let row = postgres_client.query_one(query, parameters).await.map_err(|error| match error.as_db_error() {
+
+      Some(db_error) => match db_error.code() {
+
+        &SqlState::UNIQUE_VIOLATION => {
+
+          let username = match initial_properties.username.clone() {
+
+            Some(username) => username,
+
+            // TODO: For IP users, we should make UserError more specific.
+            None => return UserError::PostgresError(error)
+
+          };
+
+          UserError::ConflictError(username)
+          
+        },
+        
+        _ => UserError::PostgresError(error)
+
+      },
+
+      None => UserError::PostgresError(error)
+
+    })?;
 
     // Return the action.
-    match rows {
+    let user = User {
+      id: row.get("id"),
+      username: row.get("username"),
+      display_name: row.get("display_name"),
+      hashed_password: row.get("hashed_password"),
+      is_anonymous: row.get("is_anonymous"),
+      ip_address: row.get("ip_address")
+    };
 
-      Ok(rows) => {
+    return Ok(user);
 
-        let row = rows.get(0).ok_or(UserCreationError::String("Client did not return a row.".to_string()))?;
-        let user = User {
-          id: row.get("id"),
-          username: row.get("username"),
-          display_name: row.get("display_name"),
-          hashed_password: row.get("hashed_password"),
-          is_anonymous: row.get("is_anonymous"),
-          ip_address: row.get("ip_address")
-        };
+  }
 
-        return Ok(user);
-        
-      },
+  pub async fn get_by_id(id: &Uuid, postgres_client: &mut deadpool_postgres::Client) -> Result<User, UserError> {
+
+    let query = include_str!("../queries/users/get-user-row-by-id.sql");
+    let row = match postgres_client.query_one(query, &[&id]).await {
+
+      Ok(row) => row,
 
       Err(error) => match error.as_db_error() {
 
-        Some(db_error) => {
+        Some(db_error) => match db_error.code() {
 
-          let error_code = db_error.code();
-          match error_code {
+          &SqlState::NO_DATA_FOUND => return Err(UserError::NotFoundError(id.clone())),
 
-            &SqlState::UNIQUE_VIOLATION => {
-
-              let resource_already_exists_error = ResourceAlreadyExistsError {
-                resource_type: "Action".to_string()
-              };
-
-              Err(UserCreationError::ResourceAlreadyExistsError(resource_already_exists_error))
-
-            },
-            
-            _ => {
-              Err(UserCreationError::PostgresError(error))
-            }
-
-          }
+          _ => return Err(UserError::PostgresError(error))
 
         },
 
-        None => {
-
-          Err(UserCreationError::PostgresError(error))
-
-        }
+        None => return Err(UserError::PostgresError(error))
 
       }
 
-    }
+    };
+
+    let user = User {
+      id: row.get("id"),
+      username: row.get("username"),
+      display_name: row.get("display_name"),
+      hashed_password: row.get("hashed_password"),
+      is_anonymous: row.get("is_anonymous"),
+      ip_address: row.get("ip_address")
+    };
+
+    return Ok(user);
 
   }
 
   /// Initializes the users table.
-  pub fn initialize_users_table(postgres_client: &mut postgres::Client) -> Result<(), postgres::Error> {
+  pub async fn initialize_users_table(postgres_client: &mut deadpool_postgres::Client) -> Result<(), UserError> {
 
     let query = include_str!("../queries/users/initialize-users-table.sql");
-    postgres_client.execute(query, &[])?;
+    postgres_client.execute(query, &[]).await?;
     return Ok(());
 
   }

@@ -1,3 +1,4 @@
+
 /**
  * 
  * This module defines the implementation and types of an access policy.
@@ -12,15 +13,19 @@
 use core::{fmt};
 use std::str::FromStr;
 use pg_escape::quote_literal;
-use postgres::{error::SqlState, types::ToSql};
+use postgres::{
+  error::SqlState, 
+  types::ToSql
+};
 use postgres_types::FromSql;
+use serde::Serialize;
+use thiserror::Error;
 use uuid::Uuid;
 use crate::{
-  errors::resource_already_exists_error::ResourceAlreadyExistsError, 
   utilities::slashstepql::{
+    SlashstepQLError, 
     SlashstepQLFilterSanitizer, 
     SlashstepQLParameterType, 
-    SlashstepQLSanitizeError, 
     SlashstepQLSanitizeFunctionOptions
   }
 };
@@ -65,7 +70,7 @@ pub const UUID_QUERY_KEYS: &[&str] = &[
 
 pub const DEFAULT_ACCESS_POLICY_LIST_LIMIT: i64 = 1000;
 
-#[derive(Debug, PartialEq, Eq, ToSql, FromSql, Clone, Copy)]
+#[derive(Debug, PartialEq, Eq, ToSql, FromSql, Clone, Copy, Serialize)]
 #[postgres(name = "permission_level")]
 pub enum AccessPolicyPermissionLevel {
   None,
@@ -85,9 +90,39 @@ impl fmt::Display for AccessPolicyPermissionLevel {
   }
 }
 
+#[derive(Debug, Error)]
+pub enum AccessPolicyError {
+  #[error("Invalid permission level: {0}")]
+  InvalidPermissionLevel(String),
+
+  #[error("Invalid inheritance level: {0}")]
+  InvalidInheritanceLevel(String),
+
+  #[error("Invalid scoped resource type: {0}")]
+  InvalidScopedResourceType(String),
+
+  #[error("Invalid principal type: {0}")]
+  InvalidPrincipalType(String),
+
+  #[error("An access policy for action {0} already exists.")]
+  ConflictError(Uuid),
+
+  #[error(transparent)]
+  UUIDError(#[from] uuid::Error),
+
+  #[error("Couldn't find an access policy with ID \"{0}\".")]
+  NotFoundError(Uuid),
+
+  #[error(transparent)]
+  SlashstepQLError(#[from] SlashstepQLError),
+
+  #[error(transparent)]
+  PostgresError(#[from] postgres::Error)
+}
+
 impl FromStr for AccessPolicyPermissionLevel {
 
-  type Err = String;
+  type Err = AccessPolicyError;
 
   fn from_str(string: &str) -> Result<Self, Self::Err> {
 
@@ -96,14 +131,14 @@ impl FromStr for AccessPolicyPermissionLevel {
       "User" => Ok(AccessPolicyPermissionLevel::User),
       "Editor" => Ok(AccessPolicyPermissionLevel::Editor),
       "Admin" => Ok(AccessPolicyPermissionLevel::Admin),
-      _ => Err(format!("Invalid permission level: {}", string))
+      _ => Err(AccessPolicyError::InvalidPermissionLevel(string.to_string()))
     }
     
   }
 
 }
 
-#[derive(Debug, PartialEq, Eq, ToSql, FromSql, Clone, Copy)]
+#[derive(Debug, PartialEq, Eq, ToSql, FromSql, Clone, Copy, Serialize)]
 #[postgres(name = "inheritance_level")]
 pub enum AccessPolicyInheritanceLevel {
   Disabled,
@@ -123,7 +158,7 @@ impl fmt::Display for AccessPolicyInheritanceLevel {
 
 impl FromStr for AccessPolicyInheritanceLevel {
 
-  type Err = String;
+  type Err = AccessPolicyError;
 
   fn from_str(string: &str) -> Result<Self, Self::Err> {
 
@@ -131,14 +166,14 @@ impl FromStr for AccessPolicyInheritanceLevel {
       "Disabled" => Ok(AccessPolicyInheritanceLevel::Disabled),
       "Enabled" => Ok(AccessPolicyInheritanceLevel::Enabled),
       "Required" => Ok(AccessPolicyInheritanceLevel::Required),
-      _ => Err(format!("Invalid inheritance level: {}", string))
+      _ => Err(AccessPolicyError::InvalidInheritanceLevel(string.to_string()))
     }
 
   }
 
 }
 
-#[derive(Debug, PartialEq, Eq, ToSql, FromSql)]
+#[derive(Debug, PartialEq, Eq, ToSql, FromSql, Serialize)]
 #[postgres(name = "scoped_resource_type")]
 pub enum AccessPolicyScopedResourceType {
   Instance,
@@ -174,7 +209,7 @@ impl fmt::Display for AccessPolicyScopedResourceType {
 
 impl FromStr for AccessPolicyScopedResourceType {
 
-  type Err = String;
+  type Err = AccessPolicyError;
 
   fn from_str(string: &str) -> Result<Self, Self::Err> {
 
@@ -189,14 +224,14 @@ impl FromStr for AccessPolicyScopedResourceType {
       "Group" => Ok(AccessPolicyScopedResourceType::Group),
       "User" => Ok(AccessPolicyScopedResourceType::User),
       "App" => Ok(AccessPolicyScopedResourceType::App),
-      _ => Err(format!("Invalid scoped resource type: {}", string))
+      _ => Err(AccessPolicyError::InvalidScopedResourceType(string.to_string()))
     }
 
   }
 
 }
 
-#[derive(Debug, PartialEq, Eq, ToSql, FromSql)]
+#[derive(Debug, PartialEq, Eq, ToSql, FromSql, Serialize)]
 #[postgres(name = "principal_type")]
 pub enum AccessPolicyPrincipalType {
 
@@ -227,7 +262,7 @@ impl fmt::Display for AccessPolicyPrincipalType {
 
 impl FromStr for AccessPolicyPrincipalType {
 
-  type Err = String;
+  type Err = AccessPolicyError;
 
   fn from_str(string: &str) -> Result<Self, Self::Err> {
 
@@ -236,7 +271,7 @@ impl FromStr for AccessPolicyPrincipalType {
       "Group" => Ok(AccessPolicyPrincipalType::Group),
       "Role" => Ok(AccessPolicyPrincipalType::Role),
       "User" => Ok(AccessPolicyPrincipalType::User),
-      _ => Err(format!("Invalid principal type: {}", string))
+      _ => Err(AccessPolicyError::InvalidPrincipalType(string.to_string()))
     }
 
   }
@@ -284,101 +319,6 @@ pub struct InitialAccessPolicyProperties {
 
 }
 
-#[derive(Debug)]
-pub enum AccessPolicyCreationError {
-  ResourceAlreadyExistsError(ResourceAlreadyExistsError),
-  String(String),
-  PostgresError(postgres::Error)
-}
-
-#[derive(Debug)]
-pub enum AccessPolicyListError {
-  PostgresError(postgres::Error),
-  SlashstepQLSanitizeError(SlashstepQLSanitizeError),
-  SlashstepQLParseError(SlashstepQLParseError)
-}
-
-impl From<postgres::Error> for AccessPolicyListError {
-  fn from(error: postgres::Error) -> Self {
-    AccessPolicyListError::PostgresError(error)
-  }
-}
-
-impl From<SlashstepQLSanitizeError> for AccessPolicyListError {
-  fn from(error: SlashstepQLSanitizeError) -> Self {
-    AccessPolicyListError::SlashstepQLSanitizeError(error)
-  }
-}
-
-impl From<SlashstepQLParseError> for AccessPolicyListError {
-  fn from(error: SlashstepQLParseError) -> Self {
-    AccessPolicyListError::SlashstepQLParseError(error)
-  }
-}
-
-#[derive(Debug)]
-pub enum SlashstepQLParseError {
-  PostgresError(postgres::Error),
-  SlashstepQLSanitizeError(SlashstepQLSanitizeError),
-  UUIDError(uuid::Error),
-  String(String)
-}
-
-impl From<postgres::Error> for SlashstepQLParseError {
-  fn from(error: postgres::Error) -> Self {
-    SlashstepQLParseError::PostgresError(error)
-  }
-}
-
-impl From<SlashstepQLSanitizeError> for SlashstepQLParseError {
-  fn from(error: SlashstepQLSanitizeError) -> Self {
-    SlashstepQLParseError::SlashstepQLSanitizeError(error)
-  }
-}
-
-impl From<uuid::Error> for SlashstepQLParseError {
-  fn from(error: uuid::Error) -> Self {
-    SlashstepQLParseError::UUIDError(error)
-  }
-}
-
-impl From<String> for SlashstepQLParseError {
-  fn from(error: String) -> Self {
-    SlashstepQLParseError::String(error)
-  }
-}
-
-#[derive(Debug)]
-pub enum AccessPolicyCountError {
-  PostgresError(postgres::Error),
-  CountNotFoundError(()),
-  SlashstepQLSanitizeError(SlashstepQLSanitizeError)
-}
-
-impl From<postgres::Error> for AccessPolicyCountError {
-  fn from(error: postgres::Error) -> Self {
-    AccessPolicyCountError::PostgresError(error)
-  }
-}
-
-impl From<SlashstepQLSanitizeError> for AccessPolicyCountError {
-  fn from(error: SlashstepQLSanitizeError) -> Self {
-    AccessPolicyCountError::SlashstepQLSanitizeError(error)
-  }
-}
-
-impl From<ResourceAlreadyExistsError> for AccessPolicyCreationError {
-  fn from(error: ResourceAlreadyExistsError) -> Self {
-    AccessPolicyCreationError::ResourceAlreadyExistsError(error)
-  }
-}
-
-impl From<String> for AccessPolicyCreationError {
-  fn from(error: String) -> Self {
-    AccessPolicyCreationError::String(error)
-  }
-}
-
 pub struct EditableAccessPolicyProperties {
 
   permission_level: Option<AccessPolicyPermissionLevel>,
@@ -390,6 +330,7 @@ pub struct EditableAccessPolicyProperties {
 pub type ResourceHierarchy<'a> = Vec<(&'a AccessPolicyScopedResourceType, Option<&'a Uuid>)>;
 
 /// A piece of information that defines the level of access and inheritance for a principal to perform an action.
+#[derive(Debug, Serialize)]
 pub struct AccessPolicy {
 
   /// The access policy's ID.
@@ -438,7 +379,7 @@ impl AccessPolicy {
 
   /* Static methods */
   /// Counts the number of access policies based on a query.
-  pub fn count(query: &str, postgres_client: &mut postgres::Client) -> Result<i64, AccessPolicyCountError> {
+  pub async fn count(query: &str, postgres_client: &mut deadpool_postgres::Client) -> Result<i64, AccessPolicyError> {
 
     // Prepare the query.
     let sanitizer_options = SlashstepQLSanitizeFunctionOptions {
@@ -454,17 +395,17 @@ impl AccessPolicy {
     let query = format!("select count(*) from hydrated_access_policies{}", where_clause);
 
     // Execute the query and return the count.
-    let rows = postgres_client.query_one(&query, &[])?;
+    let rows = postgres_client.query_one(&query, &[]).await?;
     let count = rows.get(0);
     return Ok(count);
 
   }
 
   /// Creates a new access policy.
-  pub fn create(initial_properties: &InitialAccessPolicyProperties, postgres_client: &mut postgres::Client) -> Result<Self, AccessPolicyCreationError> {
+  pub async fn create(initial_properties: &InitialAccessPolicyProperties, postgres_client: &mut deadpool_postgres::Client) -> Result<Self, AccessPolicyError> {
 
     // Insert the access policy into the database.
-    let query = include_str!("../queries/access-policies/insert-access-policy-row.sql");
+    let query = include_str!("../../queries/access-policies/insert-access-policy-row.sql");
     let parameters: &[&(dyn ToSql + Sync)] = &[
       &initial_properties.principal_type,
       &initial_properties.principal_user_id,
@@ -485,82 +426,71 @@ impl AccessPolicy {
       &initial_properties.inheritance_level,
       &initial_properties.action_id
     ];
-    let row_result = postgres_client.query_one(query, parameters);
+    let row = postgres_client.query_one(query, parameters).await.map_err(|error| match error.as_db_error() {
 
-    // Return the access policy.
-    match row_result {
+      Some(db_error) => {
 
-      Ok(row) => {
+        match db_error.code() {
 
-        let access_policy = AccessPolicy {
-          id: row.get("id"),
-          action_id: row.get("action_id"),
-          permission_level: row.get("permission_level"),
-          inheritance_level: row.get("inheritance_level"),
-          principal_type: row.get("principal_type"),
-          principal_user_id: row.get("principal_user_id"),
-          principal_group_id: row.get("principal_group_id"),
-          principal_role_id: row.get("principal_role_id"),
-          principal_app_id: row.get("principal_app_id"),
-          scoped_resource_type: row.get("scoped_resource_type"),
-          scoped_action_id: row.get("scoped_action_id"),
-          scoped_app_id: row.get("scoped_app_id"),
-          scoped_group_id: row.get("scoped_group_id"),
-          scoped_item_id: row.get("scoped_item_id"),
-          scoped_milestone_id: row.get("scoped_milestone_id"),
-          scoped_project_id: row.get("scoped_project_id"),
-          scoped_role_id: row.get("scoped_role_id"),
-          scoped_user_id: row.get("scoped_user_id"),
-          scoped_workspace_id: row.get("scoped_workspace_id")
-        };
+          &SqlState::UNIQUE_VIOLATION => AccessPolicyError::ConflictError(initial_properties.action_id),
+          
+          _ => AccessPolicyError::PostgresError(error)
 
-        return Ok(access_policy);
+        }
 
       },
 
-      Err(error) => {
+      None => AccessPolicyError::PostgresError(error)
+    
+    })?;
 
-        match error.as_db_error() {
-
-          Some(db_error) => {
-
-            match db_error.code() {
-
-              &SqlState::UNIQUE_VIOLATION => {
-
-                let resource_already_exists_error = ResourceAlreadyExistsError {
-                  resource_type: "Action".to_string()
-                };
-
-                return Err(AccessPolicyCreationError::ResourceAlreadyExistsError(resource_already_exists_error))
-
-              },
-              
-              _ => {
-                return Err(AccessPolicyCreationError::PostgresError(error))
-              }
-
-            }
-
-          },
-
-          None => return Err(AccessPolicyCreationError::PostgresError(error))
-        
-      }
-
-      }
-
+    let access_policy = AccessPolicy {
+      id: row.get("id"),
+      action_id: row.get("action_id"),
+      permission_level: row.get("permission_level"),
+      inheritance_level: row.get("inheritance_level"),
+      principal_type: row.get("principal_type"),
+      principal_user_id: row.get("principal_user_id"),
+      principal_group_id: row.get("principal_group_id"),
+      principal_role_id: row.get("principal_role_id"),
+      principal_app_id: row.get("principal_app_id"),
+      scoped_resource_type: row.get("scoped_resource_type"),
+      scoped_action_id: row.get("scoped_action_id"),
+      scoped_app_id: row.get("scoped_app_id"),
+      scoped_group_id: row.get("scoped_group_id"),
+      scoped_item_id: row.get("scoped_item_id"),
+      scoped_milestone_id: row.get("scoped_milestone_id"),
+      scoped_project_id: row.get("scoped_project_id"),
+      scoped_role_id: row.get("scoped_role_id"),
+      scoped_user_id: row.get("scoped_user_id"),
+      scoped_workspace_id: row.get("scoped_workspace_id")
     };
+
+    return Ok(access_policy);
 
   }
 
   /// Gets an access policy by its ID.
-  pub fn get_by_id(id: &Uuid, postgres_client: &mut postgres::Client) -> Result<Self, postgres::Error> {
+  pub async fn get_by_id(id: &Uuid, postgres_client: &mut deadpool_postgres::Client) -> Result<Self, AccessPolicyError> {
 
-    let query = include_str!("../queries/access-policies/get-access-policy-row-by-id.sql");
+    let query = include_str!("../../queries/access-policies/get-access-policy-row-by-id.sql");
     let parameters: &[&(dyn ToSql + Sync)] = &[&id];
-    let row = postgres_client.query_one(query, parameters)?;
+    let row = match postgres_client.query_opt(query, parameters).await {
+
+      Ok(row) => match row {
+
+        Some(row) => row,
+
+        None => return Err(AccessPolicyError::NotFoundError(id.clone()))
+
+      },
+
+      Err(error) => return Err(AccessPolicyError::PostgresError(error))
+
+    };
+
     let access_policy = AccessPolicy::convert_from_row(&row);
+
     return Ok(access_policy);
 
   }
@@ -592,18 +522,18 @@ impl AccessPolicy {
   }
 
   /// Initializes the access policies table.
-  pub fn initialize_access_policies_table(postgres_client: &mut postgres::Client) -> Result<(), postgres::Error> {
+  pub async fn initialize_access_policies_table(postgres_client: &mut deadpool_postgres::Client) -> Result<(), AccessPolicyError> {
 
-    let table_query = include_str!("../queries/access-policies/initialize-access-policies-table.sql");
-    postgres_client.execute(table_query, &[])?;
+    let table_query = include_str!("../../queries/access-policies/initialize-access-policies-table.sql");
+    postgres_client.execute(table_query, &[]).await?;
 
-    let view_query = include_str!("../queries/access-policies/initialize-hydrated-access-policies-view.sql");
-    postgres_client.execute(view_query, &[])?;
+    let view_query = include_str!("../../queries/access-policies/initialize-hydrated-access-policies-view.sql");
+    postgres_client.execute(view_query, &[]).await?;
     return Ok(());
 
   }
 
-  fn parse_slashstepql_parameters(slashstepql_parameters: &Vec<(String, SlashstepQLParameterType)>) -> Result<Vec<Box<dyn ToSql + Sync + '_>>, SlashstepQLParseError> {
+  fn parse_slashstepql_parameters(slashstepql_parameters: &Vec<(String, SlashstepQLParameterType)>) -> Result<Vec<Box<dyn ToSql + Sync + '_>>, AccessPolicyError> {
 
     let mut parameters: Vec<Box<dyn ToSql + Sync>> = Vec::new();
 
@@ -683,7 +613,7 @@ impl AccessPolicy {
   }
 
   /// Returns a list of access policies based on a query.
-  pub fn list(query: &str, postgres_client: &mut postgres::Client) -> Result<Vec<Self>, AccessPolicyListError> {
+  pub async fn list(query: &str, postgres_client: &mut deadpool_postgres::Client) -> Result<Vec<Self>, AccessPolicyError> {
                             
     // Prepare the query.
     let sanitizer_options = SlashstepQLSanitizeFunctionOptions {
@@ -703,14 +633,14 @@ impl AccessPolicy {
     // Execute the query.
     let parsed_parameters = Self::parse_slashstepql_parameters(&sanitized_filter.parameters)?;
     let parameters = parsed_parameters.iter().map(|parameter| parameter.as_ref()).collect::<Vec<&(dyn ToSql + Sync)>>();
-    let rows = postgres_client.query(&query, &parameters)?;
+    let rows = postgres_client.query(&query, &parameters).await?;
     let access_policies = rows.iter().map(AccessPolicy::convert_from_row).collect();
     return Ok(access_policies);
 
   }
 
   /// Returns a list of access policies based on a hierarchy.
-  pub fn list_by_hierarchy(resource_hierarchy: &ResourceHierarchy, action_id: &Uuid, postgres_client: &mut postgres::Client) -> Result<Vec<Self>, AccessPolicyListError> {
+  pub async fn list_by_hierarchy(resource_hierarchy: &ResourceHierarchy<'_>, action_id: &Uuid, postgres_client: &mut deadpool_postgres::Client) -> Result<Vec<Self>, AccessPolicyError> {
 
     let mut query_clauses: Vec<String> = Vec::new();
 
@@ -751,7 +681,7 @@ impl AccessPolicy {
     }
     query_filter.push_str(")");
     
-    let access_policies: Vec<AccessPolicy> = AccessPolicy::list(&query_filter, postgres_client)?;
+    let access_policies: Vec<AccessPolicy> = AccessPolicy::list(&query_filter, postgres_client).await?;
 
     return Ok(access_policies);
 
@@ -759,10 +689,10 @@ impl AccessPolicy {
 
   /* Instance methods */
   /// Deletes this access policy.
-  pub fn delete(&self, postgres_client: &mut postgres::Client) -> Result<(), postgres::Error> {
+  pub async fn delete(&self, postgres_client: &mut deadpool_postgres::Client) -> Result<(), AccessPolicyError> {
 
-    let query = include_str!("../queries/access-policies/delete-access-policy-row.sql");
-    postgres_client.execute(query, &[&self.id])?;
+    let query = include_str!("../../queries/access-policies/delete-access-policy-row.sql");
+    postgres_client.execute(query, &[&self.id]).await?;
     return Ok(());
 
   }
@@ -781,20 +711,20 @@ impl AccessPolicy {
   }
 
   /// Updates this access policy and returns a new instance of the access policy.
-  pub fn update(&self, properties: &EditableAccessPolicyProperties, postgres_client: &mut postgres::Client) -> Result<Self, postgres::Error> {
+  pub async fn update(&self, properties: &EditableAccessPolicyProperties, postgres_client: &mut deadpool_postgres::Client) -> Result<Self, AccessPolicyError> {
 
     let query = String::from("update access_policies set ");
     let parameter_boxes: Vec<Box<dyn ToSql + Sync>> = Vec::new();
 
-    postgres_client.query("begin;", &[])?;
+    postgres_client.query("begin;", &[]).await?;
     let (parameter_boxes, query) = Self::add_parameter(parameter_boxes, query, "permission_level", &properties.permission_level);
     let (mut parameter_boxes, mut query) = Self::add_parameter(parameter_boxes, query, "inheritance_level", &properties.inheritance_level);
 
     query.push_str(format!(" where id = ${} returning *;", parameter_boxes.len() + 1).as_str());
     parameter_boxes.push(Box::new(&self.id));
     let parameters = parameter_boxes.iter().map(|parameter| parameter.as_ref()).collect::<Vec<&(dyn ToSql + Sync)>>();
-    let row = postgres_client.query_one(&query, &parameters)?;
-    postgres_client.query("commit;", &[])?;
+    let row = postgres_client.query_one(&query, &parameters).await?;
+    postgres_client.query("commit;", &[]).await?;
 
     let access_policy = AccessPolicy::convert_from_row(&row);
     return Ok(access_policy);

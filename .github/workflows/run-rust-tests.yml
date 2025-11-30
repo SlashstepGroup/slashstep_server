@@ -6,12 +6,18 @@ on:
       - Cargo.toml
       - Cargo.lock
       - .github/workflows/run-rust-tests.yml
+    branches:
+      - production
+      - staging
   pull_request:
     paths: 
       - src/**
       - Cargo.toml
       - Cargo.lock
       - .github/workflows/run-rust-tests.yml
+    branches:
+      - production
+      - staging
   workflow_dispatch:
 
 jobs:
@@ -22,4 +28,10 @@ jobs:
     steps:
       - uses: actions/checkout@v6.0.0
       - uses: actions-rust-lang/setup-rust-toolchain@v1
+      - run: mkdir secrets
+      - run: openssl genrsa -out secrets/jwt-private-key.pem 2048
+      - run: openssl rsa -in secrets/jwt-private-key.pem -pubout -out ./secrets/jwt-public-key.pem
       - run: RUSTFLAGS="-Awarnings" cargo test --all-features
+        env:
+          JWT_PUBLIC_KEY_PATH: ./secrets/jwt-public-key.pem
+          JWT_PRIVATE_KEY_PATH: ./secrets/jwt-private-key.pem
