@@ -1,15 +1,14 @@
 #![warn(clippy::unwrap_used)]
 
 pub mod resources;
-pub mod errors;
 pub mod utilities;
 pub mod middleware;
 mod routes;
+mod pre_definitions;
 
 #[cfg(test)]
 mod tests;
 
-use anyhow::Error;
 use std::{fmt, sync::Arc};
 use axum::{Json, body::Body, response::{IntoResponse, Response}};
 use deadpool_postgres::{Pool, tokio_postgres};
@@ -21,7 +20,7 @@ use colored::Colorize;
 use uuid::Uuid;
 use thiserror::Error;
 
-use crate::resources::{access_policy::{AccessPolicy, AccessPolicyError}, action::{Action, ActionError}, app::{App, AppError}, app_authorization::{AppAuthorization, AppAuthorizationError}, app_authorization_credential::{AppAuthorizationCredential, AppAuthorizationCredentialError}, app_credential::{AppCredential, AppCredentialError}, group::{Group, GroupError}, http_transaction::{HTTPTransaction, HTTPTransactionError}, item::{Item, ItemError}, milestone::{Milestone, MilestoneError}, project::{Project, ProjectError}, role::{Role, RoleError}, server_log_entry::{ServerLogEntry, ServerLogEntryError}, session::{Session, SessionError}, user::{User, UserError}, workspace::{Workspace, WorkspaceError}};
+use crate::{pre_definitions::initialize_pre_defined_actions, resources::{access_policy::{AccessPolicy, AccessPolicyError}, action::{Action, ActionError}, app::{App, AppError}, app_authorization::{AppAuthorization, AppAuthorizationError}, app_authorization_credential::{AppAuthorizationCredential, AppAuthorizationCredentialError}, app_credential::{AppCredential, AppCredentialError}, group::{Group, GroupError}, http_transaction::{HTTPTransaction, HTTPTransactionError}, item::{Item, ItemError}, milestone::{Milestone, MilestoneError}, project::{Project, ProjectError}, role::{Role, RoleError}, role_memberships::{RoleMembership, RoleMembershipError}, server_log_entry::{ServerLogEntry, ServerLogEntryError}, session::{Session, SessionError}, user::{User, UserError}, workspace::{Workspace, WorkspaceError}}};
 
 const DEFAULT_APP_PORT: i16 = 8080;
 const DEFAULT_MAXIMUM_POSTGRES_CONNECTION_COUNT: u32 = 5;
@@ -129,6 +128,9 @@ pub enum SlashstepServerError {
   AccessPolicyError(#[from] AccessPolicyError),
 
   #[error(transparent)]
+  RoleMembershipError(#[from] RoleMembershipError),
+
+  #[error(transparent)]
   PostgresError(#[from] postgres::Error),
 
   #[error(transparent)]
@@ -169,6 +171,7 @@ pub async fn initialize_required_tables(postgres_client: &mut deadpool_postgres:
   AppAuthorizationCredential::initialize_app_authorization_credentials_table(postgres_client).await?;
   Milestone::initialize_milestones_table(postgres_client).await?;
   AccessPolicy::initialize_access_policies_table(postgres_client).await?;
+  RoleMembership::initialize_role_memberships_table(postgres_client).await?;
   
   return Ok(());
 
@@ -176,6 +179,7 @@ pub async fn initialize_required_tables(postgres_client: &mut deadpool_postgres:
 
 #[derive(Debug, Clone)]
 pub enum HTTPError {
+  GoneError(Option<String>),
   NotFoundError(Option<String>),
   ConflictError(Option<String>),
   BadRequestError(Option<String>),
@@ -200,6 +204,8 @@ impl fmt::Display for HTTPError {
 impl IntoResponse for HTTPError {
   fn into_response(self) -> Response {
     let (status_code, error_message) = match self {
+
+      HTTPError::GoneError(message) => (StatusCode::GONE, message.unwrap_or("Gone.".to_string())),
 
       HTTPError::NotFoundError(message) => (StatusCode::NOT_FOUND, message.unwrap_or("Not found.".to_string())),
 
@@ -229,14 +235,9 @@ impl HTTPError {
 
 }
 
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub struct AppState {
   pub database_pool: Arc<deadpool_postgres::Pool>,
-}
-
-#[derive(Clone)]
-pub struct RequestData {
-  pub http_request: HTTPTransaction
 }
 
 pub fn handle_pool_error(error: deadpool_postgres::PoolError) -> Response<Body> {
@@ -311,6 +312,8 @@ async fn main() -> Result<(), SlashstepServerError> {
   let state = AppState {
     database_pool: Arc::new(pool),
   };
+
+  let _ = initialize_pre_defined_actions(&mut state.database_pool.get().await?).await?;
 
   let app_port = get_app_port_string();
   let router = routes::get_router(state.clone()).with_state(state);

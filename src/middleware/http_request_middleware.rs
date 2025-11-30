@@ -1,7 +1,7 @@
-use std::{net::SocketAddr};
+use std::{net::SocketAddr, sync::Arc};
 use axum::{body::Body, extract::{ConnectInfo, Request, State}, middleware::Next, response::{IntoResponse, Response}};
 use chrono::{Duration, Utc};
-use crate::{AppState, HTTPError, RequestData, handle_pool_error, resources::{http_transaction::{HTTPTransaction, HTTPTransactionError, InitialHTTPTransactionProperties}, server_log_entry::ServerLogEntry}};
+use crate::{AppState, HTTPError, handle_pool_error, resources::{http_transaction::{HTTPTransaction, HTTPTransactionError, InitialHTTPTransactionProperties}, server_log_entry::ServerLogEntry}};
 
 pub async fn create_http_request(
   ConnectInfo(address): ConnectInfo<SocketAddr>,
@@ -31,7 +31,7 @@ pub async fn create_http_request(
     expiration_date: Some(Utc::now() + Duration::days(30))
   }, &mut postgres_client).await {
 
-    Ok(http_request) => http_request,
+    Ok(http_request) => Arc::new(http_request),
 
     Err(error) => {
 
@@ -56,15 +56,10 @@ pub async fn create_http_request(
     }
 
   };
-  
-  let request_data = RequestData {
-    http_request: http_request,
-  };
-  let request_data = request_data;
 
-  request.extensions_mut().insert(request_data.clone());
+  request.extensions_mut().insert(http_request.clone());
   
-  let _ = ServerLogEntry::info(&format!("HTTP request handling started."), Some(&request_data.http_request.id), &mut postgres_client).await;
+  let _ = ServerLogEntry::info(&format!("HTTP request handling started."), Some(&http_request.id), &mut postgres_client).await;
   let response = next.run(request).await;
   return Ok(response);
 

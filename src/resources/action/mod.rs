@@ -54,11 +54,26 @@ pub enum ActionError {
   #[error("An action with the name \"{0}\" already exists.")]
   ConflictError(String),
 
+  #[error("Couldn't find an action with the name \"{0}\".")]
+  NotFoundError(String),
+
   #[error(transparent)]
   PostgresError(#[from] postgres::Error)
 }
 
 impl Action {
+
+  pub fn from_row(row: &postgres::Row) -> Self {
+
+    return Action {
+      id: row.get("id"),
+      name: row.get("name"),
+      display_name: row.get("display_name"),
+      description: row.get("description"),
+      app_id: row.get("app_id")
+    };
+
+  }
 
   /// Creates a new action.
   pub async fn create(initial_properties: &InitialActionProperties, postgres_client: &mut deadpool_postgres::Client) -> Result<Self, ActionError> {
@@ -90,13 +105,30 @@ impl Action {
     })?;
 
     // Return the action.
-    let action = Action {
-      id: row.get("id"),
-      name: row.get("name"),
-      display_name: row.get("display_name"),
-      description: row.get("description"),
-      app_id: row.get("app_id")
+    let action = Action::from_row(&row);
+
+    return Ok(action);
+
+  }
+
+  pub async fn get_by_name(name: &str, postgres_client: &mut deadpool_postgres::Client) -> Result<Action, ActionError> {
+
+    let query = include_str!("../../queries/actions/get-action-row-by-name.sql");
+    let row = match postgres_client.query_opt(query, &[&name]).await {
+
+      Ok(row) => match row {
+
+        Some(row) => row,
+
+        None => return Err(ActionError::NotFoundError(name.to_string()))
+
+      },
+
+      Err(error) => return Err(ActionError::PostgresError(error))
+
     };
+
+    let action = Action::from_row(&row);
 
     return Ok(action);
 

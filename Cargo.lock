@@ -2792,6 +2792,7 @@ dependencies = [
  "anyhow",
  "axum",
  "axum-extra",
+ "axum-macros",
  "axum-test",
  "chrono",
  "colored",

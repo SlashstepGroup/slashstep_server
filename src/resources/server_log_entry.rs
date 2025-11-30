@@ -206,7 +206,7 @@ impl ServerLogEntry {
       ServerLogEntryLevel::Critical => format!("{}", formatted_message.on_red()),
       ServerLogEntryLevel::Error => format!("{}", formatted_message.red()),
       ServerLogEntryLevel::Warning => format!("{}", formatted_message.yellow()),
-      ServerLogEntryLevel::Info => format!("{}", formatted_message.cyan()),
+      ServerLogEntryLevel::Info => format!("{}", formatted_message.blue()),
       ServerLogEntryLevel::Trace => format!("{}", formatted_message.dimmed())
     };
     return formatted_message;

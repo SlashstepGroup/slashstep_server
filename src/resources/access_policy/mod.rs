@@ -22,7 +22,7 @@ use serde::Serialize;
 use thiserror::Error;
 use uuid::Uuid;
 use crate::{
-  utilities::slashstepql::{
+  resources::{action::Action, item::{Item, ItemError}, project::{self, Project, ProjectError}}, utilities::slashstepql::{
     SlashstepQLError, 
     SlashstepQLFilterSanitizer, 
     SlashstepQLParameterType, 
@@ -104,6 +104,9 @@ pub enum AccessPolicyError {
   #[error("Invalid principal type: {0}")]
   InvalidPrincipalType(String),
 
+  #[error("A scoped resource ID is required for the {0} resource type.")]
+  ScopedResourceIDMissingError(AccessPolicyScopedResourceType),
+
   #[error("An access policy for action {0} already exists.")]
   ConflictError(Uuid),
 
@@ -117,7 +120,13 @@ pub enum AccessPolicyError {
   SlashstepQLError(#[from] SlashstepQLError),
 
   #[error(transparent)]
-  PostgresError(#[from] postgres::Error)
+  PostgresError(#[from] postgres::Error),
+
+  #[error(transparent)]
+  ProjectError(#[from] ProjectError),
+
+  #[error(transparent)]
+  ItemError(#[from] ItemError)
 }
 
 impl FromStr for AccessPolicyPermissionLevel {
@@ -327,7 +336,7 @@ pub struct EditableAccessPolicyProperties {
 
 }
 
-pub type ResourceHierarchy<'a> = Vec<(&'a AccessPolicyScopedResourceType, Option<&'a Uuid>)>;
+pub type ResourceHierarchy = Vec<(AccessPolicyScopedResourceType, Option<Uuid>)>;
 
 /// A piece of information that defines the level of access and inheritance for a principal to perform an action.
 #[derive(Debug, Serialize)]
@@ -640,7 +649,7 @@ impl AccessPolicy {
   }
 
   /// Returns a list of access policies based on a hierarchy.
-  pub async fn list_by_hierarchy(resource_hierarchy: &ResourceHierarchy<'_>, action_id: &Uuid, postgres_client: &mut deadpool_postgres::Client) -> Result<Vec<Self>, AccessPolicyError> {
+  pub async fn list_by_hierarchy(resource_hierarchy: &ResourceHierarchy, action_id: &Uuid, postgres_client: &mut deadpool_postgres::Client) -> Result<Vec<Self>, AccessPolicyError> {
 
     let mut query_clauses: Vec<String> = Vec::new();
 
@@ -728,6 +737,126 @@ impl AccessPolicy {
 
     let access_policy = AccessPolicy::convert_from_row(&row);
     return Ok(access_policy);
+
+  }
+
+  pub async fn get_hierarchy(&self, postgres_client: &mut deadpool_postgres::Client) -> Result<ResourceHierarchy, AccessPolicyError> {
+
+    let mut hierarchy: ResourceHierarchy = vec![];
+    
+    match self.scoped_resource_type {
+
+      AccessPolicyScopedResourceType::Instance => {},
+
+      // Access policy -> Workspace -> Instance
+      AccessPolicyScopedResourceType::Workspace => {
+
+        let Some(scoped_workspace_id) = self.scoped_workspace_id else {
+
+          return Err(AccessPolicyError::ScopedResourceIDMissingError(AccessPolicyScopedResourceType::Workspace));
+
+        };
+
+        hierarchy.push((AccessPolicyScopedResourceType::Workspace, Some(scoped_workspace_id)));
+
+      },
+
+      // Access policy -> Project -> Workspace -> Instance
+      AccessPolicyScopedResourceType::Project => {
+
+        let Some(scoped_project_id) = self.scoped_project_id else {
+
+          return Err(AccessPolicyError::ScopedResourceIDMissingError(AccessPolicyScopedResourceType::Project));
+
+        };
+
+        hierarchy.push((AccessPolicyScopedResourceType::Project, Some(scoped_project_id)));
+
+        let project = Project::get_by_id(&scoped_project_id, postgres_client).await?;
+
+        hierarchy.push((AccessPolicyScopedResourceType::Workspace, Some(project.workspace_id)));
+
+      },
+      
+      // Access policy -> Item -> Project -> Workspace -> Instance
+      AccessPolicyScopedResourceType::Item => {
+
+        let Some(scoped_item_id) = self.scoped_item_id else {
+
+          return Err(AccessPolicyError::ScopedResourceIDMissingError(AccessPolicyScopedResourceType::Item));
+
+        };
+
+        hierarchy.push((AccessPolicyScopedResourceType::Item, Some(scoped_item_id)));
+
+        let item = Item::get_by_id(&scoped_item_id, postgres_client).await?;
+
+        hierarchy.push((AccessPolicyScopedResourceType::Project, Some(item.project_id)));
+
+        let project = Project::get_by_id(&item.project_id, postgres_client).await?;
+
+        hierarchy.push((AccessPolicyScopedResourceType::Workspace, Some(project.workspace_id)));
+
+      },
+
+      // Access policy -> Action -> (App? -> (Workspace | User)?)? -> Instance
+      AccessPolicyScopedResourceType::Action => {
+
+        let Some(scoped_action_id) = self.scoped_action_id else {
+
+          return Err(AccessPolicyError::ScopedResourceIDMissingError(AccessPolicyScopedResourceType::Action));
+
+        };
+
+        hierarchy.push((AccessPolicyScopedResourceType::Action, Some(scoped_action_id)));
+
+        let action = Action::get_by_id(&scoped_action_id, postgres_client).await?;
+
+        if let Some(scoped_app_id) = action.app_id {
+
+          hierarchy.push((AccessPolicyScopedResourceType::App, Some(scoped_app_id)));
+
+          let app = App::get_by_id(&scoped_app_id, postgres_client).await?;
+
+          match app.parent_resource_type {
+
+            AppParentResourceType::Instance => {},
+
+            AppParentResourceType::Workspace => {
+
+              let Some(scoped_workspace_id) = app.parent_workspace_id else {
+
+                return Err(AccessPolicyError::ScopedResourceIDMissingError(AppParentResourceType::Workspace));
+
+              };
+
+              hierarchy.push((AccessPolicyScopedResourceType::Workspace, Some(app.parent_workspace_id)));
+
+            },
+
+            AppParentResourceType::User => {
+
+              let Some(scoped_user_id) = app.parent_user_id else {
+
+                return Err(AccessPolicyError::ScopedResourceIDMissingError(AppParentResourceType::User));
+
+              };
+
+              hierarchy.push((AccessPolicyScopedResourceType::User, Some(app.parent_user_id)));
+
+            }
+
+          }
+
+        }
+
+      }
+
+    }
+
+    hierarchy.push((AccessPolicyScopedResourceType::Instance, None));
+
+    return Ok(hierarchy);
 
   }
 

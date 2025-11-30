@@ -127,30 +127,8 @@ async fn get_access_policy_by_id() -> Result<()> {
   let test_environment = TestEnvironment::new().await?;
   test_environment.initialize_required_tables().await?;
 
-  let mut postgres_client = test_environment.postgres_pool.get().await?; 
-  let action = test_environment.create_random_action().await?;
-  let user = test_environment.create_random_user().await?;
-  let access_policy_properties = InitialAccessPolicyProperties {
-    action_id: action.id,
-    permission_level: AccessPolicyPermissionLevel::User,
-    inheritance_level: AccessPolicyInheritanceLevel::Enabled,
-    principal_type: AccessPolicyPrincipalType::User,
-    principal_user_id: Some(user.id),
-    principal_group_id: None,
-    principal_role_id: None,
-    principal_app_id: None,
-    scoped_resource_type: AccessPolicyScopedResourceType::Instance,
-    scoped_action_id: None,
-    scoped_app_id: None,
-    scoped_group_id: None,
-    scoped_item_id: None,
-    scoped_milestone_id: None,
-    scoped_project_id: None,
-    scoped_role_id: None,
-    scoped_user_id: None,
-    scoped_workspace_id: None
-  };
-  let created_access_policy = AccessPolicy::create(&access_policy_properties, &mut postgres_client).await?;
+  let mut postgres_client = test_environment.postgres_pool.get().await?;
+  let created_access_policy = test_environment.create_random_access_policy().await?;
   let retrieved_access_policy = AccessPolicy::get_by_id(&created_access_policy.id, &mut postgres_client).await?;
 
   assert_access_policies_are_equal(&created_access_policy, &retrieved_access_policy);
@@ -172,29 +150,7 @@ async fn list_access_policies_without_query() -> Result<()> {
   let mut remaining_action_count = MAXIMUM_ACTION_COUNT;
   while remaining_action_count > 0 {
 
-    let action = test_environment.create_random_action().await?;
-    let user = test_environment.create_random_user().await?;
-    let access_policy_properties = InitialAccessPolicyProperties {
-      action_id: action.id,
-      permission_level: AccessPolicyPermissionLevel::User,
-      inheritance_level: AccessPolicyInheritanceLevel::Enabled,
-      principal_type: AccessPolicyPrincipalType::User,
-      principal_user_id: Some(user.id),
-      principal_group_id: None,
-      principal_role_id: None,
-      principal_app_id: None,
-      scoped_resource_type: AccessPolicyScopedResourceType::Instance,
-      scoped_action_id: None,
-      scoped_app_id: None,
-      scoped_group_id: None,
-      scoped_item_id: None,
-      scoped_milestone_id: None,
-      scoped_project_id: None,
-      scoped_role_id: None,
-      scoped_user_id: None,
-      scoped_workspace_id: None
-    };
-    let access_policy = AccessPolicy::create(&access_policy_properties, &mut postgres_client).await?;
+    let access_policy = test_environment.create_random_access_policy().await?;
     created_access_policies.push(access_policy);
     remaining_action_count -= 1;
 
@@ -290,29 +246,7 @@ async fn list_access_policies_with_default_limit() -> Result<()> {
   let mut remaining_action_count = MAXIMUM_ACTION_COUNT;
   while remaining_action_count > 0 {
 
-    let action = test_environment.create_random_action().await?;
-    let user = test_environment.create_random_user().await?;
-    let access_policy_properties = InitialAccessPolicyProperties {
-      action_id: action.id,
-      permission_level: AccessPolicyPermissionLevel::User,
-      inheritance_level: AccessPolicyInheritanceLevel::Enabled,
-      principal_type: AccessPolicyPrincipalType::User,
-      principal_user_id: Some(user.id),
-      principal_group_id: None,
-      principal_role_id: None,
-      principal_app_id: None,
-      scoped_resource_type: AccessPolicyScopedResourceType::Instance,
-      scoped_action_id: None,
-      scoped_app_id: None,
-      scoped_group_id: None,
-      scoped_item_id: None,
-      scoped_milestone_id: None,
-      scoped_project_id: None,
-      scoped_role_id: None,
-      scoped_user_id: None,
-      scoped_workspace_id: None
-    };
-    let access_policy = AccessPolicy::create(&access_policy_properties, &mut postgres_client).await?;
+    let access_policy = test_environment.create_random_access_policy().await?;
     created_access_policies.push(access_policy);
     remaining_action_count -= 1;
 
@@ -425,35 +359,13 @@ async fn delete_access_policy() -> Result<()> {
   test_environment.initialize_required_tables().await?;
 
   // Create the access policy.
-  let mut postgres_client = test_environment.postgres_pool.get().await?; 
-  let action = test_environment.create_random_action().await?;
-  let user = test_environment.create_random_user().await?;
-  let instance_access_policy_properties = InitialAccessPolicyProperties {
-    action_id: action.id,
-    permission_level: AccessPolicyPermissionLevel::User,
-    inheritance_level: AccessPolicyInheritanceLevel::Enabled,
-    principal_type: AccessPolicyPrincipalType::User,
-    principal_user_id: Some(user.id),
-    principal_group_id: None,
-    principal_role_id: None,
-    principal_app_id: None,
-    scoped_resource_type: AccessPolicyScopedResourceType::Instance,
-    scoped_action_id: None,
-    scoped_app_id: None,
-    scoped_group_id: None,
-    scoped_item_id: None,
-    scoped_milestone_id: None,
-    scoped_project_id: None,
-    scoped_role_id: None,
-    scoped_user_id: None,
-    scoped_workspace_id: None
-  };
-  let instance_access_policy = AccessPolicy::create(&instance_access_policy_properties, &mut postgres_client).await?;
+  let mut postgres_client = test_environment.postgres_pool.get().await?;
+  let created_access_policy = test_environment.create_random_access_policy().await?;
 
-  instance_access_policy.delete(&mut postgres_client).await?;
+  created_access_policy.delete(&mut postgres_client).await?;
 
   // Ensure that the access policy is no longer in the database.
-  let retrieved_access_policy_result = AccessPolicy::get_by_id(&instance_access_policy.id, &mut postgres_client).await;
+  let retrieved_access_policy_result = AccessPolicy::get_by_id(&created_access_policy.id, &mut postgres_client).await;
   assert!(retrieved_access_policy_result.is_err());
 
   return Ok(());
