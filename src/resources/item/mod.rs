@@ -78,7 +78,7 @@ impl Item {
 
   pub async fn get_by_id(id: &Uuid, postgres_client: &mut deadpool_postgres::Client) -> Result<Self, ItemError> {
 
-    let query = include_str!("../queries/items/get-item-row-by-id.sql");
+    let query = include_str!("../../queries/items/get-item-row-by-id.sql");
     let row = match postgres_client.query_opt(query, &[&id]).await {
 
       Ok(row) => match row {
@@ -102,7 +102,7 @@ impl Item {
   /// Initializes the items table.
   pub async fn initialize_items_table(postgres_client: &mut deadpool_postgres::Client) -> Result<(), ItemError> {
 
-    let query = include_str!("../queries/items/initialize-items-table.sql");
+    let query = include_str!("../../queries/items/initialize-items-table.sql");
     postgres_client.execute(query, &[]).await?;
     return Ok(());
 

@@ -94,7 +94,7 @@ impl Project {
 
   pub async fn get_by_id(id: &Uuid, postgres_client: &mut deadpool_postgres::Client) -> Result<Self, ProjectError> {
 
-    let query = include_str!("../queries/projects/get-project-row-by-id.sql");
+    let query = include_str!("../../queries/projects/get-project-row-by-id.sql");
     let row = match postgres_client.query_opt(query, &[&id]).await {
 
       Ok(row) => match row {

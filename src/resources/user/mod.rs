@@ -21,6 +21,9 @@ pub enum UserError {
   #[error("A user with the username \"{0}\" already exists.")]
   ConflictError(String),
 
+  #[error("A user with the ID \"{0}\" does not have the required permissions to perform the action \"{1}\".")]
+  ForbiddenError(String, String),
+
   #[error(transparent)]
   PostgresError(#[from] postgres::Error)
 }

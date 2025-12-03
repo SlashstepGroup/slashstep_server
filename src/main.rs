@@ -180,6 +180,7 @@ pub async fn initialize_required_tables(postgres_client: &mut deadpool_postgres:
 #[derive(Debug, Clone)]
 pub enum HTTPError {
   GoneError(Option<String>),
+  ForbiddenError(Option<String>),
   NotFoundError(Option<String>),
   ConflictError(Option<String>),
   BadRequestError(Option<String>),
@@ -193,6 +194,8 @@ impl fmt::Display for HTTPError {
     match self {
       HTTPError::NotFoundError(message) => write!(f, "{}", message.to_owned().unwrap_or("Not found.".to_string())),
       HTTPError::ConflictError(message) => write!(f, "{}", message.to_owned().unwrap_or("Conflict.".to_string())),
+      HTTPError::ForbiddenError(message) => write!(f, "{}", message.to_owned().unwrap_or("Forbidden.".to_string())),
+      HTTPError::GoneError(message) => write!(f, "{}", message.to_owned().unwrap_or("Gone.".to_string())),
       HTTPError::BadRequestError(message) => write!(f, "{}", message.to_owned().unwrap_or("Bad request.".to_string())),
       HTTPError::InternalServerError(message) => write!(f, "{}", message.to_owned().unwrap_or("Internal server error.".to_string())),
       HTTPError::UnauthorizedError(message) => write!(f, "{}", message.to_owned().unwrap_or("Unauthorized.".to_string()))
@@ -208,6 +211,8 @@ impl IntoResponse for HTTPError {
       HTTPError::GoneError(message) => (StatusCode::GONE, message.unwrap_or("Gone.".to_string())),
 
       HTTPError::NotFoundError(message) => (StatusCode::NOT_FOUND, message.unwrap_or("Not found.".to_string())),
+
+      HTTPError::ForbiddenError(message) => (StatusCode::FORBIDDEN, message.unwrap_or("Forbidden.".to_string())),
 
       HTTPError::BadRequestError(message) => (StatusCode::BAD_REQUEST, message.unwrap_or("Bad request.".to_string())),
 

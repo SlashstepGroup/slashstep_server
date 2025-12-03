@@ -22,7 +22,7 @@ use serde::Serialize;
 use thiserror::Error;
 use uuid::Uuid;
 use crate::{
-  resources::{action::Action, item::{Item, ItemError}, project::{self, Project, ProjectError}}, utilities::slashstepql::{
+  resources::{action::Action, item::{Item, ItemError}, project::{Project, ProjectError}}, utilities::slashstepql::{
     SlashstepQLError, 
     SlashstepQLFilterSanitizer, 
     SlashstepQLParameterType, 
@@ -542,9 +542,9 @@ impl AccessPolicy {
 
   }
 
-  fn parse_slashstepql_parameters(slashstepql_parameters: &Vec<(String, SlashstepQLParameterType)>) -> Result<Vec<Box<dyn ToSql + Sync + '_>>, AccessPolicyError> {
+  fn parse_slashstepql_parameters(slashstepql_parameters: &Vec<(String, SlashstepQLParameterType)>) -> Result<Vec<Box<dyn ToSql + Sync + Send + '_>>, AccessPolicyError> {
 
-    let mut parameters: Vec<Box<dyn ToSql + Sync>> = Vec::new();
+    let mut parameters: Vec<Box<dyn ToSql + Sync + Send>> = Vec::new();
 
     for (key, value) in slashstepql_parameters {
 
@@ -641,7 +641,7 @@ impl AccessPolicy {
 
     // Execute the query.
     let parsed_parameters = Self::parse_slashstepql_parameters(&sanitized_filter.parameters)?;
-    let parameters = parsed_parameters.iter().map(|parameter| parameter.as_ref()).collect::<Vec<&(dyn ToSql + Sync)>>();
+    let parameters: Vec<&(dyn ToSql + Sync)> = parsed_parameters.iter().map(|parameter| parameter.as_ref() as &(dyn ToSql + Sync)).collect();
     let rows = postgres_client.query(&query, &parameters).await?;
     let access_policies = rows.iter().map(AccessPolicy::convert_from_row).collect();
     return Ok(access_policies);
@@ -849,6 +849,36 @@ impl AccessPolicy {
           }
 
         }
+
+      }
+
+      // Access policy -> User -> Instance
+      AccessPolicyScopedResourceType::User => {
+
+      }
+      
+      // Access policy -> Role -> ((Project -> Workspace) | Workspace)? -> Instance
+      AccessPolicyScopedResourceType::Role => {
+
+      }
+
+      // Access policy -> Group -> Instance
+      AccessPolicyScopedResourceType::Group => {
+
+      }
+
+      // Access policy -> App -> ((Workspace | User)?)? -> Instance
+      AccessPolicyScopedResourceType::App => {
+
+      }
+
+      // Access policy -> AppCredential -> App -> ((Workspace | User)?)? -> Instance
+      AccessPolicyScopedResourceType::AppCredential => {
+
+      }
+
+      // Access policy -> Milestone -> Workspace -> Instance
+      AccessPolicyScopedResourceType::Milestone => {
 
       }
 

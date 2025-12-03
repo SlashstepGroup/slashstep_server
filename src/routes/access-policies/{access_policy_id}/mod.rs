@@ -4,7 +4,7 @@ use axum::{Extension, Json, Router, extract::{Path, State}};
 use uuid::Uuid;
 use colored::Colorize;
 
-use crate::{AppState, HTTPError, middleware::authentication_middleware, resources::{access_policy::{AccessPolicy, AccessPolicyError, AccessPolicyPermissionLevel}, action::Action, http_transaction::HTTPTransaction, server_log_entry::ServerLogEntry, user::User}};
+use crate::{AppState, HTTPError, middleware::authentication_middleware, resources::{access_policy::{AccessPolicy, AccessPolicyError, AccessPolicyPermissionLevel}, action::Action, http_transaction::HTTPTransaction, server_log_entry::ServerLogEntry, user::{User, UserError}}, utilities::principal_permission_verifier::{PrincipalPermissionVerifier, PrincipalPermissionVerifierError}};
 
 #[axum::debug_handler]
 async fn get_access_policy(
@@ -99,7 +99,7 @@ async fn get_access_policy(
   };
 
   let _ = ServerLogEntry::trace(&format!("Getting action \"slashstep.accessPolicies.get\"..."), Some(&http_transaction.id), &mut postgres_client).await;
-  let action = match Action::get_by_name("slashstep.accessPolicies.get", &mut postgres_client) {
+  let action = match Action::get_by_name("slashstep.accessPolicies.get", &mut postgres_client).await {
 
     Ok(action) => action,
 
@@ -115,14 +115,14 @@ async fn get_access_policy(
 
   let _ = ServerLogEntry::trace(&format!("Verifying principal's permissions to get access policy {}...", access_policy_id), Some(&http_transaction.id), &mut postgres_client).await;
 
-  match user.verify_permissions(&action.id, &resource_hierarchy, AccessPolicyPermissionLevel::User, &mut postgres_client).await {
+  match PrincipalPermissionVerifier::verify_user_permissions(&user.id, &action.id, &resource_hierarchy, &AccessPolicyPermissionLevel::User, &mut postgres_client).await {
 
     Ok(_) => {},
 
     Err(error) => {
 
       let http_error = match error {
-        UserError::InsufficientPermissionsError(message) => HTTPError::ForbiddenError(Some(message)),
+        PrincipalPermissionVerifierError::ForbiddenError { .. } => HTTPError::ForbiddenError(Some("You need at least user-level permission to the \"slashstep.accessPolicies.get\" action.".to_string())),
         _ => HTTPError::InternalServerError(Some(error.to_string()))
       };
       let _ = ServerLogEntry::from_http_error(&http_error, Some(&http_transaction.id), &mut postgres_client).await;

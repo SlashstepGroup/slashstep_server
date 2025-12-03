@@ -83,10 +83,10 @@ impl Session {
   /// Initializes the sessions table.
   pub async fn initialize_sessions_table(postgres_client: &mut deadpool_postgres::Client) -> Result<(), SessionError> {
 
-    let query = include_str!("../queries/sessions/initialize-sessions-table.sql");
+    let query = include_str!("../../queries/sessions/initialize-sessions-table.sql");
     postgres_client.execute(query, &[]).await?;
 
-    let query = include_str!("../queries/sessions/initialize-hydrated-sessions-view.sql");
+    let query = include_str!("../../queries/sessions/initialize-hydrated-sessions-view.sql");
     postgres_client.execute(query, &[]).await?;
 
     return Ok(());
