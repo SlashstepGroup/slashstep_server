@@ -129,19 +129,8 @@ impl TestEnvironment {
       inheritance_level: crate::resources::access_policy::AccessPolicyInheritanceLevel::Enabled,
       principal_type: crate::resources::access_policy::AccessPolicyPrincipalType::User,
       principal_user_id: Some(user.id),
-      principal_group_id: None,
-      principal_role_id: None,
-      principal_app_id: None,
       scoped_resource_type: crate::resources::access_policy::AccessPolicyScopedResourceType::Instance,
-      scoped_action_id: None,
-      scoped_app_id: None,
-      scoped_group_id: None,
-      scoped_item_id: None,
-      scoped_milestone_id: None,
-      scoped_project_id: None,
-      scoped_role_id: None,
-      scoped_user_id: None,
-      scoped_workspace_id: None
+      ..Default::default()
     };
 
     let mut postgres_client = self.postgres_pool.get().await?;

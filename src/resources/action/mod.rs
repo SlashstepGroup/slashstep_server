@@ -134,6 +134,29 @@ impl Action {
 
   }
 
+  pub async fn get_by_id(id: &Uuid, postgres_client: &mut deadpool_postgres::Client) -> Result<Self, ActionError> {
+
+    let query = include_str!("../../queries/actions/get-action-row-by-id.sql");
+    let row = match postgres_client.query_opt(query, &[&id]).await {
+
+      Ok(row) => match row {
+
+        Some(row) => row,
+
+        None => return Err(ActionError::NotFoundError(id.to_string()))
+
+      },
+
+      Err(error) => return Err(ActionError::PostgresError(error))
+
+    };
+
+    let action = Action::from_row(&row);
+
+    return Ok(action);
+
+  }
+
   /// Initializes the actions table.
   pub async fn initialize_actions_table(postgres_client: &mut deadpool_postgres::Client) -> Result<(), ActionError> {
 

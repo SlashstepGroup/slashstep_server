@@ -42,7 +42,7 @@ impl Project {
   /// Initializes the projects table.
   pub async fn initialize_projects_table(postgres_client: &mut deadpool_postgres::Client) -> Result<(), ProjectError> {
 
-    let query = include_str!("../queries/projects/initialize-projects-table.sql");
+    let query = include_str!("../../queries/projects/initialize-projects-table.sql");
     postgres_client.execute(query, &[]).await?;
     return Ok(());
 
@@ -56,14 +56,15 @@ impl Project {
       display_name: row.get("display_name"),
       description: row.get("description"),
       start_date: row.get("start_date"),
-      end_date: row.get("end_date")
+      end_date: row.get("end_date"),
+      workspace_id: row.get("workspace_id")
     };
 
   }
 
   pub async fn create(initial_properties: &InitialProjectProperties<'_>, postgres_client: &mut deadpool_postgres::Client) -> Result<Self, ProjectError> {
 
-    let query = include_str!("../queries/projects/insert-project-row.sql");
+    let query = include_str!("../../queries/projects/insert-project-row.sql");
     let parameters: &[&(dyn ToSql + Sync)] = &[
       &initial_properties.name,
       &initial_properties.display_name,

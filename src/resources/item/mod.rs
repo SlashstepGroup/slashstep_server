@@ -48,7 +48,7 @@ impl Item {
 
   pub async fn create(initial_properties: &InitialItemProperties<'_>, postgres_client: &mut deadpool_postgres::Client) -> Result<Self, ItemError> {
 
-    let query = include_str!("../queries/items/insert-item-row.sql");
+    let query = include_str!("../../queries/items/insert-item-row.sql");
     let parameters: &[&(dyn ToSql + Sync)] = &[
       &initial_properties.summary,
       &initial_properties.description,

@@ -96,19 +96,8 @@ async fn create_access_policy() -> Result<()> {
     inheritance_level: AccessPolicyInheritanceLevel::Enabled,
     principal_type: AccessPolicyPrincipalType::User,
     principal_user_id: Some(user.id),
-    principal_group_id: None,
-    principal_role_id: None,
-    principal_app_id: None,
     scoped_resource_type: AccessPolicyScopedResourceType::Instance,
-    scoped_action_id: None,
-    scoped_app_id: None,
-    scoped_group_id: None,
-    scoped_item_id: None,
-    scoped_milestone_id: None,
-    scoped_project_id: None,
-    scoped_role_id: None,
-    scoped_user_id: None,
-    scoped_workspace_id: None
+    ..Default::default()
   };
   let access_policy = AccessPolicy::create(&access_policy_properties, &mut postgres_client).await?;
 
@@ -193,19 +182,8 @@ async fn list_access_policies_with_query() -> Result<()> {
       inheritance_level: AccessPolicyInheritanceLevel::Enabled,
       principal_type: AccessPolicyPrincipalType::User,
       principal_user_id: if remaining_action_count == 1 { created_access_policies[0].principal_user_id } else { Some(user.id) },
-      principal_group_id: None,
-      principal_role_id: None,
-      principal_app_id: None,
       scoped_resource_type: AccessPolicyScopedResourceType::Instance,
-      scoped_action_id: None,
-      scoped_app_id: None,
-      scoped_group_id: None,
-      scoped_item_id: None,
-      scoped_milestone_id: None,
-      scoped_project_id: None,
-      scoped_role_id: None,
-      scoped_user_id: None,
-      scoped_workspace_id: None
+      ..Default::default()
     };
     let access_policy = AccessPolicy::create(&access_policy_properties, &mut postgres_client).await?;
     created_access_policies.push(access_policy);
@@ -281,19 +259,8 @@ async fn count_access_policies() -> Result<()> {
       inheritance_level: AccessPolicyInheritanceLevel::Enabled,
       principal_type: AccessPolicyPrincipalType::User,
       principal_user_id: Some(user.id),
-      principal_group_id: None,
-      principal_role_id: None,
-      principal_app_id: None,
       scoped_resource_type: AccessPolicyScopedResourceType::Instance,
-      scoped_action_id: None,
-      scoped_app_id: None,
-      scoped_group_id: None,
-      scoped_item_id: None,
-      scoped_milestone_id: None,
-      scoped_project_id: None,
-      scoped_role_id: None,
-      scoped_user_id: None,
-      scoped_workspace_id: None
+      ..Default::default()
     };
     let access_policy = AccessPolicy::create(&access_policy_properties, &mut postgres_client).await?;
     created_access_policies.push(access_policy);
@@ -326,22 +293,11 @@ async fn list_access_policies_by_hierarchy() -> Result<()> {
     inheritance_level: AccessPolicyInheritanceLevel::Enabled,
     principal_type: AccessPolicyPrincipalType::User,
     principal_user_id: Some(user.id),
-    principal_group_id: None,
-    principal_role_id: None,
-    principal_app_id: None,
     scoped_resource_type: AccessPolicyScopedResourceType::Instance,
-    scoped_action_id: None,
-    scoped_app_id: None,
-    scoped_group_id: None,
-    scoped_item_id: None,
-    scoped_milestone_id: None,
-    scoped_project_id: None,
-    scoped_role_id: None,
-    scoped_user_id: None,
-    scoped_workspace_id: None
+    ..Default::default()
   };
   let instance_access_policy = AccessPolicy::create(&instance_access_policy_properties, &mut postgres_client).await?;
-  let access_policy_hierarchy = vec![(&instance_access_policy.scoped_resource_type, None)];
+  let access_policy_hierarchy = instance_access_policy.get_hierarchy(&mut postgres_client).await?;
 
   let retrieved_access_policies = AccessPolicy::list_by_hierarchy(&access_policy_hierarchy, &action.id, &mut postgres_client).await?;
 
@@ -389,19 +345,8 @@ async fn update_access_policy() -> Result<()> {
     inheritance_level: AccessPolicyInheritanceLevel::Enabled,
     principal_type: AccessPolicyPrincipalType::User,
     principal_user_id: Some(user.id),
-    principal_group_id: None,
-    principal_role_id: None,
-    principal_app_id: None,
     scoped_resource_type: AccessPolicyScopedResourceType::Instance,
-    scoped_action_id: None,
-    scoped_app_id: None,
-    scoped_group_id: None,
-    scoped_item_id: None,
-    scoped_milestone_id: None,
-    scoped_project_id: None,
-    scoped_role_id: None,
-    scoped_user_id: None,
-    scoped_workspace_id: None
+    ..Default::default()
   };
   let instance_access_policy = AccessPolicy::create(&instance_access_policy_properties, &mut postgres_client).await?;
   let updated_access_policy_properties = EditableAccessPolicyProperties {

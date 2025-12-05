@@ -95,7 +95,7 @@ impl Session {
 
   pub async fn create<'a>(properties: &InitialSessionProperties<'a>, postgres_client: &mut deadpool_postgres::Client) -> Result<Self, SessionError> {
 
-    let query = include_str!("../queries/sessions/insert-session-row.sql");
+    let query = include_str!("../../queries/sessions/insert-session-row.sql");
     let parameters: &[&(dyn ToSql + Sync)] = &[
       &properties.user_id,
       &properties.expiration_date,
@@ -116,7 +116,7 @@ impl Session {
 
   pub async fn get_by_id(id: &Uuid, postgres_client: &mut deadpool_postgres::Client) -> Result<Session, SessionError> {
 
-    let query = include_str!("../queries/sessions/get-session-row-by-id.sql");
+    let query = include_str!("../../queries/sessions/get-session-row-by-id.sql");
     let row = match postgres_client.query_one(query, &[&id]).await {
 
       Ok(row) => row,

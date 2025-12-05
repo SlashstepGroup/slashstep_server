@@ -24,6 +24,7 @@ pub enum RoleParentResourceType {
   Group
 }
 
+#[derive(Debug, Clone)]
 pub struct Role {
   pub id: Uuid,
   pub name: String,
@@ -108,6 +109,29 @@ impl Role {
         Some(row) => row,
 
         None => return Err(RoleError::NotFoundError(name.to_string()))
+
+      },
+
+      Err(error) => return Err(RoleError::PostgresError(error))
+
+    };
+
+    let role = Role::from_row(&row);
+
+    return Ok(role);
+
+  }
+
+  pub async fn get_by_id(id: &Uuid, postgres_client: &mut deadpool_postgres::Client) -> Result<Role, RoleError> {
+
+    let query = include_str!("../../queries/roles/get-role-row-by-id.sql");
+    let row = match postgres_client.query_opt(query, &[&id]).await {
+
+      Ok(row) => match row {
+
+        Some(row) => row,
+
+        None => return Err(RoleError::NotFoundError(id.to_string()))
 
       },
 

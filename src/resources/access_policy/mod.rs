@@ -22,7 +22,7 @@ use serde::Serialize;
 use thiserror::Error;
 use uuid::Uuid;
 use crate::{
-  resources::{action::Action, item::{Item, ItemError}, project::{Project, ProjectError}}, utilities::slashstepql::{
+  resources::{action::{Action, ActionError}, app::{App, AppError, AppParentResourceType}, app_credential::{AppCredential, AppCredentialError}, item::{Item, ItemError}, milestone::{Milestone, MilestoneError, MilestoneParentResourceType}, project::{Project, ProjectError}, role::{Role, RoleError, RoleParentResourceType}}, utilities::slashstepql::{
     SlashstepQLError, 
     SlashstepQLFilterSanitizer, 
     SlashstepQLParameterType, 
@@ -40,7 +40,8 @@ pub const ALLOWED_QUERY_KEYS: &[&str] = &[
   "principal_app_id",
   "scoped_resource_type", 
   "scoped_action_id", 
-  "scoped_app_id", 
+  "scoped_app_id",
+  "scoped_app_credential_id",
   "scoped_group_id", 
   "scoped_item_id", 
   "scoped_milestone_id", 
@@ -59,7 +60,8 @@ pub const UUID_QUERY_KEYS: &[&str] = &[
   "principal_app_id",
   "scoped_action_id", 
   "scoped_app_id", 
-  "scoped_group_id", 
+  "scoped_group_id",
+  "scoped_app_credential_id",
   "scoped_item_id", 
   "scoped_milestone_id", 
   "scoped_project_id", 
@@ -70,9 +72,10 @@ pub const UUID_QUERY_KEYS: &[&str] = &[
 
 pub const DEFAULT_ACCESS_POLICY_LIST_LIMIT: i64 = 1000;
 
-#[derive(Debug, PartialEq, Eq, ToSql, FromSql, Clone, Copy, Serialize)]
+#[derive(Debug, PartialEq, Eq, ToSql, FromSql, Clone, Copy, Serialize, Default)]
 #[postgres(name = "permission_level")]
 pub enum AccessPolicyPermissionLevel {
+  #[default]
   None,
   User,
   Editor,
@@ -107,6 +110,9 @@ pub enum AccessPolicyError {
   #[error("A scoped resource ID is required for the {0} resource type.")]
   ScopedResourceIDMissingError(AccessPolicyScopedResourceType),
 
+  #[error("An ancestor resource of type {0} is required for this access policy.")]
+  OrphanedResourceError(AccessPolicyScopedResourceType),
+
   #[error("An access policy for action {0} already exists.")]
   ConflictError(Uuid),
 
@@ -126,7 +132,22 @@ pub enum AccessPolicyError {
   ProjectError(#[from] ProjectError),
 
   #[error(transparent)]
-  ItemError(#[from] ItemError)
+  ItemError(#[from] ItemError),
+
+  #[error(transparent)]
+  ActionError(#[from] ActionError),
+
+  #[error(transparent)]
+  AppError(#[from] AppError),
+
+  #[error(transparent)]
+  AppCredentialError(#[from] AppCredentialError),
+
+  #[error(transparent)]
+  RoleError(#[from] RoleError),
+
+  #[error(transparent)]
+  MilestoneError(#[from] MilestoneError)
 }
 
 impl FromStr for AccessPolicyPermissionLevel {
@@ -147,9 +168,10 @@ impl FromStr for AccessPolicyPermissionLevel {
 
 }
 
-#[derive(Debug, PartialEq, Eq, ToSql, FromSql, Clone, Copy, Serialize)]
+#[derive(Debug, PartialEq, Eq, ToSql, FromSql, Clone, Copy, Serialize, Default)]
 #[postgres(name = "inheritance_level")]
 pub enum AccessPolicyInheritanceLevel {
+  #[default]
   Disabled,
   Enabled,
   Required
@@ -182,9 +204,10 @@ impl FromStr for AccessPolicyInheritanceLevel {
 
 }
 
-#[derive(Debug, PartialEq, Eq, ToSql, FromSql, Serialize)]
+#[derive(Debug, Clone, PartialEq, Eq, ToSql, FromSql, Serialize, Default)]
 #[postgres(name = "scoped_resource_type")]
 pub enum AccessPolicyScopedResourceType {
+  #[default]
   Instance,
   Workspace,
   Project,
@@ -240,11 +263,12 @@ impl FromStr for AccessPolicyScopedResourceType {
 
 }
 
-#[derive(Debug, PartialEq, Eq, ToSql, FromSql, Serialize)]
+#[derive(Debug, PartialEq, Eq, ToSql, FromSql, Serialize, Default)]
 #[postgres(name = "principal_type")]
 pub enum AccessPolicyPrincipalType {
 
   /// A resource that identifies a user.
+  #[default]
   User,
 
   /// A resource that identifies multiple users, apps, and other groups.
@@ -287,7 +311,7 @@ impl FromStr for AccessPolicyPrincipalType {
 
 }
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct InitialAccessPolicyProperties {
 
   pub action_id: Uuid,
@@ -311,6 +335,8 @@ pub struct InitialAccessPolicyProperties {
   pub scoped_action_id: Option<Uuid>,
 
   pub scoped_app_id: Option<Uuid>,
+
+  pub scoped_app_credential_id: Option<Uuid>,
 
   pub scoped_group_id: Option<Uuid>,
 
@@ -368,6 +394,8 @@ pub struct AccessPolicy {
 
   pub scoped_app_id: Option<Uuid>,
 
+  pub scoped_app_credential_id: Option<Uuid>,
+
   pub scoped_group_id: Option<Uuid>,
 
   pub scoped_item_id: Option<Uuid>,
@@ -424,6 +452,7 @@ impl AccessPolicy {
       &initial_properties.scoped_resource_type,
       &initial_properties.scoped_action_id,
       &initial_properties.scoped_app_id,
+      &initial_properties.scoped_app_credential_id,
       &initial_properties.scoped_group_id,
       &initial_properties.scoped_item_id,
       &initial_properties.scoped_milestone_id,
@@ -466,6 +495,7 @@ impl AccessPolicy {
       scoped_resource_type: row.get("scoped_resource_type"),
       scoped_action_id: row.get("scoped_action_id"),
       scoped_app_id: row.get("scoped_app_id"),
+      scoped_app_credential_id: row.get("scoped_app_credential_id"),
       scoped_group_id: row.get("scoped_group_id"),
       scoped_item_id: row.get("scoped_item_id"),
       scoped_milestone_id: row.get("scoped_milestone_id"),
@@ -519,6 +549,7 @@ impl AccessPolicy {
       scoped_resource_type: row.get("scoped_resource_type"),
       scoped_action_id: row.get("scoped_action_id"),
       scoped_app_id: row.get("scoped_app_id"),
+      scoped_app_credential_id: row.get("scoped_app_credential_id"),
       scoped_group_id: row.get("scoped_group_id"),
       scoped_item_id: row.get("scoped_item_id"),
       scoped_milestone_id: row.get("scoped_milestone_id"),
@@ -743,106 +774,390 @@ impl AccessPolicy {
   pub async fn get_hierarchy(&self, postgres_client: &mut deadpool_postgres::Client) -> Result<ResourceHierarchy, AccessPolicyError> {
 
     let mut hierarchy: ResourceHierarchy = vec![];
+    let mut selected_resource_type: AccessPolicyScopedResourceType = self.scoped_resource_type.clone();
+    let mut selected_resource_id: Option<Uuid> = match self.scoped_resource_type {
+
+      AccessPolicyScopedResourceType::Instance => None,
+
+      AccessPolicyScopedResourceType::Action => self.scoped_action_id,
+
+      AccessPolicyScopedResourceType::App => self.scoped_app_id,
+
+      AccessPolicyScopedResourceType::AppCredential => self.scoped_app_credential_id,
+
+      AccessPolicyScopedResourceType::Group => self.scoped_group_id,
+
+      AccessPolicyScopedResourceType::Item => self.scoped_item_id,
+
+      AccessPolicyScopedResourceType::Milestone => self.scoped_milestone_id,
+
+      AccessPolicyScopedResourceType::Project => self.scoped_project_id,
+
+      AccessPolicyScopedResourceType::Role => self.scoped_role_id,
+
+      AccessPolicyScopedResourceType::User => self.scoped_user_id,
+
+      AccessPolicyScopedResourceType::Workspace => self.scoped_workspace_id
+
+    };
     
-    match self.scoped_resource_type {
+    loop {
 
-      AccessPolicyScopedResourceType::Instance => {},
+      match selected_resource_type {
 
-      // Access policy -> Workspace -> Instance
-      AccessPolicyScopedResourceType::Workspace => {
+        // Instance
+        AccessPolicyScopedResourceType::Instance => break,
 
-        let Some(scoped_workspace_id) = self.scoped_workspace_id else {
+        // Action -> (App | Instance)
+        AccessPolicyScopedResourceType::Action => {
 
-          return Err(AccessPolicyError::ScopedResourceIDMissingError(AccessPolicyScopedResourceType::Workspace));
+          let Some(action_id) = selected_resource_id else {
 
-        };
+            return Err(AccessPolicyError::ScopedResourceIDMissingError(AccessPolicyScopedResourceType::Action));
 
-        hierarchy.push((AccessPolicyScopedResourceType::Workspace, Some(scoped_workspace_id)));
+          };
 
-      },
+          hierarchy.push((AccessPolicyScopedResourceType::Action, Some(action_id)));
 
-      // Access policy -> Project -> Workspace -> Instance
-      AccessPolicyScopedResourceType::Project => {
+          let action = match Action::get_by_id(&action_id, postgres_client).await {
 
-        let Some(scoped_project_id) = self.scoped_project_id else {
+            Ok(action) => action,
 
-          return Err(AccessPolicyError::ScopedResourceIDMissingError(AccessPolicyScopedResourceType::Project));
+            Err(error) => match error {
 
-        };
+              ActionError::NotFoundError(_) => return Err(AccessPolicyError::OrphanedResourceError(AccessPolicyScopedResourceType::Action)),
 
-        hierarchy.push((AccessPolicyScopedResourceType::Project, Some(scoped_project_id)));
+              _ => return Err(AccessPolicyError::ActionError(error))
 
-        let project = Project::get_by_id(&scoped_project_id, postgres_client).await?;
+            }
 
-        hierarchy.push((AccessPolicyScopedResourceType::Workspace, Some(project.workspace_id)));
+          };
 
-      },
-      
-      // Access policy -> Item -> Project -> Workspace -> Instance
-      AccessPolicyScopedResourceType::Item => {
+          if let Some(app_id) = action.app_id {
 
-        let Some(scoped_item_id) = self.scoped_item_id else {
+            selected_resource_type = AccessPolicyScopedResourceType::App;
+            selected_resource_id = Some(app_id);
 
-          return Err(AccessPolicyError::ScopedResourceIDMissingError(AccessPolicyScopedResourceType::Item));
+          } else {
 
-        };
+            selected_resource_type = AccessPolicyScopedResourceType::Instance;
+            selected_resource_id = None;
 
-        hierarchy.push((AccessPolicyScopedResourceType::Item, Some(scoped_item_id)));
+          }
+ 
+        }
 
-        let item = Item::get_by_id(&scoped_item_id, postgres_client).await?;
+        // Workspace -> Instance
+        AccessPolicyScopedResourceType::Workspace => {
 
-        hierarchy.push((AccessPolicyScopedResourceType::Project, Some(item.project_id)));
+          let Some(scoped_workspace_id) = self.scoped_workspace_id else {
 
-        let project = Project::get_by_id(&item.project_id, postgres_client).await?;
+            return Err(AccessPolicyError::ScopedResourceIDMissingError(AccessPolicyScopedResourceType::Workspace));
 
-        hierarchy.push((AccessPolicyScopedResourceType::Workspace, Some(project.workspace_id)));
+          };
 
-      },
+          hierarchy.push((AccessPolicyScopedResourceType::Workspace, Some(scoped_workspace_id)));
 
-      // Access policy -> Action -> (App? -> (Workspace | User)?)? -> Instance
-      AccessPolicyScopedResourceType::Action => {
+        },
 
-        let Some(scoped_action_id) = self.scoped_action_id else {
+        // Project -> Workspace
+        AccessPolicyScopedResourceType::Project => {
 
-          return Err(AccessPolicyError::ScopedResourceIDMissingError(AccessPolicyScopedResourceType::Action));
+          let Some(scoped_project_id) = self.scoped_project_id else {
 
-        };
+            return Err(AccessPolicyError::ScopedResourceIDMissingError(AccessPolicyScopedResourceType::Project));
 
-        hierarchy.push((AccessPolicyScopedResourceType::Action, Some(scoped_action_id)));
+          };
 
-        let action = Action::get_by_id(&scoped_action_id, postgres_client).await?;
+          hierarchy.push((AccessPolicyScopedResourceType::Project, Some(scoped_project_id)));
 
-        if let Some(scoped_app_id) = action.app_id {
+          let project = match Project::get_by_id(&scoped_project_id, postgres_client).await {
 
-          hierarchy.push((AccessPolicyScopedResourceType::App, Some(scoped_app_id)));
+            Ok(project) => project,
+            
+            Err(error) => match error {
 
-          let app = App::get_by_id(&scoped_app_id, postgres_client).await?;
+              ProjectError::NotFoundError(_) => return Err(AccessPolicyError::OrphanedResourceError(AccessPolicyScopedResourceType::Project)),
 
-          match app.parent_resource_type {
+              _ => return Err(AccessPolicyError::ProjectError(error))
 
-            AppParentResourceType::Instance => {},
+            }
 
-            AppParentResourceType::Workspace => {
+          };
 
-              let Some(scoped_workspace_id) = app.parent_workspace_id else {
+          selected_resource_type = AccessPolicyScopedResourceType::Workspace;
+          selected_resource_id = Some(project.workspace_id);
 
-                return Err(AccessPolicyError::ScopedResourceIDMissingError(AppParentResourceType::Workspace));
+        },
+
+        // Item -> Project
+        AccessPolicyScopedResourceType::Item => {
+
+          let Some(scoped_item_id) = self.scoped_item_id else {
+
+            return Err(AccessPolicyError::ScopedResourceIDMissingError(AccessPolicyScopedResourceType::Item));
+
+          };
+
+          hierarchy.push((AccessPolicyScopedResourceType::Item, Some(scoped_item_id)));
+
+          let item = Item::get_by_id(&scoped_item_id, postgres_client).await?;
+
+          selected_resource_type = AccessPolicyScopedResourceType::Project;
+          selected_resource_id = Some(item.project_id);
+
+        },
+
+        // User -> Instance
+        AccessPolicyScopedResourceType::User => {
+
+          let Some(scoped_user_id) = self.scoped_user_id else {
+
+            return Err(AccessPolicyError::ScopedResourceIDMissingError(AccessPolicyScopedResourceType::User));
+
+          };
+
+          hierarchy.push((AccessPolicyScopedResourceType::User, Some(scoped_user_id)));
+
+        },
+
+        // Role -> (Project | Workspace | Group | Instance)
+        AccessPolicyScopedResourceType::Role => {
+
+          let Some(scoped_role_id) = self.scoped_role_id else {
+
+            return Err(AccessPolicyError::ScopedResourceIDMissingError(AccessPolicyScopedResourceType::Role));
+
+          };
+
+          hierarchy.push((AccessPolicyScopedResourceType::Role, Some(scoped_role_id)));
+
+          let role = match Role::get_by_id(&scoped_role_id, postgres_client).await {
+
+            Ok(role) => role,
+
+            Err(error) => match error {
+
+              RoleError::NotFoundError(_) => return Err(AccessPolicyError::OrphanedResourceError(AccessPolicyScopedResourceType::Role)),
+
+              _ => return Err(AccessPolicyError::RoleError(error))
+
+            }
+
+          };
+
+          match role.parent_resource_type {
+
+            RoleParentResourceType::Instance => {
+
+              selected_resource_type = AccessPolicyScopedResourceType::Instance;
+              selected_resource_id = None;
+
+            },
+
+            RoleParentResourceType::Workspace => {
+
+              let Some(workspace_id) = role.parent_workspace_id else {
+
+                return Err(AccessPolicyError::ScopedResourceIDMissingError(AccessPolicyScopedResourceType::Workspace));
 
               };
 
-              hierarchy.push((AccessPolicyScopedResourceType::Workspace, Some(app.parent_workspace_id)));
+              selected_resource_type = AccessPolicyScopedResourceType::Workspace;
+              selected_resource_id = Some(workspace_id);
+
+            },
+
+            RoleParentResourceType::Project => {
+
+              let Some(project_id) = role.parent_project_id else {
+
+                return Err(AccessPolicyError::ScopedResourceIDMissingError(AccessPolicyScopedResourceType::Project));
+
+              };
+
+              selected_resource_type = AccessPolicyScopedResourceType::Project;
+              selected_resource_id = Some(project_id);
+
+            },
+
+            RoleParentResourceType::Group => {
+
+              let Some(group_id) = role.parent_group_id else {
+
+                return Err(AccessPolicyError::ScopedResourceIDMissingError(AccessPolicyScopedResourceType::Group));
+
+              };
+
+              selected_resource_type = AccessPolicyScopedResourceType::Group;
+              selected_resource_id = Some(group_id);
+
+            }
+
+          }
+
+        },
+
+        // Group -> Instance
+        AccessPolicyScopedResourceType::Group => {
+
+          let Some(group_id) = selected_resource_id else {
+
+            return Err(AccessPolicyError::ScopedResourceIDMissingError(AccessPolicyScopedResourceType::Group));
+
+          };
+
+          hierarchy.push((AccessPolicyScopedResourceType::Group, Some(group_id)));
+
+          selected_resource_type = AccessPolicyScopedResourceType::Instance;
+          selected_resource_id = None;
+
+        }
+
+        // App -> (Workspace | User | Instance)
+        AccessPolicyScopedResourceType::App => {
+
+          let Some(app_id) = selected_resource_id else {
+
+            return Err(AccessPolicyError::ScopedResourceIDMissingError(AccessPolicyScopedResourceType::App));
+
+          };
+
+          hierarchy.push((AccessPolicyScopedResourceType::App, Some(app_id)));
+
+          let app = match App::get_by_id(&app_id, postgres_client).await {
+
+            Ok(app) => app,
+
+            Err(error) => match error {
+
+              AppError::NotFoundError(_) => return Err(AccessPolicyError::OrphanedResourceError(AccessPolicyScopedResourceType::App)),
+
+              _ => return Err(AccessPolicyError::AppError(error))
+
+            }
+
+          };
+
+          match app.parent_resource_type {
+
+            AppParentResourceType::Instance => {
+
+              selected_resource_type = AccessPolicyScopedResourceType::Instance;
+              selected_resource_id = None;
+
+            },
+
+            AppParentResourceType::Workspace => {
+
+              let Some(workspace_id) = app.parent_workspace_id else {
+
+                return Err(AccessPolicyError::ScopedResourceIDMissingError(AccessPolicyScopedResourceType::Workspace));
+
+              };
+
+              selected_resource_type = AccessPolicyScopedResourceType::Workspace;
+              selected_resource_id = Some(workspace_id);
 
             },
 
             AppParentResourceType::User => {
 
-              let Some(scoped_user_id) = app.parent_user_id else {
+              let Some(user_id) = app.parent_user_id else {
 
-                return Err(AccessPolicyError::ScopedResourceIDMissingError(AppParentResourceType::User));
+                return Err(AccessPolicyError::ScopedResourceIDMissingError(AccessPolicyScopedResourceType::User));
 
               };
 
-              hierarchy.push((AccessPolicyScopedResourceType::User, Some(app.parent_user_id)));
+              selected_resource_type = AccessPolicyScopedResourceType::User;
+              selected_resource_id = Some(user_id);
+
+            }
+
+          }
+
+        }
+
+        // AppCredential -> App
+        AccessPolicyScopedResourceType::AppCredential => {
+
+          let Some(app_credential_id) = selected_resource_id else {
+
+            return Err(AccessPolicyError::ScopedResourceIDMissingError(AccessPolicyScopedResourceType::AppCredential));
+
+          };
+
+          hierarchy.push((AccessPolicyScopedResourceType::AppCredential, Some(app_credential_id)));
+
+          let app_credential = match AppCredential::get_by_id(&app_credential_id, postgres_client).await {
+
+            Ok(app_credential) => app_credential,
+
+            Err(error) => match error {
+
+              AppCredentialError::NotFoundError(_) => return Err(AccessPolicyError::OrphanedResourceError(AccessPolicyScopedResourceType::AppCredential)),
+
+              _ => return Err(AccessPolicyError::AppCredentialError(error))
+
+            }
+
+          };
+
+          selected_resource_type = AccessPolicyScopedResourceType::App;
+          selected_resource_id = Some(app_credential.app_id);
+
+        }
+
+        // Milestone -> (Project | Workspace)
+        AccessPolicyScopedResourceType::Milestone => {
+
+          let Some(milestone_id) = selected_resource_id else {
+
+            return Err(AccessPolicyError::ScopedResourceIDMissingError(AccessPolicyScopedResourceType::Milestone));
+
+          };
+
+          hierarchy.push((AccessPolicyScopedResourceType::Milestone, Some(milestone_id)));
+
+          let milestone = match Milestone::get_by_id(&milestone_id, postgres_client).await {
+
+            Ok(milestone) => milestone,
+
+            Err(error) => match error {
+
+              MilestoneError::NotFoundError(_) => return Err(AccessPolicyError::OrphanedResourceError(AccessPolicyScopedResourceType::Milestone)),
+
+              _ => return Err(AccessPolicyError::MilestoneError(error))
+
+            }
+
+          };
+
+          match milestone.parent_resource_type {
+
+            MilestoneParentResourceType::Project => {
+
+              let Some(project_id) = milestone.parent_project_id else {
+
+                return Err(AccessPolicyError::ScopedResourceIDMissingError(AccessPolicyScopedResourceType::Project));
+
+              };
+
+              selected_resource_type = AccessPolicyScopedResourceType::Project;
+              selected_resource_id = Some(project_id);
+
+            },
+
+            MilestoneParentResourceType::Workspace => {
+
+              let Some(workspace_id) = milestone.parent_workspace_id else {
+
+                return Err(AccessPolicyError::ScopedResourceIDMissingError(AccessPolicyScopedResourceType::Workspace));
+
+              };
+
+              selected_resource_type = AccessPolicyScopedResourceType::Workspace;
+              selected_resource_id = Some(workspace_id);
 
             }
 
@@ -851,37 +1166,7 @@ impl AccessPolicy {
         }
 
       }
-
-      // Access policy -> User -> Instance
-      AccessPolicyScopedResourceType::User => {
-
-      }
       
-      // Access policy -> Role -> ((Project -> Workspace) | Workspace)? -> Instance
-      AccessPolicyScopedResourceType::Role => {
-
-      }
-
-      // Access policy -> Group -> Instance
-      AccessPolicyScopedResourceType::Group => {
-
-      }
-
-      // Access policy -> App -> ((Workspace | User)?)? -> Instance
-      AccessPolicyScopedResourceType::App => {
-
-      }
-
-      // Access policy -> AppCredential -> App -> ((Workspace | User)?)? -> Instance
-      AccessPolicyScopedResourceType::AppCredential => {
-
-      }
-
-      // Access policy -> Milestone -> Workspace -> Instance
-      AccessPolicyScopedResourceType::Milestone => {
-
-      }
-
     }
 
     hierarchy.push((AccessPolicyScopedResourceType::Instance, None));
