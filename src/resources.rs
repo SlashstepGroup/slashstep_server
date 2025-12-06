@@ -11,3 +11,7 @@ pub mod project;
 pub mod role;
 pub mod user;
 pub mod workspace;
+pub mod server_log_entry;
+pub mod http_transaction;
+pub mod session;
+pub mod role_memberships;
