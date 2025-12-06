@@ -1,6 +1,6 @@
-use std::sync::Arc;
+use std::{sync::Arc};
 
-use anyhow::Result;
+use anyhow::{Result};
 use chrono::{Duration, Utc};
 use deadpool_postgres::tokio_postgres;
 use local_ip_address::local_ip;
