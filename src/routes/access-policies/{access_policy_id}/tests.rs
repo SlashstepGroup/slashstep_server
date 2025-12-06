@@ -15,8 +15,29 @@ async fn get_access_policy_by_id() -> Result<(), std::io::Error> {
 }
 
 /// Verifies that the router can return a 400 if the access policy ID is not a UUID.
-#[test]
-fn verify_uuid_when_getting_access_policy_by_id() {
+#[tokio::test]
+async fn verify_uuid_when_getting_access_policy_by_id() -> Result<(), SlashstepServerError> {
+
+  let test_environment = TestEnvironment::new().await?;
+  let mut postgres_client = test_environment.postgres_pool.get().await?;
+  test_environment.initialize_required_tables().await?;
+  let _ = initialize_pre_defined_actions(&mut postgres_client).await?;
+  let _ = initialize_pre_defined_roles(&mut postgres_client).await?;
+  let state = AppState {
+    database_pool: test_environment.postgres_pool.clone(),
+  };
+
+  let router = super::get_router(state.clone())
+    .layer(middleware::from_fn_with_state(state.clone(), http_request_middleware::create_http_request))
+    .with_state(state)
+    .into_make_service_with_connect_info::<SocketAddr>();
+  let test_server = TestServer::new(router)?;
+
+  let response = test_server.get("/access-policies/not-a-uuid")
+    .await;
+  
+  assert_eq!(response.status_code(), 400);
+  return Ok(());
 
 }
 
