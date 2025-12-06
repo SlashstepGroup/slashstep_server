@@ -166,7 +166,8 @@ async fn patch_access_policy() {
 
 }
 
-async fn delete_access_policy(
+#[axum::debug_handler]
+async fn handle_delete_access_policy_request(
   Path(access_policy_id): Path<String>,
   State(state): State<AppState>, 
   Extension(http_transaction): Extension<Arc<HTTPTransaction>>,
@@ -289,7 +290,7 @@ pub fn get_router(state: AppState) -> Router<AppState> {
   let router = Router::<AppState>::new()
     .route("/access-policies/{access_policy_id}", axum::routing::get(handle_get_access_policy_request))
     .route("/access-policies/{access_policy_id}", axum::routing::patch(patch_access_policy))
-    .route("/access-policies/{access_policy_id}", axum::routing::delete(delete_access_policy))
+    .route("/access-policies/{access_policy_id}", axum::routing::delete(handle_delete_access_policy_request))
     .layer(axum::middleware::from_fn_with_state(state, authentication_middleware::authenticate_user));
   return router;
 
