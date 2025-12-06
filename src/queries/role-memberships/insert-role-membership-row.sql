@@ -1,0 +1,1 @@
+insert into role_memberships (role_id, principal_type, principal_user_id, principal_group_id, principal_app_id) values ($1, $2, $3, $4, $5) returning *;
