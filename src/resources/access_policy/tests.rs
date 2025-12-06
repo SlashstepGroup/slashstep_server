@@ -18,7 +18,7 @@ use crate::{
     AccessPolicyScopedResourceType, 
     DEFAULT_ACCESS_POLICY_LIST_LIMIT, 
     EditableAccessPolicyProperties, 
-    InitialAccessPolicyProperties
+    InitialAccessPolicyProperties, Principal
   }, tests::TestEnvironment
 };
 use anyhow::{anyhow, Result};
@@ -299,7 +299,7 @@ async fn list_access_policies_by_hierarchy() -> Result<()> {
   let instance_access_policy = AccessPolicy::create(&instance_access_policy_properties, &mut postgres_client).await?;
   let access_policy_hierarchy = instance_access_policy.get_hierarchy(&mut postgres_client).await?;
 
-  let retrieved_access_policies = AccessPolicy::list_by_hierarchy(&access_policy_hierarchy, &action.id, &mut postgres_client).await?;
+  let retrieved_access_policies = AccessPolicy::list_by_hierarchy(&Principal::User(user.id), &action.id, &access_policy_hierarchy, &mut postgres_client).await?;
 
   assert_eq!(retrieved_access_policies.len(), access_policy_hierarchy.len());
   

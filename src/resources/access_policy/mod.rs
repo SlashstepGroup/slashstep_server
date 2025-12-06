@@ -72,7 +72,7 @@ pub const UUID_QUERY_KEYS: &[&str] = &[
 
 pub const DEFAULT_ACCESS_POLICY_LIST_LIMIT: i64 = 1000;
 
-#[derive(Debug, PartialEq, Eq, ToSql, FromSql, Clone, Copy, Serialize, Deserialize, Default)]
+#[derive(Debug, PartialEq, Eq, ToSql, FromSql, Clone, Copy, Serialize, Deserialize, Default, PartialOrd)]
 #[postgres(name = "permission_level")]
 pub enum AccessPolicyPermissionLevel {
   #[default]
@@ -311,6 +311,19 @@ impl FromStr for AccessPolicyPrincipalType {
 
 }
 
+#[derive(Debug, Clone)]
+pub enum Principal {
+
+  User(Uuid),
+
+  Group(Uuid),
+
+  Role(Uuid),
+
+  App(Uuid)
+
+}
+
 #[derive(Debug, Default)]
 pub struct InitialAccessPolicyProperties {
 
@@ -354,6 +367,8 @@ pub struct InitialAccessPolicyProperties {
 
 }
 
+#[derive(Debug, Deserialize, Clone)]
+#[serde(deny_unknown_fields)]
 pub struct EditableAccessPolicyProperties {
 
   permission_level: Option<AccessPolicyPermissionLevel>,
@@ -680,7 +695,7 @@ impl AccessPolicy {
   }
 
   /// Returns a list of access policies based on a hierarchy.
-  pub async fn list_by_hierarchy(resource_hierarchy: &ResourceHierarchy, action_id: &Uuid, postgres_client: &mut deadpool_postgres::Client) -> Result<Vec<Self>, AccessPolicyError> {
+  pub async fn list_by_hierarchy(principal: &Principal, action_id: &Uuid, resource_hierarchy: &ResourceHierarchy, postgres_client: &mut deadpool_postgres::Client) -> Result<Vec<Self>, AccessPolicyError> {
 
     let mut query_clauses: Vec<String> = Vec::new();
 
@@ -706,8 +721,16 @@ impl AccessPolicy {
 
     // This will turn the query into something like:
     // action_id = $1 and (scoped_resource_type = 'Instance' or scoped_workspace_id = $2 or scoped_project_id = $3 or scoped_milestone_id = $4 or scoped_item_id = $5)
+    let principal_clause = match principal {
+
+      Principal::User(user_id) => format!("principal_user_id = '{}'", user_id),
+      Principal::Group(group_id) => format!("principal_group_id = '{}'", group_id),
+      Principal::Role(role_id) => format!("principal_role_id = '{}'", role_id),
+      Principal::App(app_id) => format!("principal_app_id = '{}'", app_id)
+
+    };
     let mut query_filter = String::new();
-    query_filter.push_str(format!("action_id = {} and (", quote_literal(&action_id.to_string())).as_str());
+    query_filter.push_str(format!("{} and action_id = {} and (", principal_clause, quote_literal(&action_id.to_string())).as_str());
     for i in 0..query_clauses.len() {
 
       if i > 0 {
@@ -737,7 +760,7 @@ impl AccessPolicy {
 
   }
 
-  fn add_parameter<T: ToSql + Sync + Clone + 'static>(mut parameter_boxes: Vec<Box<dyn ToSql + Sync>>, mut query: String, key: &str, parameter_value: &Option<T>) -> (Vec<Box<dyn ToSql + Sync>>, String) {
+  fn add_parameter<T: ToSql + Sync + Clone + Send + 'static>(mut parameter_boxes: Vec<Box<dyn ToSql + Sync + Send>>, mut query: String, key: &str, parameter_value: &Option<T>) -> (Vec<Box<dyn ToSql + Sync + Send>>, String) {
 
     if let Some(parameter_value) = parameter_value.clone() {
 
@@ -754,7 +777,7 @@ impl AccessPolicy {
   pub async fn update(&self, properties: &EditableAccessPolicyProperties, postgres_client: &mut deadpool_postgres::Client) -> Result<Self, AccessPolicyError> {
 
     let query = String::from("update access_policies set ");
-    let parameter_boxes: Vec<Box<dyn ToSql + Sync>> = Vec::new();
+    let parameter_boxes: Vec<Box<dyn ToSql + Sync + Send>> = Vec::new();
 
     postgres_client.query("begin;", &[]).await?;
     let (parameter_boxes, query) = Self::add_parameter(parameter_boxes, query, "permission_level", &properties.permission_level);
@@ -762,7 +785,7 @@ impl AccessPolicy {
 
     query.push_str(format!(" where id = ${} returning *;", parameter_boxes.len() + 1).as_str());
     parameter_boxes.push(Box::new(&self.id));
-    let parameters = parameter_boxes.iter().map(|parameter| parameter.as_ref()).collect::<Vec<&(dyn ToSql + Sync)>>();
+    let parameters: Vec<&(dyn ToSql + Sync)> = parameter_boxes.iter().map(|parameter| parameter.as_ref() as &(dyn ToSql + Sync)).collect();
     let row = postgres_client.query_one(&query, &parameters).await?;
     postgres_client.query("commit;", &[]).await?;
 
