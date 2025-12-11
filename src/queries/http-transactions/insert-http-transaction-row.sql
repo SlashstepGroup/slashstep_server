@@ -1,15 +1,15 @@
-insert into http_requests (
+INSERT INTO http_transactions (
   method,
   url,
   ip_address,
   headers,
   status_code,
   expiration_date
-) values (
+) VALUES (
   $1,
   $2,
   $3,
   $4,
   $5,
   $6
-) returning *;
+) RETURNING *;

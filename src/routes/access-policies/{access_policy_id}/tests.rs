@@ -18,8 +18,7 @@ use crate::{
   resources::{
     access_policy::{
       AccessPolicy, 
-      AccessPolicyError, 
-      AccessPolicyInheritanceLevel, 
+      AccessPolicyError,
       AccessPolicyPermissionLevel, 
       AccessPolicyPrincipalType, 
       AccessPolicyResourceType, 
@@ -58,7 +57,7 @@ async fn verify_returned_access_policy_by_id() -> Result<(), SlashstepServerErro
   let access_policy_properties = InitialAccessPolicyProperties {
     action_id: get_access_policies_action.id,
     permission_level: AccessPolicyPermissionLevel::User,
-    inheritance_level: AccessPolicyInheritanceLevel::Enabled,
+    is_inheritance_enabled: true,
     principal_type: AccessPolicyPrincipalType::User,
     principal_user_id: Some(user.id),
     scoped_resource_type: AccessPolicyResourceType::Instance,
@@ -76,7 +75,7 @@ async fn verify_returned_access_policy_by_id() -> Result<(), SlashstepServerErro
   assert_eq!(response_access_policy.id, access_policy.id);
   assert_eq!(response_access_policy.action_id, access_policy.action_id);
   assert_eq!(response_access_policy.permission_level, access_policy.permission_level);
-  assert_eq!(response_access_policy.inheritance_level, access_policy.inheritance_level);
+  assert_eq!(response_access_policy.is_inheritance_enabled, access_policy.is_inheritance_enabled);
   assert_eq!(response_access_policy.principal_type, access_policy.principal_type);
   assert_eq!(response_access_policy.principal_user_id, access_policy.principal_user_id);
   assert_eq!(response_access_policy.principal_group_id, access_policy.principal_group_id);
@@ -246,7 +245,7 @@ async fn verify_successful_deletion_when_deleting_access_policy_by_id() -> Resul
   let access_policy_properties = InitialAccessPolicyProperties {
     action_id: delete_access_policies_action.id,
     permission_level: AccessPolicyPermissionLevel::Editor,
-    inheritance_level: AccessPolicyInheritanceLevel::Enabled,
+    is_inheritance_enabled: true,
     principal_type: AccessPolicyPrincipalType::User,
     principal_user_id: Some(user.id),
     scoped_resource_type: AccessPolicyResourceType::Instance,
@@ -419,7 +418,7 @@ async fn verify_successful_patch_access_policy_by_id() -> Result<(), SlashstepSe
   let access_policy_properties = InitialAccessPolicyProperties {
     action_id: get_access_policies_action.id,
     permission_level: AccessPolicyPermissionLevel::Editor,
-    inheritance_level: AccessPolicyInheritanceLevel::Enabled,
+    is_inheritance_enabled: true,
     principal_type: AccessPolicyPrincipalType::User,
     principal_user_id: Some(user.id),
     scoped_resource_type: AccessPolicyResourceType::Instance,
@@ -431,7 +430,7 @@ async fn verify_successful_patch_access_policy_by_id() -> Result<(), SlashstepSe
     .add_cookie(Cookie::new("sessionToken", format!("Bearer {}", session_token)))
     .json(&serde_json::json!({
       "permission_level": "User",
-      "inheritance_level": "Disabled"
+      "is_inheritance_enabled": false
     }))
     .await;
   
@@ -441,7 +440,7 @@ async fn verify_successful_patch_access_policy_by_id() -> Result<(), SlashstepSe
   assert_eq!(response_access_policy.id, access_policy.id);
   assert_eq!(response_access_policy.action_id, access_policy.action_id);
   assert_eq!(response_access_policy.permission_level, AccessPolicyPermissionLevel::User);
-  assert_eq!(response_access_policy.inheritance_level, AccessPolicyInheritanceLevel::Disabled);
+  assert_eq!(response_access_policy.is_inheritance_enabled, false);
   assert_eq!(response_access_policy.principal_type, access_policy.principal_type);
   assert_eq!(response_access_policy.principal_user_id, access_policy.principal_user_id);
   assert_eq!(response_access_policy.principal_group_id, access_policy.principal_group_id);
@@ -540,7 +539,7 @@ async fn verify_request_body_json_when_patching_access_policy_by_id() -> Result<
     .add_header("Content-Type", "application/json")
     .json(&serde_json::json!({
       "permission_level": "Super Duper Admin",
-      "inheritance_level": "Required",
+      "is_inheritance_enabled": "true",
       "principal_type": "User2",
     }))
     .await;
@@ -573,7 +572,7 @@ async fn verify_uuid_when_patching_access_policy_by_id() -> Result<(), Slashstep
     .add_header("Content-Type", "application/json")
     .json(&serde_json::json!({
       "permission_level": "Editor",
-      "inheritance_level": "Disabled"
+      "is_inheritance_enabled": false
     }))
     .await;
   
@@ -606,7 +605,7 @@ async fn verify_authentication_when_patching_access_policy_by_id() -> Result<(),
   let access_policy_properties = InitialAccessPolicyProperties {
     action_id: get_access_policies_action.id,
     permission_level: AccessPolicyPermissionLevel::Editor,
-    inheritance_level: AccessPolicyInheritanceLevel::Enabled,
+    is_inheritance_enabled: true,
     principal_type: AccessPolicyPrincipalType::User,
     principal_user_id: Some(user.id),
     scoped_resource_type: AccessPolicyResourceType::Instance,
@@ -617,7 +616,7 @@ async fn verify_authentication_when_patching_access_policy_by_id() -> Result<(),
   let response = test_server.patch(&format!("/access-policies/{}", access_policy.id))
     .json(&serde_json::json!({
       "permission_level": "User",
-      "inheritance_level": "Disabled"
+      "is_inheritance_enabled": false
     }))
     .await;
   
@@ -654,7 +653,7 @@ async fn verify_permission_when_patching_access_policy() -> Result<(), Slashstep
   let access_policy_properties = InitialAccessPolicyProperties {
     action_id: update_access_policies_action.id,
     permission_level: AccessPolicyPermissionLevel::None,
-    inheritance_level: AccessPolicyInheritanceLevel::Enabled,
+    is_inheritance_enabled: true,
     principal_type: AccessPolicyPrincipalType::User,
     principal_user_id: Some(user.id),
     scoped_resource_type: AccessPolicyResourceType::Instance,
@@ -666,7 +665,7 @@ async fn verify_permission_when_patching_access_policy() -> Result<(), Slashstep
     .add_cookie(Cookie::new("sessionToken", format!("Bearer {}", session_token)))
     .json(&serde_json::json!({
       "permission_level": "User",
-      "inheritance_level": "Disabled"
+      "is_inheritance_enabled": false
     }))
     .await;
   
@@ -698,7 +697,7 @@ async fn verify_access_policy_exists_when_patching_access_policy() -> Result<(),
   let response = test_server.patch(&format!("/access-policies/{}", Uuid::now_v7()))
     .json(&serde_json::json!({
       "permission_level": "User",
-      "inheritance_level": "Disabled"
+      "is_inheritance_enabled": false
     }))
     .await;
   

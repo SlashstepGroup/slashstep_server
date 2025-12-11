@@ -9,27 +9,27 @@ DO $$
       );
     END IF;
 
-    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'inheritance_level') THEN
-      CREATE TYPE inheritance_level AS ENUM (
-        'Disabled',
-        'Enabled',
-        'Required'
-      );
-    END IF;
-
     if not exists (SELECT 1 FROM pg_type WHERE typname = 'access_policy_resource_type') THEN
       CREATE TYPE access_policy_resource_type AS ENUM (
-        'Instance',
-        'Workspace',
-        'Project',
-        'Item',
         'Action',
-        'User',
-        'Role',
-        'Group',
+        'ActionLogEntry',
         'App',
+        'AppAuthorization',
+        'AppAuthorizationCredential',
         'AppCredential',
-        'Milestone'
+        'Group',
+        'GroupMembership',
+        'HTTPTransaction',
+        'Instance',
+        'Item',
+        'Milestone',
+        'Project',
+        'Role',
+        'RoleMembership',
+        'ServerLogEntry',
+        'Session',
+        'User',
+        'Workspace'
       );
     END IF;
 
@@ -54,23 +54,29 @@ DO $$
 
       /* Scopes */
       scoped_resource_type access_policy_resource_type not null,
-      scoped_workspace_id UUID references workspaces(id) on delete cascade,
-      scoped_project_id UUID references projects(id) on delete cascade,
-      scoped_item_id UUID references items(id) on delete cascade,
       scoped_action_id UUID references actions(id) on delete cascade,
-      scoped_user_id UUID references users(id) on delete cascade,
-      scoped_role_id UUID references roles(id) on delete cascade,
-      scoped_group_id UUID references groups(id) on delete cascade,
+      scoped_action_log_entry_id UUID references action_log_entries(id) on delete cascade,
       scoped_app_id UUID references apps(id) on delete cascade,
-      scoped_app_credential_id UUID references app_credentials(id) on delete cascade,
       scoped_app_authorization_id UUID references app_authorizations(id) on delete cascade,
       scoped_app_authorization_credential_id UUID references app_authorization_credentials(id) on delete cascade,
+      scoped_app_credential_id UUID references app_credentials(id) on delete cascade,
+      scoped_group_id UUID references groups(id) on delete cascade,
+      scoped_group_membership_id UUID references group_memberships(id) on delete cascade,
+      scoped_http_transaction_id UUID references http_transactions(id) on delete cascade,
+      scoped_item_id UUID references items(id) on delete cascade,
       scoped_milestone_id UUID references milestones(id) on delete cascade,
+      scoped_project_id UUID references projects(id) on delete cascade,
+      scoped_role_id UUID references roles(id) on delete cascade,
+      scoped_role_membership_id UUID references role_memberships(id) on delete cascade,
+      scoped_server_log_entry_id UUID references server_log_entries(id) on delete cascade,
+      scoped_session_id UUID references sessions(id) on delete cascade,
+      scoped_user_id UUID references users(id) on delete cascade,
+      scoped_workspace_id UUID references workspaces(id) on delete cascade,
 
       /* Permissions */
       action_id UUID not null references actions(id) on delete cascade,
       permission_level permission_level not null,
-      inheritance_level inheritance_level not null,
+      is_inheritance_enabled BOOLEAN not null,
 
       /* Constraints */
       constraint one_principal_type check (
