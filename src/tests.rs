@@ -126,10 +126,10 @@ impl TestEnvironment {
     let access_policy_properties = InitialAccessPolicyProperties {
       action_id: action.id,
       permission_level: crate::resources::access_policy::AccessPolicyPermissionLevel::User,
-      inheritance_level: crate::resources::access_policy::AccessPolicyInheritanceLevel::Enabled,
+      is_inheritance_enabled: true,
       principal_type: crate::resources::access_policy::AccessPolicyPrincipalType::User,
       principal_user_id: Some(user.id),
-      scoped_resource_type: crate::resources::access_policy::AccessPolicyScopedResourceType::Instance,
+      scoped_resource_type: crate::resources::access_policy::AccessPolicyResourceType::Instance,
       ..Default::default()
     };
 

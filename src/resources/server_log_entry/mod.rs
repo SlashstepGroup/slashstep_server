@@ -44,8 +44,8 @@ pub struct ServerLogEntry {
   /// The message of the server log entry.
   pub message: String,
 
-  /// The HTTP request ID of the server log entry, if applicable.
-  pub http_request_id: Option<Uuid>,
+  /// The HTTP transaction ID of the server log entry, if applicable.
+  pub http_transaction_id: Option<Uuid>,
 
   /// The level of the server log entry.
   pub level: ServerLogEntryLevel
@@ -58,7 +58,7 @@ pub struct InitialServerLogEntryProperties<'a> {
   pub message: &'a str,
 
   /// The HTTP request ID of the server log entry, if applicable.
-  pub http_request_id: Option<&'a Uuid>,
+  pub http_transaction_id: Option<&'a Uuid>,
 
   /// The level of the server log entry.
   pub level: &'a ServerLogEntryLevel
@@ -67,61 +67,61 @@ pub struct InitialServerLogEntryProperties<'a> {
 
 impl ServerLogEntry {
 
-  pub async fn critical(message: &str, http_request_id: Option<&Uuid>, postgres_client: &mut deadpool_postgres::Client) -> Result<Self, ServerLogEntryError> {
+  pub async fn critical(message: &str, http_transaction_id: Option<&Uuid>, postgres_client: &mut deadpool_postgres::Client) -> Result<Self, ServerLogEntryError> {
 
     let level = &ServerLogEntryLevel::Critical;
-    let properties = InitialServerLogEntryProperties { message, http_request_id, level };
+    let properties = InitialServerLogEntryProperties { message, http_transaction_id, level };
     let server_log_entry_result = ServerLogEntry::create(&properties, postgres_client, true).await;
     return server_log_entry_result;
 
   }
 
-  pub async fn trace(message: &str, http_request_id: Option<&Uuid>, postgres_client: &mut deadpool_postgres::Client) -> Result<Self, ServerLogEntryError> {
+  pub async fn trace(message: &str, http_transaction_id: Option<&Uuid>, postgres_client: &mut deadpool_postgres::Client) -> Result<Self, ServerLogEntryError> {
 
     let level = &ServerLogEntryLevel::Trace;
-    let properties = InitialServerLogEntryProperties { message, http_request_id, level };
+    let properties = InitialServerLogEntryProperties { message, http_transaction_id, level };
     let server_log_entry_result = ServerLogEntry::create(&properties, postgres_client, true).await;
     return server_log_entry_result;
 
   }
 
-  pub async fn info(message: &str, http_request_id: Option<&Uuid>, postgres_client: &mut deadpool_postgres::Client) -> Result<Self, ServerLogEntryError> {
+  pub async fn info(message: &str, http_transaction_id: Option<&Uuid>, postgres_client: &mut deadpool_postgres::Client) -> Result<Self, ServerLogEntryError> {
 
     let level = &ServerLogEntryLevel::Info;
-    let properties = InitialServerLogEntryProperties { message, http_request_id, level };
+    let properties = InitialServerLogEntryProperties { message, http_transaction_id, level };
     let server_log_entry_result = ServerLogEntry::create(&properties, postgres_client, true).await;
     return server_log_entry_result;
 
   }
 
-  pub async fn warning(message: &str, http_request_id: Option<&Uuid>, postgres_client: &mut deadpool_postgres::Client) -> Result<Self, ServerLogEntryError> {
+  pub async fn warning(message: &str, http_transaction_id: Option<&Uuid>, postgres_client: &mut deadpool_postgres::Client) -> Result<Self, ServerLogEntryError> {
 
     let level = &ServerLogEntryLevel::Warning;
-    let properties = InitialServerLogEntryProperties { message, http_request_id, level };
+    let properties = InitialServerLogEntryProperties { message, http_transaction_id, level };
     let server_log_entry_result = ServerLogEntry::create(&properties, postgres_client, true).await;
     return server_log_entry_result;
 
   }
 
-  pub async fn error(message: &str, http_request_id: Option<&Uuid>, postgres_client: &mut deadpool_postgres::Client) -> Result<Self, ServerLogEntryError> {
+  pub async fn error(message: &str, http_transaction_id: Option<&Uuid>, postgres_client: &mut deadpool_postgres::Client) -> Result<Self, ServerLogEntryError> {
 
     let level = &ServerLogEntryLevel::Error;
-    let properties = InitialServerLogEntryProperties { message, http_request_id, level };
+    let properties = InitialServerLogEntryProperties { message, http_transaction_id, level };
     let server_log_entry_result = ServerLogEntry::create(&properties, postgres_client, true).await;
     return server_log_entry_result;
 
   }
 
-  pub async fn success(message: &str, http_request_id: Option<&Uuid>, postgres_client: &mut deadpool_postgres::Client) -> Result<Self, ServerLogEntryError> {
+  pub async fn success(message: &str, http_transaction_id: Option<&Uuid>, postgres_client: &mut deadpool_postgres::Client) -> Result<Self, ServerLogEntryError> {
 
     let level = &ServerLogEntryLevel::Success;
-    let properties = InitialServerLogEntryProperties { message, http_request_id, level };
+    let properties = InitialServerLogEntryProperties { message, http_transaction_id, level };
     let server_log_entry_result = ServerLogEntry::create(&properties, postgres_client, true).await;
     return server_log_entry_result;
 
   }
 
-  pub async fn from_http_error(http_error: &HTTPError, http_request_id: Option<&Uuid>, postgres_client: &mut deadpool_postgres::Client) -> Result<Self, ServerLogEntryError> {
+  pub async fn from_http_error(http_error: &HTTPError, http_transaction_id: Option<&Uuid>, postgres_client: &mut deadpool_postgres::Client) -> Result<Self, ServerLogEntryError> {
 
     let level = match http_error {
       HTTPError::InternalServerError(_) => &ServerLogEntryLevel::Critical,
@@ -130,7 +130,7 @@ impl ServerLogEntry {
     let message = &http_error.to_string();
     let properties = InitialServerLogEntryProperties {
       message,
-      http_request_id,
+      http_transaction_id,
       level
     };
     let server_log_entry = ServerLogEntry::create(&properties, postgres_client, true).await?;
@@ -138,12 +138,20 @@ impl ServerLogEntry {
 
   }
 
+  pub async fn initialize_server_log_entries_table(postgres_client: &mut deadpool_postgres::Client) -> Result<(), ServerLogEntryError> {
+
+    let query = include_str!("../../queries/server_log_entries/initialize_server_log_entries_table.sql");
+    postgres_client.execute(query, &[]).await?;
+    return Ok(());
+
+  }
+
   pub async fn create<'a>(properties: &InitialServerLogEntryProperties<'a>, postgres_client: &mut deadpool_postgres::Client, should_print_to_console: bool) -> Result<Self, ServerLogEntryError> {
 
-    let query = include_str!("../../queries/server-log-entries/insert-server-log-entry-row.sql");
+    let query = include_str!("../../queries/server_log_entries/insert-server-log-entry-row.sql");
     let parameters: &[&(dyn ToSql + Sync)] = &[
       &properties.message,
-      &properties.http_request_id,
+      &properties.http_transaction_id,
       &properties.level
     ];
     let row_result = postgres_client.query_one(query, parameters).await;
@@ -159,7 +167,7 @@ impl ServerLogEntry {
           let temporary_server_log_entry = ServerLogEntry {
             id: Uuid::now_v7(),
             message: properties.message.to_string(),
-            http_request_id: properties.http_request_id.copied(),
+            http_transaction_id: properties.http_transaction_id.copied(),
             level: *properties.level
           };
 
@@ -176,7 +184,7 @@ impl ServerLogEntry {
     let server_log_entry = ServerLogEntry {
       id: row.get("id"),
       message: row.get("message"),
-      http_request_id: row.get("http_request_id"),
+      http_transaction_id: row.get("http_transaction_id"),
       level: row.get("level")
     };
 
@@ -193,9 +201,9 @@ impl ServerLogEntry {
   pub fn get_formatted_message(&self) -> String {
 
     let level_prefix = format!("[{}]", self.level);
-    let request_id_prefix = match &self.http_request_id {
+    let request_id_prefix = match &self.http_transaction_id {
 
-      Some(http_request_id) => format!("[{}] ", http_request_id),
+      Some(http_transaction_id) => format!("[{}] ", http_transaction_id),
 
       None => String::new()
 

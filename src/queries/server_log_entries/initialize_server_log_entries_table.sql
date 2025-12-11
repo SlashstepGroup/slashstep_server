@@ -10,12 +10,12 @@ begin
       'Critical'
     );
   end if;
+
+  CREATE TABLE IF NOT EXISTS server_log_entries (
+    id UUID DEFAULT uuidv7() PRIMARY KEY,
+    message TEXT NOT NULL,
+    http_transaction_id UUID REFERENCES http_transactions(id),
+    level server_log_entry_level NOT NULL
+  );
 end
 $$ LANGUAGE plpgsql;
-
-create table if not exists server_log_entries (
-  id UUID default uuidv7() primary key,
-  message text not null,
-  http_request_id UUID references http_requests(id) on delete cascade,
-  level server_log_entry_level not null
-);

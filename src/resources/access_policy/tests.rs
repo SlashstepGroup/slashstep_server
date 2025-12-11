@@ -11,11 +11,10 @@
 
 use crate::{
   resources::access_policy::{
-    AccessPolicy, 
-    AccessPolicyInheritanceLevel, 
+    AccessPolicy,
     AccessPolicyPermissionLevel, 
     AccessPolicyPrincipalType, 
-    AccessPolicyScopedResourceType, 
+    AccessPolicyResourceType, 
     DEFAULT_ACCESS_POLICY_LIST_LIMIT, 
     EditableAccessPolicyProperties, 
     InitialAccessPolicyProperties, Principal
@@ -27,7 +26,7 @@ fn assert_access_policy_is_equal_to_initial_properties(access_policy: &AccessPol
 
   assert_eq!(access_policy.action_id, initial_properties.action_id);
   assert_eq!(access_policy.permission_level, initial_properties.permission_level);
-  assert_eq!(access_policy.inheritance_level, initial_properties.inheritance_level);
+  assert_eq!(access_policy.is_inheritance_enabled, initial_properties.is_inheritance_enabled);
   assert_eq!(access_policy.principal_type, initial_properties.principal_type);
   assert_eq!(access_policy.principal_user_id, initial_properties.principal_user_id);
   assert_eq!(access_policy.principal_group_id, initial_properties.principal_group_id);
@@ -50,7 +49,7 @@ fn assert_access_policies_are_equal(access_policy_1: &AccessPolicy, access_polic
   assert_eq!(access_policy_1.id, access_policy_2.id);
   assert_eq!(access_policy_1.action_id, access_policy_2.action_id);
   assert_eq!(access_policy_1.permission_level, access_policy_2.permission_level);
-  assert_eq!(access_policy_1.inheritance_level, access_policy_2.inheritance_level);
+  assert_eq!(access_policy_1.is_inheritance_enabled, access_policy_2.is_inheritance_enabled);
   assert_eq!(access_policy_1.principal_type, access_policy_2.principal_type);
   assert_eq!(access_policy_1.principal_user_id, access_policy_2.principal_user_id);
   assert_eq!(access_policy_1.principal_group_id, access_policy_2.principal_group_id);
@@ -93,10 +92,10 @@ async fn create_access_policy() -> Result<()> {
   let access_policy_properties = InitialAccessPolicyProperties {
     action_id: action.id,
     permission_level: AccessPolicyPermissionLevel::User,
-    inheritance_level: AccessPolicyInheritanceLevel::Enabled,
+    is_inheritance_enabled: true,
     principal_type: AccessPolicyPrincipalType::User,
     principal_user_id: Some(user.id),
-    scoped_resource_type: AccessPolicyScopedResourceType::Instance,
+    scoped_resource_type: AccessPolicyResourceType::Instance,
     ..Default::default()
   };
   let access_policy = AccessPolicy::create(&access_policy_properties, &mut postgres_client).await?;
@@ -145,7 +144,7 @@ async fn list_access_policies_without_query() -> Result<()> {
 
   }
 
-  let retrieved_access_policies = AccessPolicy::list("", &mut postgres_client).await?;
+  let retrieved_access_policies = AccessPolicy::list("", &mut postgres_client, None).await?;
 
   assert_eq!(created_access_policies.len(), retrieved_access_policies.len());
   for i in 0..created_access_policies.len() {
@@ -179,10 +178,10 @@ async fn list_access_policies_with_query() -> Result<()> {
     let access_policy_properties = InitialAccessPolicyProperties {
       action_id: action.id,
       permission_level: AccessPolicyPermissionLevel::User,
-      inheritance_level: AccessPolicyInheritanceLevel::Enabled,
+      is_inheritance_enabled: true,
       principal_type: AccessPolicyPrincipalType::User,
       principal_user_id: if remaining_action_count == 1 { created_access_policies[0].principal_user_id } else { Some(user.id) },
-      scoped_resource_type: AccessPolicyScopedResourceType::Instance,
+      scoped_resource_type: AccessPolicyResourceType::Instance,
       ..Default::default()
     };
     let access_policy = AccessPolicy::create(&access_policy_properties, &mut postgres_client).await?;
@@ -194,7 +193,7 @@ async fn list_access_policies_with_query() -> Result<()> {
 
   let principal_user_id = created_access_policies[0].principal_user_id.ok_or_else(|| anyhow!("Principal user ID is not set."))?;
   let query = format!("principal_user_id = \"{}\"", principal_user_id);
-  let retrieved_access_policies = AccessPolicy::list(&query, &mut postgres_client).await?;
+  let retrieved_access_policies = AccessPolicy::list(&query, &mut postgres_client, None).await?;
 
   let created_access_policies_with_specific_user: Vec<&AccessPolicy> = created_access_policies.iter().filter(|access_policy| access_policy.principal_user_id == Some(principal_user_id)).collect();
   assert_eq!(created_access_policies_with_specific_user.len(), retrieved_access_policies.len());
@@ -230,7 +229,7 @@ async fn list_access_policies_with_default_limit() -> Result<()> {
 
   }
 
-  let retrieved_access_policies = AccessPolicy::list("", &mut postgres_client).await?;
+  let retrieved_access_policies = AccessPolicy::list("", &mut postgres_client, None).await?;
 
   assert_eq!(retrieved_access_policies.len(), DEFAULT_ACCESS_POLICY_LIST_LIMIT as usize);
 
@@ -256,10 +255,10 @@ async fn count_access_policies() -> Result<()> {
     let access_policy_properties = InitialAccessPolicyProperties {
       action_id: action.id,
       permission_level: AccessPolicyPermissionLevel::User,
-      inheritance_level: AccessPolicyInheritanceLevel::Enabled,
+      is_inheritance_enabled: true,
       principal_type: AccessPolicyPrincipalType::User,
       principal_user_id: Some(user.id),
-      scoped_resource_type: AccessPolicyScopedResourceType::Instance,
+      scoped_resource_type: AccessPolicyResourceType::Instance,
       ..Default::default()
     };
     let access_policy = AccessPolicy::create(&access_policy_properties, &mut postgres_client).await?;
@@ -268,7 +267,7 @@ async fn count_access_policies() -> Result<()> {
 
   }
 
-  let retrieved_access_policy_count = AccessPolicy::count("", &mut postgres_client).await?;
+  let retrieved_access_policy_count = AccessPolicy::count("", &mut postgres_client, None).await?;
 
   assert_eq!(retrieved_access_policy_count, MAXIMUM_ACTION_COUNT);
 
@@ -290,10 +289,10 @@ async fn list_access_policies_by_hierarchy() -> Result<()> {
   let instance_access_policy_properties = InitialAccessPolicyProperties {
     action_id: action.id,
     permission_level: AccessPolicyPermissionLevel::User,
-    inheritance_level: AccessPolicyInheritanceLevel::Enabled,
+    is_inheritance_enabled: true,
     principal_type: AccessPolicyPrincipalType::User,
     principal_user_id: Some(user.id),
-    scoped_resource_type: AccessPolicyScopedResourceType::Instance,
+    scoped_resource_type: AccessPolicyResourceType::Instance,
     ..Default::default()
   };
   let instance_access_policy = AccessPolicy::create(&instance_access_policy_properties, &mut postgres_client).await?;
@@ -342,21 +341,21 @@ async fn update_access_policy() -> Result<()> {
   let instance_access_policy_properties = InitialAccessPolicyProperties {
     action_id: action.id,
     permission_level: AccessPolicyPermissionLevel::User,
-    inheritance_level: AccessPolicyInheritanceLevel::Enabled,
+    is_inheritance_enabled: true,
     principal_type: AccessPolicyPrincipalType::User,
     principal_user_id: Some(user.id),
-    scoped_resource_type: AccessPolicyScopedResourceType::Instance,
+    scoped_resource_type: AccessPolicyResourceType::Instance,
     ..Default::default()
   };
   let instance_access_policy = AccessPolicy::create(&instance_access_policy_properties, &mut postgres_client).await?;
   let updated_access_policy_properties = EditableAccessPolicyProperties {
     permission_level: Some(AccessPolicyPermissionLevel::Editor),
-    inheritance_level: Some(AccessPolicyInheritanceLevel::Disabled)
+    is_inheritance_enabled: Some(false)
   };
   let updated_access_policy = instance_access_policy.update(&updated_access_policy_properties, &mut postgres_client).await?;
 
   assert_eq!(updated_access_policy.permission_level, AccessPolicyPermissionLevel::Editor);
-  assert_eq!(updated_access_policy.inheritance_level, AccessPolicyInheritanceLevel::Disabled);
+  assert_eq!(updated_access_policy.is_inheritance_enabled, false);
 
   return Ok(());
 
