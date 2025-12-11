@@ -14,35 +14,35 @@ CREATE OR REPLACE FUNCTION can_principal_get_access_policy(parameter_principal_t
 
       -- Set the selected resource type and ID based on the principal type.
       get_access_policy_action_id := (
-          select
-              id
-          from
-              actions
-          where
-              name = 'slashstep.accessPolicies.get'
+        select
+          id
+        from
+          actions
+        where
+          name = 'slashstep.accessPolicies.get'
       );
 
       selected_resource_type := access_policy_record.scoped_resource_type;
       selected_resource_id := CASE selected_resource_type
-          WHEN 'Action' THEN access_policy_record.scoped_action_id
-          WHEN 'ActionLogEntry' THEN access_policy_record.scoped_action_log_entry_id
-          WHEN 'App' THEN access_policy_record.scoped_app_id
-          WHEN 'AppAuthorization' THEN access_policy_record.scoped_app_authorization_id
-          WHEN 'AppAuthorizationCredential' THEN access_policy_record.scoped_app_authorization_credential_id
-          WHEN 'AppCredential' THEN access_policy_record.scoped_app_credential_id
-          WHEN 'Group' THEN access_policy_record.scoped_group_id
-          WHEN 'GroupMembership' THEN access_policy_record.scoped_group_membership_id
-          WHEN 'HTTPTransaction' THEN access_policy_record.scoped_http_transaction_id
-          WHEN 'HTTPTransactionLogEntry' THEN access_policy_record.scoped_http_transaction_log_entry_id
-          WHEN 'Instance' THEN NULL
-          WHEN 'Item' THEN access_policy_record.scoped_item_id
-          WHEN 'Milestone' THEN access_policy_record.scoped_milestone_id
-          WHEN 'Project' THEN access_policy_record.scoped_project_id
-          WHEN 'Role' THEN access_policy_record.scoped_role_id
-          WHEN 'RoleMembership' THEN access_policy_record.scoped_role_membership_id
-          WHEN 'Session' THEN access_policy_record.scoped_session_id
-          WHEN 'User' THEN access_policy_record.scoped_user_id
-          WHEN 'Workspace' THEN access_policy_record.scoped_workspace_id
+        WHEN 'Action' THEN access_policy_record.scoped_action_id
+        WHEN 'ActionLogEntry' THEN access_policy_record.scoped_action_log_entry_id
+        WHEN 'App' THEN access_policy_record.scoped_app_id
+        WHEN 'AppAuthorization' THEN access_policy_record.scoped_app_authorization_id
+        WHEN 'AppAuthorizationCredential' THEN access_policy_record.scoped_app_authorization_credential_id
+        WHEN 'AppCredential' THEN access_policy_record.scoped_app_credential_id
+        WHEN 'Group' THEN access_policy_record.scoped_group_id
+        WHEN 'GroupMembership' THEN access_policy_record.scoped_group_membership_id
+        WHEN 'HTTPTransaction' THEN access_policy_record.scoped_http_transaction_id
+        WHEN 'Instance' THEN NULL
+        WHEN 'Item' THEN access_policy_record.scoped_item_id
+        WHEN 'Milestone' THEN access_policy_record.scoped_milestone_id
+        WHEN 'Project' THEN access_policy_record.scoped_project_id
+        WHEN 'Role' THEN access_policy_record.scoped_role_id
+        WHEN 'RoleMembership' THEN access_policy_record.scoped_role_membership_id
+        WHEN 'ServerLogEntry' THEN access_policy_record.scoped_server_log_entry_id
+        WHEN 'Session' THEN access_policy_record.scoped_session_id
+        WHEN 'User' THEN access_policy_record.scoped_user_id
+        WHEN 'Workspace' THEN access_policy_record.scoped_workspace_id
       END;
 
       LOOP
@@ -474,9 +474,9 @@ CREATE OR REPLACE FUNCTION can_principal_get_access_policy(parameter_principal_t
               selected_resource_type := 'Instance';
               selected_resource_id := NULL;
 
-          ELSIF selected_resource_type = 'HTTPTransactionLogEntry' THEN
+          ELSIF selected_resource_type = 'ServerLogEntry' THEN
           
-              -- HTTPTransactionLogEntry -> HTTPTransaction
+              -- ServerLogEntry -> Instance
               -- Check if the HTTP transaction log entry has an associated access policy.
               SELECT
                   permission_level,
@@ -487,8 +487,8 @@ CREATE OR REPLACE FUNCTION can_principal_get_access_policy(parameter_principal_t
               FROM
                   get_principal_access_policies(parameter_principal_type, parameter_principal_user_id, parameter_principal_app_id, get_access_policy_action_id) principal_access_policies
               WHERE
-                  principal_access_policies.scoped_resource_type = 'HTTPTransactionLogEntry' AND 
-                  principal_access_policies.scoped_http_transaction_log_entry_id = selected_resource_id AND (
+                  principal_access_policies.scoped_resource_type = 'ServerLogEntry' AND 
+                  principal_access_policies.scoped_server_log_entry_id = selected_resource_id AND (
                       NOT needs_inheritance OR
                       principal_access_policies.is_inheritance_enabled
                   )
@@ -506,24 +506,8 @@ CREATE OR REPLACE FUNCTION can_principal_get_access_policy(parameter_principal_t
 
               -- Use the parent resource type.
               needs_inheritance := TRUE;
-
-              SELECT
-                  http_transaction_id
-              INTO
-                  selected_resource_parent_id
-              FROM
-                  http_transaction_log_entries
-              WHERE
-                  http_transaction_log_entries.id = selected_resource_id;
-
-              IF selected_resource_parent_id IS NULL THEN
-
-                  RAISE EXCEPTION 'Couldn''t find a parent HTTP transaction for HTTP transaction log entry %.', selected_resource_id;
-
-              END IF;
-
-              selected_resource_type := 'HTTPTransaction';
-              selected_resource_id := selected_resource_parent_id;
+              selected_resource_type := 'Instance';
+              selected_resource_id := NULL;
               
           ELSIF selected_resource_type = 'Item' THEN
 

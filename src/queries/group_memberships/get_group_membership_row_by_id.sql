@@ -1,0 +1,1 @@
+SELECT * FROM group_memberships WHERE id = $1;

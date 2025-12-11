@@ -1,9 +1,9 @@
-create table if not exists http_requests (
-  id UUID default uuidv7() primary key,
-  method text not null,
-  url text not null,
-  ip_address inet not null,
-  headers text not null,
-  status_code integer,
-  expiration_date timestamptz not null default now() + interval '14 days'
+CREATE TABLE IF NOT EXISTS http_transactions (
+  id UUID DEFAULT uuidv7() PRIMARY KEY,
+  method TEXT NOT NULL,
+  url TEXT NOT NULL,
+  ip_address INET NOT NULL,
+  headers TEXT NOT NULL,
+  status_code INTEGER,
+  expiration_date TIMESTAMPTZ NOT NULL DEFAULT NOW() + INTERVAL '14 days'
 );

@@ -1,10 +1,12 @@
 pub mod access_policy;
 pub mod action;
+pub mod action_log_entry;
 pub mod app_authorization_credential;
 pub mod app_authorization;
 pub mod app_credential;
 pub mod app;
 pub mod group;
+pub mod group_membership;
 pub mod item;
 pub mod milestone;
 pub mod project;
