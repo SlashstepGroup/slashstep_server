@@ -1,5 +1,6 @@
 #[path = "./access-policies/mod.rs"]
 mod access_policies;
+mod actions;
 
 use axum::{Router, response::IntoResponse};
 use crate::{AppState, HTTPError};
@@ -14,6 +15,7 @@ pub fn get_router(state: AppState) -> Router<AppState> {
 
   let router = Router::<AppState>::new()
     .merge(access_policies::get_router(state.clone()))
+    .merge(actions::get_router(state.clone()))
     .fallback(fallback);
   return router;
 

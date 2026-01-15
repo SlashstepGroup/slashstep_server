@@ -32,10 +32,16 @@ pub async fn initialize_pre_defined_actions(postgres_client: &mut deadpool_postg
     },
     InitialActionProperties {
       name: "slashstep.accessPolicies.delete".to_string(),
-      display_name: "Delete access policy".to_string(),
+      display_name: "Delete access policies".to_string(),
       description: "Delete access policies on a particular scope.".to_string(),
       app_id: None
-    }
+    },
+    InitialActionProperties {
+      name: "slashstep.actions.get".to_string(),
+      display_name: "Get actions".to_string(),
+      description: "Get specific access policies on a particular scope.".to_string(),
+      app_id: None
+    },
   ];
 
   let mut actions: Vec<Action> = Vec::new();
