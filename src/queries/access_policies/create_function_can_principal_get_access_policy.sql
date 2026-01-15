@@ -80,7 +80,7 @@ CREATE OR REPLACE FUNCTION can_principal_get_access_policy(parameter_principal_t
                   get_principal_access_policies(parameter_principal_type, parameter_principal_user_id, parameter_principal_app_id, get_access_policy_action_id) principal_access_policies
               WHERE
                   principal_access_policies.scoped_resource_type = 'Action' AND 
-                  principal_access_policies.scoped_action_id = parameter_scoped_action_id AND (
+                  principal_access_policies.scoped_action_id = selected_resource_id AND (
                       NOT needs_inheritance OR 
                       principal_access_policies.is_inheritance_enabled
                   )
@@ -106,7 +106,7 @@ CREATE OR REPLACE FUNCTION can_principal_get_access_policy(parameter_principal_t
               FROM
                   actions
               WHERE
-                  actions.id = parameter_scoped_action_id;
+                  actions.id = selected_resource_id;
 
               IF selected_resource_parent_type = 'App' THEN
 
@@ -117,7 +117,7 @@ CREATE OR REPLACE FUNCTION can_principal_get_access_policy(parameter_principal_t
                   FROM
                       actions
                   WHERE
-                      actions.id = parameter_scoped_action_id;
+                      actions.id = selected_resource_id;
 
                   IF selected_resource_parent_id IS NULL THEN
 
@@ -135,7 +135,7 @@ CREATE OR REPLACE FUNCTION can_principal_get_access_policy(parameter_principal_t
                   
               ELSE
 
-                  RAISE EXCEPTION 'Unknown parent resource type % for action %.', selected_resource_parent_type, parameter_scoped_action_id;
+                  RAISE EXCEPTION 'Unknown parent resource type % for action %.', selected_resource_parent_type, selected_resource_id;
 
               END IF;
 
@@ -298,7 +298,7 @@ CREATE OR REPLACE FUNCTION can_principal_get_access_policy(parameter_principal_t
                   
               ELSE
 
-                  RAISE EXCEPTION 'Unknown parent resource type % for action %.', selected_resource_parent_type, parameter_scoped_action_id;
+                  RAISE EXCEPTION 'Unknown parent resource type % for action %.', selected_resource_parent_type, selected_resource_id;
 
               END IF;
 

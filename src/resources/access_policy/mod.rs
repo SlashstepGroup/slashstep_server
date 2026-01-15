@@ -271,7 +271,7 @@ impl FromStr for AccessPolicyResourceType {
 
 }
 
-#[derive(Debug, PartialEq, Eq, ToSql, FromSql, Serialize, Deserialize, Default)]
+#[derive(Debug, PartialEq, Eq, ToSql, FromSql, Serialize, Deserialize, Default, Clone)]
 #[postgres(name = "principal_type")]
 pub enum AccessPolicyPrincipalType {
 
@@ -410,7 +410,7 @@ pub enum IndividualPrincipal {
 }
 
 /// A piece of information that defines the level of access and inheritance for a principal to perform an action.
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct AccessPolicy {
 
   /// The access policy's ID.
@@ -520,7 +520,9 @@ impl AccessPolicy {
     let query = format!("select count(*) from access_policies{}", where_clause);
 
     // Execute the query and return the count.
-    let rows = postgres_client.query_one(&query, &[]).await?;
+    let parsed_parameters = Self::parse_slashstepql_parameters(&sanitized_filter.parameters)?;
+    let parameters: Vec<&(dyn ToSql + Sync)> = parsed_parameters.iter().map(|parameter| parameter.as_ref() as &(dyn ToSql + Sync)).collect();
+    let rows = postgres_client.query_one(&query, &parameters).await?;
     let count = rows.get(0);
     return Ok(count);
 

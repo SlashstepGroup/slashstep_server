@@ -9,7 +9,7 @@ use crate::{AppState, SlashstepServerError, middleware::http_request_middleware,
 
 /// Verifies that the router can return a 200 status code and the requested access policy list.
 #[tokio::test]
-async fn verify_returned_access_policy_list() -> Result<(), SlashstepServerError> {
+async fn verify_returned_access_policy_list_without_query() -> Result<(), SlashstepServerError> {
 
   let test_environment = TestEnvironment::new().await?;
   let mut postgres_client = test_environment.postgres_pool.get().await?;
@@ -68,6 +68,78 @@ async fn verify_returned_access_policy_list() -> Result<(), SlashstepServerError
   assert_eq!(response_access_policies.total_count, actual_access_policy_count);
 
   let actual_access_policies = AccessPolicy::list("", &mut postgres_client, Some(&IndividualPrincipal::User(user.id))).await?;
+  assert_eq!(response_access_policies.access_policies.len(), actual_access_policies.len());
+
+  for actual_access_policy in actual_access_policies {
+
+    let found_access_policy = response_access_policies.access_policies.iter().find(|access_policy| access_policy.id == actual_access_policy.id);
+    assert!(found_access_policy.is_some());
+
+  }
+
+  return Ok(());
+
+}
+
+/// Verifies that the router can return a 200 status code and the requested access policy list.
+#[tokio::test]
+async fn verify_returned_access_policy_list_with_query() -> Result<(), SlashstepServerError> {
+
+  let test_environment = TestEnvironment::new().await?;
+  let mut postgres_client = test_environment.postgres_pool.get().await?;
+  test_environment.initialize_required_tables().await?;
+  initialize_pre_defined_actions(&mut postgres_client).await?;
+  initialize_pre_defined_roles(&mut postgres_client).await?;
+  let state = AppState {
+    database_pool: test_environment.postgres_pool.clone(),
+  };
+
+  let router = super::get_router(state.clone())
+    .layer(middleware::from_fn_with_state(state.clone(), http_request_middleware::create_http_request))
+    .with_state(state)
+    .into_make_service_with_connect_info::<SocketAddr>();
+  let test_server = TestServer::new(router)?;
+  
+  let user = test_environment.create_random_user().await?;
+  let session = test_environment.create_session(&user.id).await?;
+  let json_web_token_private_key = Session::get_json_web_token_private_key().await?;
+  let session_token = session.generate_json_web_token(&json_web_token_private_key).await?;
+  let get_access_policies_action = Action::get_by_name("slashstep.accessPolicies.get", &mut postgres_client).await?;
+  let get_access_policy_properties = InitialAccessPolicyProperties {
+    action_id: get_access_policies_action.id,
+    permission_level: AccessPolicyPermissionLevel::User,
+    is_inheritance_enabled: true,
+    principal_type: AccessPolicyPrincipalType::User,
+    principal_user_id: Some(user.id),
+    scoped_resource_type: AccessPolicyResourceType::Instance,
+    ..Default::default()
+  };
+  AccessPolicy::create(&get_access_policy_properties, &mut postgres_client).await?;
+
+  let list_access_policies_action = Action::get_by_name("slashstep.accessPolicies.list", &mut postgres_client).await?;
+  let list_access_policy_properties = InitialAccessPolicyProperties {
+    action_id: list_access_policies_action.id,
+    permission_level: AccessPolicyPermissionLevel::User,
+    is_inheritance_enabled: true,
+    principal_type: AccessPolicyPrincipalType::User,
+    principal_user_id: Some(user.id),
+    scoped_resource_type: AccessPolicyResourceType::Instance,
+    ..Default::default()
+  };
+  AccessPolicy::create(&list_access_policy_properties, &mut postgres_client).await?;
+  let query = format!("action_id = \'{}\'", get_access_policies_action.id);
+  let response = test_server.get(&format!("/access-policies"))
+    .add_cookie(Cookie::new("sessionToken", format!("Bearer {}", session_token)))
+    .add_query_param("query", &query)
+    .await;
+  
+  assert_eq!(response.status_code(), 200);
+
+  let response_access_policies: ListAccessPolicyResponseBody = response.json();
+  let actual_access_policy_count = AccessPolicy::count(&query, &mut postgres_client, Some(&IndividualPrincipal::User(user.id))).await?;
+  assert_eq!(response_access_policies.total_count, actual_access_policy_count);
+
+  let actual_access_policies = AccessPolicy::list(&query, &mut postgres_client, Some(&IndividualPrincipal::User(user.id))).await?;
   assert_eq!(response_access_policies.access_policies.len(), actual_access_policies.len());
 
   for actual_access_policy in actual_access_policies {
