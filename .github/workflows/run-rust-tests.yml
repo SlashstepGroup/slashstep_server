@@ -6,6 +6,8 @@ on:
       - Cargo.toml
       - Cargo.lock
       - .github/workflows/run-rust-tests.yml
+    branches:
+      - main
   pull_request:
     paths: 
       - src/**
