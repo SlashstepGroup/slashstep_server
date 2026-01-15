@@ -11,9 +11,11 @@
 
 use postgres::error::SqlState;
 use postgres_types::ToSql;
+use serde::{Deserialize, Serialize};
 use thiserror::Error;
 use uuid::Uuid;
 
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Action {
 
   /// The action's ID.
@@ -166,6 +168,14 @@ impl Action {
     let view_initialization_query = include_str!("../../queries/actions/initialize-hydrated-actions-view.sql");
     postgres_client.execute(view_initialization_query, &[]).await?;
 
+    return Ok(());
+
+  }
+
+  pub async fn delete(&self, postgres_client: &mut deadpool_postgres::Client) -> Result<(), ActionError> {
+
+    let query = include_str!("../../queries/actions/delete-action-row.sql");
+    postgres_client.execute(query, &[&self.id]).await?;
     return Ok(());
 
   }

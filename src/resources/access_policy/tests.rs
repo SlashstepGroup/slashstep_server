@@ -13,7 +13,7 @@ use std::cmp;
 use crate::{
   pre_definitions::initialize_pre_defined_actions, resources::{access_policy::{
     AccessPolicy, AccessPolicyPermissionLevel, AccessPolicyPrincipalType, AccessPolicyResourceType, DEFAULT_ACCESS_POLICY_LIST_LIMIT, EditableAccessPolicyProperties, IndividualPrincipal, InitialAccessPolicyProperties, Principal
-  }, action::Action}, tests::TestEnvironment
+  }, action::Action}, tests::TestEnvironment, utilities::resource_hierarchy
 };
 use anyhow::{anyhow, Result};
 
@@ -349,7 +349,7 @@ async fn list_access_policies_by_hierarchy() -> Result<()> {
     ..Default::default()
   };
   let instance_access_policy = AccessPolicy::create(&instance_access_policy_properties, &mut postgres_client).await?;
-  let access_policy_hierarchy = instance_access_policy.get_hierarchy(&mut postgres_client).await?;
+  let access_policy_hierarchy = resource_hierarchy::get_hierarchy(&instance_access_policy.scoped_resource_type, &instance_access_policy.get_scoped_resource_id(), &mut postgres_client).await?;
 
   let retrieved_access_policies = AccessPolicy::list_by_hierarchy(&Principal::User(user.id), &action.id, &access_policy_hierarchy, &mut postgres_client).await?;
 
