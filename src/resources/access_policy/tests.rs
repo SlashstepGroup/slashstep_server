@@ -9,16 +9,11 @@
  * 
  */
 
+use std::cmp;
 use crate::{
-  resources::access_policy::{
-    AccessPolicy,
-    AccessPolicyPermissionLevel, 
-    AccessPolicyPrincipalType, 
-    AccessPolicyResourceType, 
-    DEFAULT_ACCESS_POLICY_LIST_LIMIT, 
-    EditableAccessPolicyProperties, 
-    InitialAccessPolicyProperties, Principal
-  }, tests::TestEnvironment
+  pre_definitions::initialize_pre_defined_actions, resources::{access_policy::{
+    AccessPolicy, AccessPolicyPermissionLevel, AccessPolicyPrincipalType, AccessPolicyResourceType, DEFAULT_ACCESS_POLICY_LIST_LIMIT, EditableAccessPolicyProperties, IndividualPrincipal, InitialAccessPolicyProperties, Principal
+  }, action::Action}, tests::TestEnvironment
 };
 use anyhow::{anyhow, Result};
 
@@ -145,6 +140,64 @@ async fn list_access_policies_without_query() -> Result<()> {
   }
 
   let retrieved_access_policies = AccessPolicy::list("", &mut postgres_client, None).await?;
+
+  assert_eq!(created_access_policies.len(), retrieved_access_policies.len());
+  for i in 0..created_access_policies.len() {
+
+    let created_access_policy = &created_access_policies[i];
+    let retrieved_access_policy = &retrieved_access_policies[i];
+
+    assert_access_policies_are_equal(created_access_policy, retrieved_access_policy);
+
+  }
+
+  return Ok(());
+
+}
+
+/// Verifies that a list of access policies can be retrieved without a query.
+#[tokio::test]
+async fn list_access_policies_without_query_and_filter_based_on_requestor_permissions() -> Result<()> {
+
+  let test_environment = TestEnvironment::new().await?;
+  test_environment.initialize_required_tables().await?;
+  
+  // Get the "slashstep.accessPolicies.get" action one time.
+  let mut postgres_client = test_environment.postgres_pool.get().await?; 
+  initialize_pre_defined_actions(&mut postgres_client).await?;
+  let user = test_environment.create_random_user().await?;
+  let get_access_policies_action = Action::get_by_name("slashstep.accessPolicies.get", &mut postgres_client).await?;
+
+  // Create dummy access policies.
+  const MAXIMUM_ACTION_COUNT: i32 = 25;
+  let mut created_access_policies: Vec<Box<AccessPolicy>> = Vec::new();
+  let mut remaining_action_count = cmp::max(MAXIMUM_ACTION_COUNT, 2);
+  let denied_access_policy_count = remaining_action_count / 2;
+  while remaining_action_count > 0 {
+
+    let dummy_action = test_environment.create_random_action().await?;
+    let access_policy_properties = InitialAccessPolicyProperties {
+      action_id: get_access_policies_action.id,
+      permission_level: if remaining_action_count > denied_access_policy_count { AccessPolicyPermissionLevel::None } else { AccessPolicyPermissionLevel::User },
+      principal_type: AccessPolicyPrincipalType::User,
+      principal_user_id: Some(user.id),
+      scoped_resource_type: AccessPolicyResourceType::Action,
+      scoped_action_id: Some(dummy_action.id),
+      ..Default::default()
+    };
+
+    let access_policy = Box::new(AccessPolicy::create(&access_policy_properties, &mut postgres_client).await?);
+    if access_policy.permission_level == AccessPolicyPermissionLevel::User {
+
+      created_access_policies.push(access_policy.clone());
+
+    }
+    remaining_action_count -= 1;
+
+  }
+
+  let individual_principal = IndividualPrincipal::User(user.id);
+  let retrieved_access_policies = AccessPolicy::list("", &mut postgres_client, Some(&individual_principal)).await?;
 
   assert_eq!(created_access_policies.len(), retrieved_access_policies.len());
   for i in 0..created_access_policies.len() {
