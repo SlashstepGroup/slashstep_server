@@ -1,8 +1,25 @@
-use std::cmp;
-
 use uuid::Uuid;
-
-use crate::{SlashstepServerError, pre_definitions::initialize_pre_defined_actions, resources::{access_policy::{self, AccessPolicy, AccessPolicyPermissionLevel, AccessPolicyPrincipalType, AccessPolicyResourceType, IndividualPrincipal, InitialAccessPolicyProperties}, action::{Action, ActionParentResourceType, DEFAULT_ACTION_LIST_LIMIT, DEFAULT_MAXIMUM_ACTION_LIST_LIMIT, InitialActionProperties}}, tests::TestEnvironment};
+use crate::{
+  SlashstepServerError, 
+  pre_definitions::initialize_pre_defined_actions, 
+  resources::{
+    access_policy::{ 
+      AccessPolicy, 
+      AccessPolicyPermissionLevel, 
+      AccessPolicyPrincipalType, 
+      AccessPolicyResourceType, 
+      IndividualPrincipal, 
+      InitialAccessPolicyProperties
+    }, 
+    action::{
+      Action, 
+      ActionParentResourceType, 
+      DEFAULT_ACTION_LIST_LIMIT,
+      InitialActionProperties
+    }
+  }, 
+  tests::TestEnvironment
+};
 
 fn assert_actions_are_equal(action_1: &Action, action_2: &Action) {
 
@@ -43,8 +60,23 @@ fn create_action() {
 
 }
 
-#[test]
-fn delete_action() {
+#[tokio::test]
+async fn delete_action() -> Result<(), SlashstepServerError> {
+
+  let test_environment = TestEnvironment::new().await?;
+  test_environment.initialize_required_tables().await?;
+
+  // Create the access policy.
+  let mut postgres_client = test_environment.postgres_pool.get().await?;
+  let created_action = test_environment.create_random_action().await?;
+
+  created_action.delete(&mut postgres_client).await?;
+
+  // Ensure that the access policy is no longer in the database.
+  let retrieved_action_result = Action::get_by_id(&created_action.id, &mut postgres_client).await;
+  assert!(retrieved_action_result.is_err());
+
+  return Ok(());
 
 }
 
