@@ -81,77 +81,79 @@ async fn verify_returned_action_list_without_query() -> Result<(), SlashstepServ
 
 }
 
-// /// Verifies that the router can return a 200 status code and the requested access policy list.
-// #[tokio::test]
-// async fn verify_returned_action_list_with_query() -> Result<(), SlashstepServerError> {
+/// Verifies that the router can return a 200 status code and the requested access policy list.
+#[tokio::test]
+async fn verify_returned_action_list_with_query() -> Result<(), SlashstepServerError> {
 
-//   let test_environment = TestEnvironment::new().await?;
-//   let mut postgres_client = test_environment.postgres_pool.get().await?;
-//   test_environment.initialize_required_tables().await?;
-//   initialize_pre_defined_actions(&mut postgres_client).await?;
-//   initialize_pre_defined_roles(&mut postgres_client).await?;
-//   let state = AppState {
-//     database_pool: test_environment.postgres_pool.clone(),
-//   };
-
-//   let router = super::get_router(state.clone())
-//     .layer(middleware::from_fn_with_state(state.clone(), http_request_middleware::create_http_request))
-//     .with_state(state)
-//     .into_make_service_with_connect_info::<SocketAddr>();
-//   let test_server = TestServer::new(router)?;
+  let test_environment = TestEnvironment::new().await?;
+  let mut postgres_client = test_environment.postgres_pool.get().await?;
+  test_environment.initialize_required_tables().await?;
+  initialize_pre_defined_actions(&mut postgres_client).await?;
+  initialize_pre_defined_roles(&mut postgres_client).await?;
   
-//   let user = test_environment.create_random_user().await?;
-//   let session = test_environment.create_session(&user.id).await?;
-//   let json_web_token_private_key = Session::get_json_web_token_private_key().await?;
-//   let session_token = session.generate_json_web_token(&json_web_token_private_key).await?;
-//   let get_access_policies_action = Action::get_by_name("slashstep.accessPolicies.get", &mut postgres_client).await?;
-//   let get_access_policy_properties = InitialAccessPolicyProperties {
-//     action_id: get_access_policies_action.id,
-//     permission_level: AccessPolicyPermissionLevel::User,
-//     is_inheritance_enabled: true,
-//     principal_type: AccessPolicyPrincipalType::User,
-//     principal_user_id: Some(user.id),
-//     scoped_resource_type: AccessPolicyResourceType::Instance,
-//     ..Default::default()
-//   };
-//   AccessPolicy::create(&get_access_policy_properties, &mut postgres_client).await?;
+  // Grant access to the "slashstep.actions.get" action to the user.
+  let user = test_environment.create_random_user().await?;
+  let session = test_environment.create_session(&user.id).await?;
+  let json_web_token_private_key = Session::get_json_web_token_private_key().await?;
+  let session_token = session.generate_json_web_token(&json_web_token_private_key).await?;
+  let get_actions_action = Action::get_by_name("slashstep.actions.get", &mut postgres_client).await?;
+  AccessPolicy::create(&InitialAccessPolicyProperties {
+    action_id: get_actions_action.id,
+    permission_level: AccessPolicyPermissionLevel::User,
+    is_inheritance_enabled: true,
+    principal_type: AccessPolicyPrincipalType::User,
+    principal_user_id: Some(user.id),
+    scoped_resource_type: AccessPolicyResourceType::Instance,
+    ..Default::default()
+  }, &mut postgres_client).await?;
 
-//   let list_access_policies_action = Action::get_by_name("slashstep.accessPolicies.list", &mut postgres_client).await?;
-//   let list_access_policy_properties = InitialAccessPolicyProperties {
-//     action_id: list_access_policies_action.id,
-//     permission_level: AccessPolicyPermissionLevel::User,
-//     is_inheritance_enabled: true,
-//     principal_type: AccessPolicyPrincipalType::User,
-//     principal_user_id: Some(user.id),
-//     scoped_resource_type: AccessPolicyResourceType::Instance,
-//     ..Default::default()
-//   };
-//   AccessPolicy::create(&list_access_policy_properties, &mut postgres_client).await?;
-//   let query = format!("action_id = \'{}\'", get_access_policies_action.id);
-//   let response = test_server.get(&format!("/access-policies"))
-//     .add_cookie(Cookie::new("sessionToken", format!("Bearer {}", session_token)))
-//     .add_query_param("query", &query)
-//     .await;
+  // Grant access to the "slashstep.actions.list" action to the user.
+  let list_actions_action = Action::get_by_name("slashstep.actions.list", &mut postgres_client).await?;
+  AccessPolicy::create(&InitialAccessPolicyProperties {
+    action_id: list_actions_action.id,
+    permission_level: AccessPolicyPermissionLevel::User,
+    is_inheritance_enabled: true,
+    principal_type: AccessPolicyPrincipalType::User,
+    principal_user_id: Some(user.id),
+    scoped_resource_type: AccessPolicyResourceType::Instance,
+    ..Default::default()
+  }, &mut postgres_client).await?;
+
+  // Set up the server and send the request.
+  let state = AppState {
+    database_pool: test_environment.postgres_pool.clone(),
+  };
+
+  let router = super::get_router(state.clone())
+    .layer(middleware::from_fn_with_state(state.clone(), http_request_middleware::create_http_request))
+    .with_state(state)
+    .into_make_service_with_connect_info::<SocketAddr>();
+  let test_server = TestServer::new(router)?;
+  let query = format!("name ~ \"{}\"", "actions");
+  let response = test_server.get(&format!("/actions"))
+    .add_cookie(Cookie::new("sessionToken", format!("Bearer {}", session_token)))
+    .add_query_param("query", &query)
+    .await;
   
-//   assert_eq!(response.status_code(), 200);
+  assert_eq!(response.status_code(), 200);
 
-//   let response_access_policies: ListAccessPolicyResponseBody = response.json();
-//   let actual_access_policy_count = AccessPolicy::count(&query, &mut postgres_client, Some(&IndividualPrincipal::User(user.id))).await?;
-//   assert_eq!(response_access_policies.total_count, actual_access_policy_count);
+  let response_json: ListActionResponseBody = response.json();
+  let actual_action_count = Action::count(&query, &mut postgres_client, Some(&IndividualPrincipal::User(user.id))).await?;
+  assert_eq!(response_json.total_count, actual_action_count);
 
-//   let actual_access_policies = AccessPolicy::list(&query, &mut postgres_client, Some(&IndividualPrincipal::User(user.id))).await?;
-//   assert_eq!(response_access_policies.access_policies.len(), actual_access_policies.len());
+  let actual_actions = Action::list(&query, &mut postgres_client, Some(&IndividualPrincipal::User(user.id))).await?;
+  assert_eq!(response_json.actions.len(), actual_actions.len());
 
-//   for actual_access_policy in actual_access_policies {
+  for actual_action in actual_actions {
 
-//     let found_access_policy = response_access_policies.access_policies.iter().find(|access_policy| access_policy.id == actual_access_policy.id);
-//     assert!(found_access_policy.is_some());
+    let found_action = response_json.actions.iter().find(|action| action.id == actual_action.id);
+    assert!(found_action.is_some());
 
-//   }
+  }
 
-//   return Ok(());
+  return Ok(());
 
-// }
+}
 
 // /// Verifies that the default access policy list limit is 1000.
 // #[tokio::test]
@@ -218,7 +220,7 @@ async fn verify_returned_action_list_without_query() -> Result<(), SlashstepServ
 //   };
 //   AccessPolicy::create(&list_access_policy_properties, &mut postgres_client).await?;
 
-//   let response = test_server.get(&format!("/access-policies"))
+//   let response = test_server.get(&format!("/actions"))
 //     .add_cookie(Cookie::new("sessionToken", format!("Bearer {}", session_token)))
 //     .await;
   
@@ -278,7 +280,7 @@ async fn verify_returned_action_list_without_query() -> Result<(), SlashstepServ
 //   };
 //   AccessPolicy::create(&list_access_policy_properties, &mut postgres_client).await?;
 
-//   let response = test_server.get(&format!("/access-policies"))
+//   let response = test_server.get(&format!("/actions"))
 //     .add_query_param("query", format!("limit {}", DEFAULT_ACCESS_POLICY_LIST_LIMIT + 1))
 //     .add_cookie(Cookie::new("sessionToken", format!("Bearer {}", session_token)))
 //     .await;
@@ -337,15 +339,15 @@ async fn verify_returned_action_list_without_query() -> Result<(), SlashstepServ
 //   AccessPolicy::create(&list_access_policy_properties, &mut postgres_client).await?;
 
 //   let requests = vec![
-//     test_server.get(&format!("/access-policies"))
+//     test_server.get(&format!("/actions"))
 //       .add_query_param("query", format!("action_ied = {}", get_access_policies_action.id)),
-//     test_server.get(&format!("/access-policies"))
+//     test_server.get(&format!("/actions"))
 //       .add_query_param("query", format!("SELECT * FROM access_policies")),
-//     test_server.get(&format!("/access-policies"))
+//     test_server.get(&format!("/actions"))
 //       .add_query_param("query", format!("1 = 1")),
-//     test_server.get(&format!("/access-policies"))
+//     test_server.get(&format!("/actions"))
 //       .add_query_param("query", format!("SELECT PG_SLEEP(10)")),
-//     test_server.get(&format!("/access-policies"))
+//     test_server.get(&format!("/actions"))
 //       .add_query_param("query", format!("SELECT * FROM access_policies WHERE action_id = {}", get_access_policies_action.id))
 //   ];
   
@@ -382,7 +384,7 @@ async fn verify_returned_action_list_without_query() -> Result<(), SlashstepServ
 //     .into_make_service_with_connect_info::<SocketAddr>();
 //   let test_server = TestServer::new(router)?;
 
-//   let response = test_server.get(&format!("/access-policies"))
+//   let response = test_server.get(&format!("/actions"))
 //     .await;
   
 //   assert_eq!(response.status_code(), StatusCode::UNAUTHORIZED);
@@ -415,7 +417,7 @@ async fn verify_returned_action_list_without_query() -> Result<(), SlashstepServ
 //   let json_web_token_private_key = Session::get_json_web_token_private_key().await?;
 //   let session_token = session.generate_json_web_token(&json_web_token_private_key).await?;
 
-//   let response = test_server.get(&format!("/access-policies"))
+//   let response = test_server.get(&format!("/actions"))
 //     .add_query_param("query", format!("limit {}", DEFAULT_ACCESS_POLICY_LIST_LIMIT + 1))
 //     .add_cookie(Cookie::new("sessionToken", format!("Bearer {}", session_token)))
 //     .await;
