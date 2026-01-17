@@ -61,6 +61,13 @@ pub async fn initialize_pre_defined_actions(postgres_client: &mut deadpool_postg
       description: "Delete actions on a particular scope.".to_string(),
       app_id: None,
       parent_resource_type: ActionParentResourceType::Instance 
+    },
+    InitialActionProperties {
+      name: "slashstep.actions.update".to_string(),
+      display_name: "Update actions".to_string(),
+      description: "Update actions on a particular scope.".to_string(),
+      app_id: None,
+      parent_resource_type: ActionParentResourceType::Instance
     }
   ];
 
