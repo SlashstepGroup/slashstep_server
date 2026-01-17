@@ -4,8 +4,32 @@ use axum::middleware;
 use axum_extra::extract::cookie::Cookie;
 use axum_test::TestServer;
 use reqwest::StatusCode;
-
-use crate::{AppState, SlashstepServerError, middleware::http_request_middleware, pre_definitions::{initialize_pre_defined_actions, initialize_pre_defined_roles}, resources::{access_policy::{AccessPolicy, AccessPolicyPermissionLevel, AccessPolicyPrincipalType, AccessPolicyResourceType, IndividualPrincipal, InitialAccessPolicyProperties}, action::{Action, DEFAULT_ACTION_LIST_LIMIT}, session::Session}, routes::{access_policies::ListAccessPolicyResponseBody, actions::ListActionResponseBody}, tests::TestEnvironment};
+use crate::{
+  AppState, 
+  SlashstepServerError, 
+  middleware::http_request_middleware, 
+  pre_definitions::{
+    initialize_pre_defined_actions, 
+    initialize_pre_defined_roles
+  }, 
+  resources::{
+    access_policy::{
+      AccessPolicy, 
+      AccessPolicyPermissionLevel, 
+      AccessPolicyPrincipalType, 
+      AccessPolicyResourceType, 
+      IndividualPrincipal, 
+      InitialAccessPolicyProperties
+    }, 
+    action::{
+      Action, 
+      DEFAULT_ACTION_LIST_LIMIT
+    }, 
+    session::Session
+  }, 
+  routes::actions::ListActionResponseBody, 
+  tests::TestEnvironment
+};
 
 /// Verifies that the router can return a 200 status code and the requested action list.
 #[tokio::test]
@@ -389,37 +413,39 @@ async fn verify_authentication_when_listing_actions() -> Result<(), SlashstepSer
 
 }
 
-// /// Verifies that the server returns a 403 status code when the user lacks permissions and is authenticated.
-// #[tokio::test]
-// async fn verify_permission_when_listing_actions() -> Result<(), SlashstepServerError> {
+/// Verifies that the server returns a 403 status code when the user lacks permissions and is authenticated.
+#[tokio::test]
+async fn verify_permission_when_listing_actions() -> Result<(), SlashstepServerError> {
 
-//   let test_environment = TestEnvironment::new().await?;
-//   let mut postgres_client = test_environment.postgres_pool.get().await?;
-//   test_environment.initialize_required_tables().await?;
-//   initialize_pre_defined_actions(&mut postgres_client).await?;
-//   initialize_pre_defined_roles(&mut postgres_client).await?;
-//   let state = AppState {
-//     database_pool: test_environment.postgres_pool.clone(),
-//   };
+  let test_environment = TestEnvironment::new().await?;
+  let mut postgres_client = test_environment.postgres_pool.get().await?;
+  test_environment.initialize_required_tables().await?;
+  initialize_pre_defined_actions(&mut postgres_client).await?;
+  initialize_pre_defined_roles(&mut postgres_client).await?;
 
-//   let router = super::get_router(state.clone())
-//     .layer(middleware::from_fn_with_state(state.clone(), http_request_middleware::create_http_request))
-//     .with_state(state)
-//     .into_make_service_with_connect_info::<SocketAddr>();
-//   let test_server = TestServer::new(router)?;
+  // Create a user and a session.
+  let user = test_environment.create_random_user().await?;
+  let session = test_environment.create_session(&user.id).await?;
+  let json_web_token_private_key = Session::get_json_web_token_private_key().await?;
+  let session_token = session.generate_json_web_token(&json_web_token_private_key).await?;
+
+  // Set up the server and send the request.
+  let state = AppState {
+    database_pool: test_environment.postgres_pool.clone(),
+  };
+  let router = super::get_router(state.clone())
+    .layer(middleware::from_fn_with_state(state.clone(), http_request_middleware::create_http_request))
+    .with_state(state)
+    .into_make_service_with_connect_info::<SocketAddr>();
+  let test_server = TestServer::new(router)?;
+  let response = test_server.get(&format!("/actions"))
+    .add_query_param("query", format!("limit {}", DEFAULT_ACTION_LIST_LIMIT + 1))
+    .add_cookie(Cookie::new("sessionToken", format!("Bearer {}", session_token)))
+    .await;
   
-//   let user = test_environment.create_random_user().await?;
-//   let session = test_environment.create_session(&user.id).await?;
-//   let json_web_token_private_key = Session::get_json_web_token_private_key().await?;
-//   let session_token = session.generate_json_web_token(&json_web_token_private_key).await?;
+  // Verify the response.
+  assert_eq!(response.status_code(), StatusCode::FORBIDDEN);
 
-//   let response = test_server.get(&format!("/actions"))
-//     .add_query_param("query", format!("limit {}", DEFAULT_ACCESS_POLICY_LIST_LIMIT + 1))
-//     .add_cookie(Cookie::new("sessionToken", format!("Bearer {}", session_token)))
-//     .await;
-  
-//   assert_eq!(response.status_code(), StatusCode::FORBIDDEN);
+  return Ok(());
 
-//   return Ok(());
-
-// }
+}
