@@ -7,7 +7,7 @@ use pg_escape::quote_literal;
 use reqwest::StatusCode;
 use uuid::Uuid;
 
-use crate::{AppState, SlashstepServerError, middleware::http_request_middleware, pre_definitions::{initialize_pre_defined_actions}, resources::{access_policy::{AccessPolicy, AccessPolicyPermissionLevel, AccessPolicyPrincipalType, AccessPolicyResourceType, DEFAULT_ACCESS_POLICY_LIST_LIMIT, IndividualPrincipal, InitialAccessPolicyProperties}, action::Action, session::Session}, routes::actions::action_id::access_policies::InitialAccessPolicyPropertiesForAction, tests::TestEnvironment, utilities::reusable_route_handlers::ListAccessPolicyResponseBody};
+use crate::{AppState, SlashstepServerError, middleware::http_request_middleware, pre_definitions::{initialize_pre_defined_actions, initialize_pre_defined_roles}, resources::{access_policy::{AccessPolicy, AccessPolicyPermissionLevel, AccessPolicyPrincipalType, AccessPolicyResourceType, DEFAULT_ACCESS_POLICY_LIST_LIMIT, IndividualPrincipal, InitialAccessPolicyProperties}, action::Action, session::Session}, routes::actions::action_id::access_policies::InitialAccessPolicyPropertiesForAction, tests::TestEnvironment, utilities::reusable_route_handlers::ListAccessPolicyResponseBody};
 
 async fn create_instance_access_policy(postgres_client: &mut deadpool_postgres::Client, user_id: &Uuid, action_id: &Uuid, permission_level: &AccessPolicyPermissionLevel) -> Result<AccessPolicy, SlashstepServerError> {
 
@@ -366,33 +366,37 @@ async fn verify_query_when_listing_access_policies() -> Result<(), SlashstepServ
 
 }
 
-// /// Verifies that the server returns a 401 status code when the user lacks permissions and is unauthenticated.
-// #[tokio::test]
-// async fn verify_authentication_when_listing_access_policies() -> Result<(), SlashstepServerError> {
+/// Verifies that the server returns a 401 status code when the user lacks permissions and is unauthenticated.
+#[tokio::test]
+async fn verify_authentication_when_listing_access_policies() -> Result<(), SlashstepServerError> {
 
-//   let test_environment = TestEnvironment::new().await?;
-//   let mut postgres_client = test_environment.postgres_pool.get().await?;
-//   test_environment.initialize_required_tables().await?;
-//   initialize_pre_defined_actions(&mut postgres_client).await?;
-//   initialize_pre_defined_roles(&mut postgres_client).await?;
-//   let state = AppState {
-//     database_pool: test_environment.postgres_pool.clone(),
-//   };
+  let test_environment = TestEnvironment::new().await?;
+  let mut postgres_client = test_environment.postgres_pool.get().await?;
+  test_environment.initialize_required_tables().await?;
+  initialize_pre_defined_actions(&mut postgres_client).await?;
+  initialize_pre_defined_roles(&mut postgres_client).await?;
 
-//   let router = super::get_router(state.clone())
-//     .layer(middleware::from_fn_with_state(state.clone(), http_request_middleware::create_http_request))
-//     .with_state(state)
-//     .into_make_service_with_connect_info::<SocketAddr>();
-//   let test_server = TestServer::new(router)?;
+  // Create a dummy action.
+  let dummy_action = test_environment.create_random_action().await?;
 
-//   let response = test_server.get(&format!("/access-policies"))
-//     .await;
+  // Set up the server and send the request.
+  let state = AppState {
+    database_pool: test_environment.postgres_pool.clone(),
+  };
+  let router = super::get_router(state.clone())
+    .layer(middleware::from_fn_with_state(state.clone(), http_request_middleware::create_http_request))
+    .with_state(state)
+    .into_make_service_with_connect_info::<SocketAddr>();
+  let test_server = TestServer::new(router)?;
+  let response = test_server.get(&format!("/actions/{}/access-policies", &dummy_action.id))
+    .await;
   
-//   assert_eq!(response.status_code(), StatusCode::UNAUTHORIZED);
+  // Verify the response.
+  assert_eq!(response.status_code(), StatusCode::UNAUTHORIZED);
 
-//   return Ok(());
+  return Ok(());
 
-// }
+}
 
 // /// Verifies that the server returns a 403 status code when the user lacks permissions and is authenticated.
 // #[tokio::test]
