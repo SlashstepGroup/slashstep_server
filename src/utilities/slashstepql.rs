@@ -1,7 +1,7 @@
 use std::fmt;
 use pg_escape::{quote_identifier, quote_literal};
 use postgres_types::ToSql;
-use regex::{Regex, RegexBuilder};
+use regex::{RegexBuilder};
 use thiserror::Error;
 use std::error::Error;
 use crate::resources::access_policy::IndividualPrincipal;
