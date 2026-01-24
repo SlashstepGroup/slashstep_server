@@ -6,7 +6,7 @@
  * Programmers: 
  * - Christian Toney (https://christiantoney.com)
  * 
- * © 2025 Beastslash LLC
+ * © 2025 – 2026 Beastslash LLC
  * 
  */
 
@@ -21,11 +21,11 @@ use postgres_types::FromSql;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 use uuid::Uuid;
-use crate::{
-  resources::{action::ActionError, action_log_entry::ActionLogEntryError, app::AppError, app_authorization::AppAuthorizationError, app_authorization_credential::AppAuthorizationCredentialError, app_credential::AppCredentialError, group_membership::GroupMembershipError, item::ItemError, milestone::MilestoneError, project::ProjectError, role::RoleError, role_memberships::RoleMembershipError, session::SessionError}, utilities::slashstepql::{
+use crate::
+  utilities::slashstepql::{
     self, SlashstepQLError, SlashstepQLFilterSanitizer, SlashstepQLParsedParameter, SlashstepQLSanitizeFunctionOptions
   }
-};
+;
 
 pub const ALLOWED_QUERY_KEYS: &[&str] = &[
   "id",
@@ -36,7 +36,8 @@ pub const ALLOWED_QUERY_KEYS: &[&str] = &[
   "principal_role_id", 
   "principal_app_id",
   "scoped_resource_type", 
-  "scoped_action_id", 
+  "scoped_action_id",
+  "scoped_action_log_entry_id", 
   "scoped_app_id",
   "scoped_app_credential_id",
   "scoped_group_id", 
@@ -58,6 +59,7 @@ pub const UUID_QUERY_KEYS: &[&str] = &[
   "principal_role_id", 
   "principal_app_id",
   "scoped_action_id", 
+  "scoped_action_log_entry_id",
   "scoped_app_id", 
   "scoped_group_id",
   "scoped_app_credential_id",
@@ -129,46 +131,7 @@ pub enum AccessPolicyError {
   SlashstepQLError(#[from] SlashstepQLError),
 
   #[error(transparent)]
-  PostgresError(#[from] postgres::Error),
-
-  #[error(transparent)]
-  ProjectError(#[from] ProjectError),
-
-  #[error(transparent)]
-  ItemError(#[from] ItemError),
-
-  #[error(transparent)]
-  ActionError(#[from] ActionError),
-
-  #[error(transparent)]
-  ActionLogEntryError(#[from] ActionLogEntryError),
-
-  #[error(transparent)]
-  AppError(#[from] AppError),
-
-  #[error(transparent)]
-  AppCredentialError(#[from] AppCredentialError),
-
-  #[error(transparent)]
-  RoleError(#[from] RoleError),
-
-  #[error(transparent)]
-  RoleMembershipError(#[from] RoleMembershipError),
-
-  #[error(transparent)]
-  SessionError(#[from] SessionError),
-
-  #[error(transparent)]
-  MilestoneError(#[from] MilestoneError),
-
-  #[error(transparent)]
-  AppAuthorizationError(#[from] AppAuthorizationError),
-
-  #[error(transparent)]
-  AppAuthorizationCredentialError(#[from] AppAuthorizationCredentialError),
-
-  #[error(transparent)]
-  GroupMembershipError(#[from] GroupMembershipError),
+  PostgresError(#[from] postgres::Error)
 }
 
 impl FromStr for AccessPolicyPermissionLevel {
@@ -743,7 +706,15 @@ impl AccessPolicy {
       should_ignore_limit: false,
       should_ignore_offset: false
     };
-    let sanitized_filter = SlashstepQLFilterSanitizer::sanitize(&sanitizer_options)?;
+    let sanitized_filter = match SlashstepQLFilterSanitizer::sanitize(&sanitizer_options) {
+      Ok(sanitized_filter) => sanitized_filter,
+      Err(error) => {
+       
+        println!("{:?}", error); 
+        return Err(AccessPolicyError::SlashstepQLError(error))
+
+      }
+    };
     let query = SlashstepQLFilterSanitizer::build_query_from_sanitized_filter(&sanitized_filter, individual_principal, "AccessPolicy", "access_policies", "slashstep.accessPolicies.get", false);
     let parsed_parameters = slashstepql::parse_parameters(&sanitized_filter.parameters, Self::parse_string_slashstepql_parameters)?;
     let parameters: Vec<&(dyn ToSql + Sync)> = parsed_parameters.iter().map(|parameter| parameter.as_ref() as &(dyn ToSql + Sync)).collect();
@@ -843,12 +814,12 @@ impl AccessPolicy {
 
     };
     let mut query_filter = String::new();
-    query_filter.push_str(format!("{} and action_id = {} and (", principal_clause, quote_literal(&action_id.to_string())).as_str());
+    query_filter.push_str(format!("{} AND action_id = {} AND (", principal_clause, quote_literal(&action_id.to_string())).as_str());
     for i in 0..query_clauses.len() {
 
       if i > 0 {
 
-        query_filter.push_str(" or ");
+        query_filter.push_str(" OR ");
 
       }
 
@@ -857,7 +828,7 @@ impl AccessPolicy {
     }
     query_filter.push_str(")");
     
-    let access_policies: Vec<AccessPolicy> = AccessPolicy::list(&query_filter, postgres_client, None).await?;
+    let access_policies = AccessPolicy::list(&query_filter, postgres_client, None).await?;
 
     return Ok(access_policies);
 

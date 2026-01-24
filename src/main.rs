@@ -5,7 +5,6 @@ pub mod utilities;
 pub mod middleware;
 mod routes;
 mod pre_definitions;
-
 #[cfg(test)]
 mod tests;
 
@@ -21,8 +20,91 @@ use tokio::net::TcpListener;
 use colored::Colorize;
 use uuid::Uuid;
 use thiserror::Error;
-
-use crate::{pre_definitions::{initialize_pre_defined_actions, initialize_pre_defined_roles}, resources::{access_policy::{AccessPolicy, AccessPolicyError}, action::{Action, ActionError}, action_log_entry::{ActionLogEntry, ActionLogEntryError}, app::{App, AppError}, app_authorization::{AppAuthorization, AppAuthorizationError}, app_authorization_credential::{AppAuthorizationCredential, AppAuthorizationCredentialError}, app_credential::{AppCredential, AppCredentialError}, group::{Group, GroupError}, group_membership::{GroupMembership, GroupMembershipError}, http_transaction::{HTTPTransaction, HTTPTransactionError}, item::{Item, ItemError}, milestone::{Milestone, MilestoneError}, project::{Project, ProjectError}, role::{Role, RoleError}, role_memberships::{RoleMembership, RoleMembershipError}, server_log_entry::{ServerLogEntry, ServerLogEntryError}, session::{Session, SessionError}, user::{User, UserError}, workspace::{Workspace, WorkspaceError}}};
+use crate::{
+  pre_definitions::{
+    initialize_pre_defined_actions, 
+    initialize_pre_defined_roles
+  }, 
+  resources::{
+    access_policy::{
+      AccessPolicy, 
+      AccessPolicyError
+    }, 
+    action::{
+      Action, 
+      ActionError
+    }, 
+    action_log_entry::{
+      ActionLogEntry, 
+      ActionLogEntryError
+    }, 
+    app::{
+      App, 
+      AppError
+    }, 
+    app_authorization::{
+      AppAuthorization, 
+      AppAuthorizationError
+    }, 
+    app_authorization_credential::{
+      AppAuthorizationCredential, 
+      AppAuthorizationCredentialError
+    }, 
+    app_credential::{
+      AppCredential, 
+      AppCredentialError
+    }, 
+    group::{
+      Group, 
+      GroupError
+    }, 
+    group_membership::{
+      GroupMembership, 
+      GroupMembershipError
+    }, 
+    http_transaction::{
+      HTTPTransaction, 
+      HTTPTransactionError
+    }, 
+    item::{
+      Item, 
+      ItemError
+    }, 
+    milestone::{
+      Milestone, 
+      MilestoneError
+    }, 
+    project::{
+      Project, 
+      ProjectError
+    }, 
+    role::{
+      Role, 
+      RoleError
+    }, 
+    role_memberships::{
+      RoleMembership, 
+      RoleMembershipError
+    }, 
+    server_log_entry::{
+      ServerLogEntry, 
+      ServerLogEntryError
+    }, 
+    session::{
+      Session, 
+      SessionError
+    }, 
+    user::{
+      User, 
+      UserError
+    }, 
+    workspace::{
+      Workspace, 
+      WorkspaceError
+    }
+  },
+  utilities::resource_hierarchy::ResourceHierarchyError
+};
 
 const DEFAULT_APP_PORT: i16 = 8080;
 const DEFAULT_MAXIMUM_POSTGRES_CONNECTION_COUNT: u32 = 5;
@@ -160,7 +242,7 @@ pub enum SlashstepServerError {
   LocalIPAddressError(#[from] local_ip_address::Error),
 
   #[error(transparent)]
-  AnyhowError(#[from] anyhow::Error)
+  ResourceHierarchyError(#[from] ResourceHierarchyError)
 
 }
 
@@ -186,9 +268,6 @@ pub async fn initialize_required_tables(postgres_client: &mut deadpool_postgres:
   Milestone::initialize_milestones_table(postgres_client).await?;
   ActionLogEntry::initialize_action_log_entries_table(postgres_client).await?;
   AccessPolicy::initialize_access_policies_table(postgres_client).await?;
-
-  let query = include_str!("./queries/action_log_entries/add_access_policies_reference.sql");
-  postgres_client.execute(query, &[]).await?;
   
   return Ok(());
 
