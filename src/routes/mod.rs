@@ -2,6 +2,9 @@
 mod access_policies;
 mod actions;
 
+#[path = "./action-log-entries/mod.rs"]
+mod action_log_entries;
+
 use axum::{Router, response::IntoResponse};
 use crate::{AppState, HTTPError};
 

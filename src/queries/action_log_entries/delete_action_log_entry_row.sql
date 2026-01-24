@@ -1,0 +1,1 @@
+DELETE FROM action_log_entries WHERE id = $1;

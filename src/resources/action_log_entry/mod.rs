@@ -1,4 +1,5 @@
 use postgres_types::{FromSql, ToSql};
+use serde::Serialize;
 use thiserror::Error;
 use uuid::Uuid;
 
@@ -11,14 +12,14 @@ pub enum ActionLogEntryError {
   PostgresError(#[from] postgres::Error)
 }
 
-#[derive(Debug, Clone, FromSql, ToSql)]
+#[derive(Debug, Clone, FromSql, ToSql, Serialize)]
 #[postgres(name = "action_log_entry_actor_type")]
 pub enum ActionLogEntryActorType {
   User,
   App
 }
 
-#[derive(Debug, Clone, FromSql, ToSql)]
+#[derive(Debug, Clone, FromSql, ToSql, Serialize)]
 #[postgres(name = "action_log_entry_target_resource_type")]
 pub enum ActionLogEntryTargetResourceType {
   AccessPolicy,
@@ -43,7 +44,7 @@ pub enum ActionLogEntryTargetResourceType {
   Workspace
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize)]
 pub struct ActionLogEntry {
 
   /// The ID of the action log entry.
@@ -197,6 +198,14 @@ impl ActionLogEntry {
 
     let query = include_str!("../../queries/action_log_entries/initialize_action_log_entries_table.sql");
     postgres_client.execute(query, &[]).await?;
+    return Ok(());
+
+  }
+
+  pub async fn delete(&self, postgres_client: &mut deadpool_postgres::Client) -> Result<(), ActionLogEntryError> {
+
+    let query = include_str!("../../queries/action_log_entries/delete_action_log_entry_row.sql");
+    postgres_client.execute(query, &[&self.id]).await?;
     return Ok(());
 
   }

@@ -129,46 +129,7 @@ pub enum AccessPolicyError {
   SlashstepQLError(#[from] SlashstepQLError),
 
   #[error(transparent)]
-  PostgresError(#[from] postgres::Error),
-
-  #[error(transparent)]
-  ProjectError(#[from] ProjectError),
-
-  #[error(transparent)]
-  ItemError(#[from] ItemError),
-
-  #[error(transparent)]
-  ActionError(#[from] ActionError),
-
-  #[error(transparent)]
-  ActionLogEntryError(#[from] ActionLogEntryError),
-
-  #[error(transparent)]
-  AppError(#[from] AppError),
-
-  #[error(transparent)]
-  AppCredentialError(#[from] AppCredentialError),
-
-  #[error(transparent)]
-  RoleError(#[from] RoleError),
-
-  #[error(transparent)]
-  RoleMembershipError(#[from] RoleMembershipError),
-
-  #[error(transparent)]
-  SessionError(#[from] SessionError),
-
-  #[error(transparent)]
-  MilestoneError(#[from] MilestoneError),
-
-  #[error(transparent)]
-  AppAuthorizationError(#[from] AppAuthorizationError),
-
-  #[error(transparent)]
-  AppAuthorizationCredentialError(#[from] AppAuthorizationCredentialError),
-
-  #[error(transparent)]
-  GroupMembershipError(#[from] GroupMembershipError),
+  PostgresError(#[from] postgres::Error)
 }
 
 impl FromStr for AccessPolicyPermissionLevel {

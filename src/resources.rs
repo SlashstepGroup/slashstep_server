@@ -1,3 +1,5 @@
+use crate::Error;
+
 pub mod access_policy;
 pub mod action;
 pub mod action_log_entry;
@@ -17,3 +19,7 @@ pub mod server_log_entry;
 pub mod http_transaction;
 pub mod session;
 pub mod role_memberships;
+
+pub trait DeletableResource {
+  fn delete(self, postgres_client: &mut deadpool_postgres::Client) -> Result<(), Error>;
+}
