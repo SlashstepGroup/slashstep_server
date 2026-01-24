@@ -74,6 +74,9 @@ pub struct ActionLogEntry {
   /// The type of the target resource of the action.
   pub target_resource_type: ActionLogEntryTargetResourceType,
 
+  /// The target access policy ID of the action, if applicable.
+  pub target_access_policy_id: Option<Uuid>,
+
   /// The target action ID of the action, if applicable.
   pub target_action_id: Option<Uuid>,
 
@@ -153,6 +156,9 @@ pub struct InitialActionLogEntryProperties {
 
   /// The type of the target resource of the action.
   pub target_resource_type: ActionLogEntryTargetResourceType,
+
+  /// The target access policy ID of the action, if applicable.
+  pub target_access_policy_id: Option<Uuid>,
 
   /// The target action ID of the action, if applicable.
   pub target_action_id: Option<Uuid>,
@@ -248,6 +254,7 @@ impl ActionLogEntry {
       actor_user_id: row.get("actor_user_id"),
       actor_app_id: row.get("actor_app_id"),
       target_resource_type: row.get("target_resource_type"),
+      target_access_policy_id: row.get("target_access_policy_id"),
       target_action_id: row.get("target_action_id"),
       target_action_log_entry_id: row.get("target_action_log_entry_id"),
       target_app_id: row.get("target_app_id"),
@@ -299,6 +306,7 @@ impl ActionLogEntry {
       &initial_properties.actor_user_id,
       &initial_properties.actor_app_id,
       &initial_properties.target_resource_type,
+      &initial_properties.target_access_policy_id,
       &initial_properties.target_action_id,
       &initial_properties.target_action_log_entry_id,
       &initial_properties.target_app_id,

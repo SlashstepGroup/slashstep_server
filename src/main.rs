@@ -268,9 +268,6 @@ pub async fn initialize_required_tables(postgres_client: &mut deadpool_postgres:
   Milestone::initialize_milestones_table(postgres_client).await?;
   ActionLogEntry::initialize_action_log_entries_table(postgres_client).await?;
   AccessPolicy::initialize_access_policies_table(postgres_client).await?;
-
-  let query = include_str!("./queries/access_policies/add_access_policies_reference.sql");
-  postgres_client.execute(query, &[]).await?;
   
   return Ok(());
 
