@@ -18,7 +18,7 @@ use crate::{
       AccessPolicyPrincipalType, 
       AccessPolicyResourceType, 
       InitialAccessPolicyProperties
-    }, action_log_entry::ActionLogEntry, session::Session
+    }, action_log_entry::{ActionLogEntry, ActionLogEntryError}, session::Session
   }, 
   tests::{TestEnvironment, TestSlashstepServerError}
 };
@@ -220,3 +220,187 @@ async fn verify_not_found_when_getting_action_log_entry_by_id() -> Result<(), Te
   return Ok(());
 
 }
+
+/// Verifies that the router can return a 204 status code if the action log entry is successfully deleted.
+#[tokio::test]
+async fn verify_successful_deletion_when_deleting_action_log_entry_by_id() -> Result<(), TestSlashstepServerError> {
+
+  let test_environment = TestEnvironment::new().await?;
+  let mut postgres_client = test_environment.postgres_pool.get().await?;
+  initialize_required_tables(&mut postgres_client).await?;
+  initialize_pre_defined_actions(&mut postgres_client).await?;
+  initialize_pre_defined_roles(&mut postgres_client).await?;
+  
+  // Create the user and the session.
+  let user = test_environment.create_random_user().await?;
+  let session = test_environment.create_session(&user.id).await?;
+  let json_web_token_private_key = Session::get_json_web_token_private_key().await?;
+  let session_token = session.generate_json_web_token(&json_web_token_private_key).await?;
+
+  // Grant access to the "slashstep.actions.delete" action to the user.
+  let delete_action_log_entries_action = Action::get_by_name("slashstep.actionLogEntries.delete", &mut postgres_client).await?;
+  AccessPolicy::create(&InitialAccessPolicyProperties {
+    action_id: delete_action_log_entries_action.id,
+    permission_level: AccessPolicyPermissionLevel::User,
+    is_inheritance_enabled: true,
+    principal_type: AccessPolicyPrincipalType::User,
+    principal_user_id: Some(user.id),
+    scoped_resource_type: AccessPolicyResourceType::Instance,
+    ..Default::default()
+  }, &mut postgres_client).await?;
+
+  // Set up the server and send the request.
+  let action_log_entry = test_environment.create_random_action_log_entry().await?;
+  let state = AppState {
+    database_pool: test_environment.postgres_pool.clone(),
+  };
+  let router = super::get_router(state.clone())
+    .layer(middleware::from_fn_with_state(state.clone(), http_request_middleware::create_http_request))
+    .with_state(state)
+    .into_make_service_with_connect_info::<SocketAddr>();
+  let test_server = TestServer::new(router)?;
+  let response = test_server.delete(&format!("/action-log-entries/{}", action_log_entry.id))
+    .add_cookie(Cookie::new("sessionToken", format!("Bearer {}", session_token)))
+    .await;
+  
+  assert_eq!(response.status_code(), 204);
+
+  match ActionLogEntry::get_by_id(&action_log_entry.id, &mut postgres_client).await.expect_err("Expected an action log entry not found error.") {
+
+    ActionLogEntryError::NotFoundError(_) => {},
+
+    error => return Err(TestSlashstepServerError::ActionLogEntryError(error))
+
+  }
+
+  return Ok(());
+
+}
+
+// /// Verifies that the router can return a 400 status code if the action ID is not a UUID.
+// #[tokio::test]
+// async fn verify_uuid_when_deleting_action_by_id() -> Result<(), TestSlashstepServerError> {
+
+//   let test_environment = TestEnvironment::new().await?;
+//   let mut postgres_client = test_environment.postgres_pool.get().await?;
+//   initialize_required_tables(&mut postgres_client).await?;
+//   initialize_pre_defined_actions(&mut postgres_client).await?;
+//   initialize_pre_defined_roles(&mut postgres_client).await?;
+//   let state = AppState {
+//     database_pool: test_environment.postgres_pool.clone(),
+//   };
+
+//   let router = super::get_router(state.clone())
+//     .layer(middleware::from_fn_with_state(state.clone(), http_request_middleware::create_http_request))
+//     .with_state(state)
+//     .into_make_service_with_connect_info::<SocketAddr>();
+//   let test_server = TestServer::new(router)?;
+
+//   let response = test_server.delete("/actions/not-a-uuid")
+//     .await;
+  
+//   assert_eq!(response.status_code(), 400);
+//   return Ok(());
+
+// }
+
+// /// Verifies that the router can return a 401 status code if the user needs authentication.
+// #[tokio::test]
+// async fn verify_authentication_when_deleting_action_by_id() -> Result<(), TestSlashstepServerError> {
+
+//   let test_environment = TestEnvironment::new().await?;
+//   let mut postgres_client = test_environment.postgres_pool.get().await?;
+//   initialize_required_tables(&mut postgres_client).await?;
+//   initialize_pre_defined_actions(&mut postgres_client).await?;
+//   initialize_pre_defined_roles(&mut postgres_client).await?;
+  
+//   // Create a dummy action.
+//   let action = test_environment.create_random_action().await?;
+
+//   // Set up the server and send the request.
+//   let state = AppState {
+//     database_pool: test_environment.postgres_pool.clone(),
+//   };
+//   let router = super::get_router(state.clone())
+//     .layer(middleware::from_fn_with_state(state.clone(), http_request_middleware::create_http_request))
+//     .with_state(state)
+//     .into_make_service_with_connect_info::<SocketAddr>();
+//   let test_server = TestServer::new(router)?;
+//   let response = test_server.delete(&format!("/actions/{}", action.id))
+//     .await;
+  
+//   // Verify the response.
+//   assert_eq!(response.status_code(), 401);
+//   return Ok(());
+
+// }
+
+// /// Verifies that the router can return a 403 status code if the user does not have permission to delete the action.
+// #[tokio::test]
+// async fn verify_permission_when_deleting_action_by_id() -> Result<(), TestSlashstepServerError> {
+
+//   let test_environment = TestEnvironment::new().await?;
+//   let mut postgres_client = test_environment.postgres_pool.get().await?;
+//   initialize_required_tables(&mut postgres_client).await?;
+//   initialize_pre_defined_actions(&mut postgres_client).await?;
+//   initialize_pre_defined_roles(&mut postgres_client).await?;
+  
+//   // Create the user and the session.
+//   let user = test_environment.create_random_user().await?;
+//   let session = test_environment.create_session(&user.id).await?;
+//   let json_web_token_private_key = Session::get_json_web_token_private_key().await?;
+//   let session_token = session.generate_json_web_token(&json_web_token_private_key).await?;
+  
+//   // Create a dummy action.
+//   let action = test_environment.create_random_action().await?;
+
+//   // Set up the server and send the request.
+//   let state = AppState {
+//     database_pool: test_environment.postgres_pool.clone(),
+//   };
+//   let router = super::get_router(state.clone())
+//     .layer(middleware::from_fn_with_state(state.clone(), http_request_middleware::create_http_request))
+//     .with_state(state)
+//     .into_make_service_with_connect_info::<SocketAddr>();
+//   let test_server = TestServer::new(router)?;
+//   let response = test_server.delete(&format!("/actions/{}", action.id))
+//     .add_cookie(Cookie::new("sessionToken", format!("Bearer {}", session_token)))
+//     .await;
+  
+//   // Verify the response.
+//   assert_eq!(response.status_code(), 403);
+//   return Ok(());
+
+// }
+
+// /// Verifies that the router can return a 404 status code if the action does not exist.
+// #[tokio::test]
+// async fn verify_action_exists_when_deleting_action_by_id() -> Result<(), TestSlashstepServerError> {
+
+//   let test_environment = TestEnvironment::new().await?;
+//   initialize_required_tables(&mut test_environment.postgres_pool.get().await?).await?;
+  
+//   // Create the user and the session.
+//   let user = test_environment.create_random_user().await?;
+//   let session = test_environment.create_session(&user.id).await?;
+//   let json_web_token_private_key = Session::get_json_web_token_private_key().await?;
+//   let session_token = session.generate_json_web_token(&json_web_token_private_key).await?;
+
+//   // Set up the server and send the request.
+//   let state = AppState {
+//     database_pool: test_environment.postgres_pool.clone(),
+//   };
+//   let router = super::get_router(state.clone())
+//     .layer(middleware::from_fn_with_state(state.clone(), http_request_middleware::create_http_request))
+//     .with_state(state)
+//     .into_make_service_with_connect_info::<SocketAddr>();
+//   let test_server = TestServer::new(router)?;
+//   let response = test_server.delete(&format!("/actions/{}", uuid::Uuid::now_v7()))
+//     .add_cookie(Cookie::new("sessionToken", format!("Bearer {}", session_token)))
+//     .await;
+  
+//   // Verify the response.
+//   assert_eq!(response.status_code(), 404);
+//   return Ok(());
+
+// }
