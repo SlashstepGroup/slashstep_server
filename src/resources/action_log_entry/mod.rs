@@ -355,3 +355,6 @@ impl ActionLogEntry {
   }
 
 }
+
+#[cfg(test)]
+mod tests;
