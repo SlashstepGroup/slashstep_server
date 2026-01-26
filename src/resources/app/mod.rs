@@ -1,15 +1,16 @@
 use postgres::error::SqlState;
 use postgres_types::{FromSql, ToSql};
+use serde::{Deserialize, Serialize};
 use thiserror::Error;
 use uuid::Uuid;
 
-#[derive(Debug, PartialEq, Eq, ToSql, FromSql, Clone)]
+#[derive(Debug, PartialEq, Eq, ToSql, FromSql, Clone, Serialize, Deserialize)]
 pub enum AppClientType {
   Public,
   Confidential
 }
 
-#[derive(Debug, PartialEq, Eq, ToSql, FromSql, Clone)]
+#[derive(Debug, PartialEq, Eq, ToSql, FromSql, Clone, Serialize, Deserialize)]
 #[postgres(name = "app_parent_resource_type")]
 pub enum AppParentResourceType {
   Instance,
@@ -29,7 +30,7 @@ pub enum AppError {
   NotFoundError(String)
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct App {
   pub id: Uuid,
   pub name: String,
@@ -42,15 +43,15 @@ pub struct App {
   pub parent_user_id: Option<Uuid>
 }
 
-pub struct InitialAppProperties<'a> {
-  pub name: &'a str,
-  pub display_name: &'a str,
-  pub description: Option<&'a str>,
-  pub client_type: &'a AppClientType,
-  pub client_secret_hash: &'a str,
-  pub parent_resource_type: &'a AppParentResourceType,
-  pub parent_workspace_id: Option<&'a Uuid>,
-  pub parent_user_id: Option<&'a Uuid>
+pub struct InitialAppProperties {
+  pub name: String,
+  pub display_name: String,
+  pub description: Option<String>,
+  pub client_type: AppClientType,
+  pub client_secret_hash: String,
+  pub parent_resource_type: AppParentResourceType,
+  pub parent_workspace_id: Option<Uuid>,
+  pub parent_user_id: Option<Uuid>
 }
 
 impl App {
@@ -64,7 +65,7 @@ impl App {
 
   }
 
-  pub fn from_row(row: &postgres::Row) -> Self {
+  pub fn convert_from_row(row: &postgres::Row) -> Self {
 
     return App {
       id: row.get("id"),
@@ -80,7 +81,8 @@ impl App {
 
   }
 
-  pub async fn create(initial_properties: &InitialAppProperties<'_>, postgres_client: &mut deadpool_postgres::Client) -> Result<Self, AppError> {
+  /// Creates a new app.
+  pub async fn create(initial_properties: &InitialAppProperties, postgres_client: &mut deadpool_postgres::Client) -> Result<Self, AppError> {
 
     let query = include_str!("../../queries/apps/insert-app-row.sql");
     let parameters: &[&(dyn ToSql + Sync)] = &[
@@ -108,12 +110,22 @@ impl App {
     })?;
 
     // Return the action.
-    let app = App::from_row(&row);
+    let app = Self::convert_from_row(&row);
 
     return Ok(app);
 
   }
 
+  /// Deletes an app.
+  pub async fn delete(&self, postgres_client: &mut deadpool_postgres::Client) -> Result<(), AppError> {
+
+    let query = include_str!("../../queries/apps/delete-app-row-by-id.sql");
+    postgres_client.execute(query, &[&self.id]).await?;
+    return Ok(());
+
+  }
+
+  /// Gets an app by its ID.
   pub async fn get_by_id(id: &Uuid, postgres_client: &mut deadpool_postgres::Client) -> Result<Self, AppError> {
 
     let query = include_str!("../../queries/apps/get-app-row-by-id.sql");
@@ -131,7 +143,7 @@ impl App {
 
     };
 
-    let app = App::from_row(&row);
+    let app = Self::convert_from_row(&row);
 
     return Ok(app);
 

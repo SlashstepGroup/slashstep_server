@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use crate::{HTTPError, resources::{access_policy::{AccessPolicyPermissionLevel, AccessPolicyResourceType, Principal, ResourceHierarchy}, action::{Action, ActionError}, action_log_entry::ActionLogEntry, http_transaction::HTTPTransaction, server_log_entry::ServerLogEntry, user::User}, utilities::{principal_permission_verifier::{PrincipalPermissionVerifier, PrincipalPermissionVerifierError}, resource_hierarchy::{self, ResourceHierarchyError}}};
+use crate::{HTTPError, resources::{access_policy::{AccessPolicyPermissionLevel, AccessPolicyResourceType, Principal, ResourceHierarchy}, action::{Action, ActionError}, action_log_entry::ActionLogEntry, app::{App, AppError}, http_transaction::HTTPTransaction, server_log_entry::ServerLogEntry, user::User}, utilities::{principal_permission_verifier::{PrincipalPermissionVerifier, PrincipalPermissionVerifierError}, resource_hierarchy::{self, ResourceHierarchyError}}};
 use colored::Colorize;
 use uuid::Uuid;
 
@@ -126,6 +126,90 @@ pub async fn get_action_from_id(action_id_string: &str, http_transaction: &HTTPT
   };
 
   return Ok(action);
+
+}
+
+pub async fn get_app_from_id(app_id_string: &str, http_transaction: &HTTPTransaction, mut postgres_client: &mut deadpool_postgres::Client) -> Result<App, HTTPError> {
+
+  let app_id = match Uuid::parse_str(&app_id_string) {
+
+    Ok(app_id) => app_id,
+
+    Err(_) => {
+
+      let http_error = HTTPError::BadRequestError(Some("You must provide a valid UUID for the action ID.".to_string()));
+      ServerLogEntry::from_http_error(&http_error, Some(&http_transaction.id), &mut postgres_client).await.ok();
+      return Err(http_error);
+
+    }
+
+  };
+
+  ServerLogEntry::trace(&format!("Getting app {}...", app_id), Some(&http_transaction.id), postgres_client).await.ok();
+  let app = match App::get_by_id(&app_id, postgres_client).await {
+
+    Ok(app) => app,
+
+    Err(error) => {
+
+      let http_error = match error {
+        
+        AppError::NotFoundError(message) => HTTPError::NotFoundError(Some(message)),
+
+        error => HTTPError::InternalServerError(Some(format!("Failed to get app {}: {:?}", app_id, error)))
+
+      };
+      http_error.print_and_save(Some(&http_transaction.id), &mut postgres_client).await.ok();
+      return Err(http_error);
+
+    }
+
+  };
+
+  return Ok(app);
+
+}
+
+pub async fn get_resource_hierarchy_for_app(app: &App, http_transaction: &HTTPTransaction, mut postgres_client: &mut deadpool_postgres::Client) -> Result<ResourceHierarchy, HTTPError> {
+
+  ServerLogEntry::trace(&format!("Getting resource hierarchy for app {}...", app.id), Some(&http_transaction.id), &mut postgres_client).await.ok();
+  let resource_hierarchy = match resource_hierarchy::get_hierarchy(&AccessPolicyResourceType::Action, &Some(app.id), &mut postgres_client).await {
+
+    Ok(resource_hierarchy) => resource_hierarchy,
+
+    Err(error) => {
+
+      let http_error = match error {
+
+        ResourceHierarchyError::ScopedResourceIDMissingError(scoped_resource_type) => {
+
+          ServerLogEntry::trace(&format!("Deleting orphaned app {}...", app.id), Some(&http_transaction.id), &mut postgres_client).await.ok();
+
+          let http_error = match app.delete(&mut postgres_client).await {
+
+            Ok(_) => HTTPError::GoneError(Some(format!("The {} resource has been deleted because it was orphaned.", scoped_resource_type))),
+
+            Err(error) => HTTPError::InternalServerError(Some(format!("Failed to delete orphaned app: {:?}", error)))
+
+          };
+          
+          http_error.print_and_save(Some(&http_transaction.id), &mut postgres_client).await.ok();
+          return Err(http_error);
+
+        },
+
+        _ => HTTPError::InternalServerError(Some(error.to_string()))
+
+      };
+      
+      ServerLogEntry::from_http_error(&http_error, Some(&http_transaction.id), &mut postgres_client).await.ok();
+      return Err(http_error);
+
+    }
+
+  };
+
+  return Ok(resource_hierarchy);
 
 }
 

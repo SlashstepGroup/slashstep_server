@@ -89,7 +89,14 @@ pub async fn initialize_pre_defined_actions(postgres_client: &mut deadpool_postg
       description: "List all action log entries on a particular scope.".to_string(),
       app_id: None,
       parent_resource_type: ActionParentResourceType::Instance
-    }
+    },
+    InitialActionProperties {
+      name: "slashstep.apps.get".to_string(),
+      display_name: "Get apps".to_string(),
+      description: "Get an app on a particular scope.".to_string(),
+      app_id: None,
+      parent_resource_type: ActionParentResourceType::Instance
+    },
   ];
 
   let mut actions: Vec<Action> = Vec::new();
