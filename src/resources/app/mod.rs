@@ -5,6 +5,7 @@ use thiserror::Error;
 use uuid::Uuid;
 
 #[derive(Debug, PartialEq, Eq, ToSql, FromSql, Clone, Serialize, Deserialize)]
+#[postgres(name = "app_client_type")]
 pub enum AppClientType {
   Public,
   Confidential
@@ -14,8 +15,8 @@ pub enum AppClientType {
 #[postgres(name = "app_parent_resource_type")]
 pub enum AppParentResourceType {
   Instance,
-  Workspace,
-  User
+  User,
+  Workspace
 }
 
 #[derive(Debug, Error)]
