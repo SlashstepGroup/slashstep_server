@@ -6,7 +6,7 @@ use postgres::NoTls;
 use testcontainers_modules::{testcontainers::runners::AsyncRunner};
 use testcontainers::{ImageExt};
 use uuid::Uuid;
-use crate::{DEFAULT_MAXIMUM_POSTGRES_CONNECTION_COUNT, SlashstepServerError, import_env_file, resources::{access_policy::{AccessPolicy, AccessPolicyError, InitialAccessPolicyProperties}, action::{Action, ActionError, ActionParentResourceType, InitialActionProperties}, action_log_entry::{ActionLogEntry, ActionLogEntryError, InitialActionLogEntryProperties}, app::AppError, app_authorization::AppAuthorizationError, app_authorization_credential::AppAuthorizationCredentialError, app_credential::AppCredentialError, group::GroupError, group_membership::GroupMembershipError, http_transaction::HTTPTransactionError, item::ItemError, milestone::MilestoneError, project::ProjectError, role::RoleError, role_memberships::RoleMembershipError, server_log_entry::ServerLogEntryError, session::{InitialSessionProperties, Session, SessionError}, user::{InitialUserProperties, User, UserError}, workspace::WorkspaceError}, utilities::resource_hierarchy::ResourceHierarchyError};
+use crate::{DEFAULT_MAXIMUM_POSTGRES_CONNECTION_COUNT, SlashstepServerError, import_env_file, resources::{access_policy::{AccessPolicy, AccessPolicyError, InitialAccessPolicyProperties}, action::{Action, ActionError, ActionParentResourceType, InitialActionProperties}, action_log_entry::{ActionLogEntry, ActionLogEntryError, InitialActionLogEntryProperties}, app::{App, AppClientType, AppError, AppParentResourceType, InitialAppProperties}, app_authorization::AppAuthorizationError, app_authorization_credential::AppAuthorizationCredentialError, app_credential::AppCredentialError, group::GroupError, group_membership::GroupMembershipError, http_transaction::HTTPTransactionError, item::ItemError, milestone::MilestoneError, project::ProjectError, role::RoleError, role_memberships::RoleMembershipError, server_log_entry::ServerLogEntryError, session::{InitialSessionProperties, Session, SessionError}, user::{InitialUserProperties, User, UserError}, workspace::WorkspaceError}, utilities::resource_hierarchy::ResourceHierarchyError};
 use thiserror::Error;
 
 #[derive(Debug, Error)]
@@ -146,6 +146,27 @@ impl TestEnvironment {
 
   }
 
+  pub async fn create_random_app(&self) -> Result<App, TestSlashstepServerError> {
+
+    let app_properties = InitialAppProperties {
+      name: Uuid::now_v7().to_string(),
+      display_name: Uuid::now_v7().to_string(),
+      description: Some(Uuid::now_v7().to_string()),
+      client_type: AppClientType::Public,
+      client_secret_hash: Uuid::now_v7().to_string(),
+      parent_resource_type: AppParentResourceType::Instance,
+      parent_workspace_id: None,
+      parent_user_id: None
+    };
+
+    let mut postgres_client = self.postgres_pool.get().await?;
+
+    let app = App::create(&app_properties, &mut postgres_client).await?;
+
+    return Ok(app);
+
+  }
+  
   pub async fn create_random_action(&self) -> Result<Action, TestSlashstepServerError> {
 
     let action_properties = InitialActionProperties {
