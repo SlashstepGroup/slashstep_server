@@ -77,7 +77,7 @@ async fn create_action_log_entry_access_policy(postgres_client: &mut deadpool_po
 //     .with_state(state)
 //     .into_make_service_with_connect_info::<SocketAddr>();
 //   let test_server = TestServer::new(router)?;
-//   let response = test_server.post(&format!("/actions/{}/access-policies", dummy_action.id))
+//   let response = test_server.post(&format!("/action-log-entries/{}/access-policies", dummy_action.id))
 //     .add_cookie(Cookie::new("sessionToken", format!("Bearer {}", session_token)))
 //     .json(&serde_json::json!(initial_access_policy_properties))
 //     .await;
@@ -305,62 +305,64 @@ async fn verify_maximum_access_policy_list_limit() -> Result<(), TestSlashstepSe
 
 }
 
-// /// Verifies that the server returns a 400 status code when the query is invalid.
-// #[tokio::test]
-// async fn verify_query_when_listing_access_policies() -> Result<(), TestSlashstepServerError> {
+/// Verifies that the server returns a 400 status code when the query is invalid.
+#[tokio::test]
+async fn verify_query_when_listing_access_policies() -> Result<(), TestSlashstepServerError> {
 
-//   let test_environment = TestEnvironment::new().await?;
-//   let mut postgres_client = test_environment.postgres_pool.get().await?;
-//   initialize_required_tables(&mut postgres_client).await?;
-//   initialize_pre_defined_actions(&mut postgres_client).await?;
+  let test_environment = TestEnvironment::new().await?;
+  let mut postgres_client = test_environment.postgres_pool.get().await?;
+  initialize_required_tables(&mut postgres_client).await?;
+  initialize_pre_defined_actions(&mut postgres_client).await?;
   
-//   // Create the user and the session.
-//   let user = test_environment.create_random_user().await?;
-//   let session = test_environment.create_session(&user.id).await?;
-//   let json_web_token_private_key = Session::get_json_web_token_private_key().await?;
-//   let session_token = session.generate_json_web_token(&json_web_token_private_key).await?;
-//   let get_access_policies_action = Action::get_by_name("slashstep.accessPolicies.get", &mut postgres_client).await?;
-//   create_instance_access_policy(&mut postgres_client, &user.id, &get_access_policies_action.id, &AccessPolicyPermissionLevel::User).await?;
+  // Create the user and the session.
+  let user = test_environment.create_random_user().await?;
+  let session = test_environment.create_session(&user.id).await?;
+  let json_web_token_private_key = Session::get_json_web_token_private_key().await?;
+  let session_token = session.generate_json_web_token(&json_web_token_private_key).await?;
+  let get_access_policies_action = Action::get_by_name("slashstep.accessPolicies.get", &mut postgres_client).await?;
+  create_instance_access_policy(&mut postgres_client, &user.id, &get_access_policies_action.id, &AccessPolicyPermissionLevel::User).await?;
 
-//   let list_access_policies_action = Action::get_by_name("slashstep.accessPolicies.list", &mut postgres_client).await?;
-//   create_instance_access_policy(&mut postgres_client, &user.id, &list_access_policies_action.id, &AccessPolicyPermissionLevel::User).await?;
+  let list_access_policies_action = Action::get_by_name("slashstep.accessPolicies.list", &mut postgres_client).await?;
+  create_instance_access_policy(&mut postgres_client, &user.id, &list_access_policies_action.id, &AccessPolicyPermissionLevel::User).await?;
 
-//   // Set up the server and send the request.
-//   let state = AppState {
-//     database_pool: test_environment.postgres_pool.clone(),
-//   };
-//   let router = super::get_router(state.clone())
-//     .layer(middleware::from_fn_with_state(state.clone(), http_request_middleware::create_http_request))
-//     .with_state(state)
-//     .into_make_service_with_connect_info::<SocketAddr>();
-//   let test_server = TestServer::new(router)?;
-//   let requests = vec![
-//     test_server.get(&format!("/actions/{}/access-policies", get_access_policies_action.id))
-//       .add_query_param("query", format!("action_ied = {}", get_access_policies_action.id)),
-//     test_server.get(&format!("/actions/{}/access-policies", get_access_policies_action.id))
-//       .add_query_param("query", format!("SELECT * FROM access_policies")),
-//     test_server.get(&format!("/actions/{}/access-policies", get_access_policies_action.id))
-//       .add_query_param("query", format!("1 = 1")),
-//     test_server.get(&format!("/actions/{}/access-policies", get_access_policies_action.id))
-//       .add_query_param("query", format!("SELECT PG_SLEEP(10)")),
-//     test_server.get(&format!("/actions/{}/access-policies", get_access_policies_action.id))
-//       .add_query_param("query", format!("SELECT * FROM access_policies WHERE action_id = {}", get_access_policies_action.id))
-//   ];
+  let dummy_action_log_entry = test_environment.create_random_action_log_entry().await?;
+
+  // Set up the server and send the request.
+  let state = AppState {
+    database_pool: test_environment.postgres_pool.clone(),
+  };
+  let router = super::get_router(state.clone())
+    .layer(middleware::from_fn_with_state(state.clone(), http_request_middleware::create_http_request))
+    .with_state(state)
+    .into_make_service_with_connect_info::<SocketAddr>();
+  let test_server = TestServer::new(router)?;
+  let requests = vec![
+    test_server.get(&format!("/action-log-entries/{}/access-policies", dummy_action_log_entry.id))
+      .add_query_param("query", format!("action_ied = {}", get_access_policies_action.id)),
+    test_server.get(&format!("/action-log-entries/{}/access-policies", dummy_action_log_entry.id))
+      .add_query_param("query", format!("SELECT * FROM access_policies")),
+    test_server.get(&format!("/action-log-entries/{}/access-policies", dummy_action_log_entry.id))
+      .add_query_param("query", format!("1 = 1")),
+    test_server.get(&format!("/action-log-entries/{}/access-policies", dummy_action_log_entry.id))
+      .add_query_param("query", format!("SELECT PG_SLEEP(10)")),
+    test_server.get(&format!("/action-log-entries/{}/access-policies", dummy_action_log_entry.id))
+      .add_query_param("query", format!("SELECT * FROM access_policies WHERE action_id = {}", get_access_policies_action.id))
+  ];
   
-//   for request in requests {
+  for request in requests {
 
-//     let response = request
-//       .add_cookie(Cookie::new("sessionToken", format!("Bearer {}", session_token)))
-//       .await;
+    let response = request
+      .add_cookie(Cookie::new("sessionToken", format!("Bearer {}", session_token)))
+      .await;
 
-//     // Verify the response.
-//     assert_eq!(response.status_code(), StatusCode::UNPROCESSABLE_ENTITY);
+    // Verify the response.
+    assert_eq!(response.status_code(), StatusCode::UNPROCESSABLE_ENTITY);
 
-//   }
+  }
 
-//   return Ok(());
+  return Ok(());
 
-// }
+}
 
 // /// Verifies that the server returns a 401 status code when the user lacks permissions and is unauthenticated.
 // #[tokio::test]
@@ -384,7 +386,7 @@ async fn verify_maximum_access_policy_list_limit() -> Result<(), TestSlashstepSe
 //     .with_state(state)
 //     .into_make_service_with_connect_info::<SocketAddr>();
 //   let test_server = TestServer::new(router)?;
-//   let response = test_server.get(&format!("/actions/{}/access-policies", &dummy_action.id))
+//   let response = test_server.get(&format!("/action-log-entries/{}/access-policies", &dummy_action.id))
 //     .await;
   
 //   // Verify the response.
@@ -422,7 +424,7 @@ async fn verify_maximum_access_policy_list_limit() -> Result<(), TestSlashstepSe
 //     .with_state(state)
 //     .into_make_service_with_connect_info::<SocketAddr>();
 //   let test_server = TestServer::new(router)?;
-//   let response = test_server.get(&format!("/actions/{}/access-policies", &dummy_action.id))
+//   let response = test_server.get(&format!("/action-log-entries/{}/access-policies", &dummy_action.id))
 //     .add_cookie(Cookie::new("sessionToken", format!("Bearer {}", session_token)))
 //     .await;
   
