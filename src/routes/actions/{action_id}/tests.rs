@@ -15,8 +15,7 @@ use crate::{
   }, 
   resources::{
     access_policy::{
-      AccessPolicy, 
-      AccessPolicyError,
+      AccessPolicy,
       AccessPolicyPermissionLevel, 
       AccessPolicyPrincipalType, 
       AccessPolicyResourceType, 
