@@ -10,20 +10,18 @@ use crate::{
   AppState,
   initialize_required_tables, 
   middleware::http_request_middleware, 
-  pre_definitions::{
+  predefinitions::{
     initialize_pre_defined_actions, 
     initialize_pre_defined_roles
   }, 
   resources::{
-    access_policy::{
-      AccessPolicy, 
-      AccessPolicyError,
+    ResourceError, access_policy::{
+      AccessPolicy,
       AccessPolicyPermissionLevel, 
       AccessPolicyPrincipalType, 
       AccessPolicyResourceType, 
       InitialAccessPolicyProperties
-    }, 
-    session::Session
+    }, session::Session
   }, 
   tests::{TestEnvironment, TestSlashstepServerError}
 };
@@ -260,9 +258,9 @@ async fn verify_successful_deletion_when_deleting_access_policy_by_id() -> Resul
 
   match AccessPolicy::get_by_id(&access_policy.id, &mut postgres_client).await.expect_err("Expected an access policy not found error.") {
 
-    AccessPolicyError::NotFoundError(_) => {},
+    ResourceError::NotFoundError(_) => {},
 
-    error => return Err(TestSlashstepServerError::AccessPolicyError(error))
+    error => return Err(TestSlashstepServerError::ResourceError(error))
 
   }
 

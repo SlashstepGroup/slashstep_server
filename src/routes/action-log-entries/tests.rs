@@ -5,7 +5,7 @@ use axum_test::TestServer;
 use pg_escape::quote_literal;
 use reqwest::StatusCode;
 use crate::{
-  AppState, initialize_required_tables, middleware::http_request_middleware, pre_definitions::{
+  AppState, initialize_required_tables, middleware::http_request_middleware, predefinitions::{
     initialize_pre_defined_actions, 
     initialize_pre_defined_roles
   }, resources::{

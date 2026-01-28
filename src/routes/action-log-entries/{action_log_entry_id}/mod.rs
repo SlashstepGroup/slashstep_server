@@ -12,9 +12,9 @@
 
 use std::sync::Arc;
 use axum::{Extension, Json, Router, extract::{Path, State}};
-use reqwest::StatusCode;
+use reqwest::{StatusCode};
 use uuid::Uuid;
-use crate::{AppState, HTTPError, middleware::authentication_middleware, resources::{access_policy::AccessPolicyPermissionLevel, action_log_entry::{ActionLogEntry, ActionLogEntryActorType, ActionLogEntryError, ActionLogEntryTargetResourceType, InitialActionLogEntryProperties}, http_transaction::HTTPTransaction, server_log_entry::ServerLogEntry, user::User}, utilities::route_handler_utilities::{get_action_from_name, get_resource_hierarchy_for_action_log_entry, get_user_from_option_user, map_postgres_error_to_http_error, verify_user_permissions}};
+use crate::{AppState, HTTPError, middleware::authentication_middleware, resources::{DeletableResource, ResourceError, access_policy::{AccessPolicyPermissionLevel, AccessPolicyResourceType}, action_log_entry::{ActionLogEntry, ActionLogEntryActorType, ActionLogEntryTargetResourceType, InitialActionLogEntryProperties}, http_transaction::HTTPTransaction, server_log_entry::ServerLogEntry, user::User}, utilities::route_handler_utilities::{get_action_from_name, get_resource_hierarchy, get_user_from_option_user, map_postgres_error_to_http_error, verify_user_permissions}};
 
 #[path = "./access-policies/mod.rs"]
 mod access_policies;
@@ -45,9 +45,9 @@ async fn get_action_log_entry_from_id(action_log_entry_id: &str, http_transactio
 
       let http_error = match error {
 
-        ActionLogEntryError::NotFoundError(_) => HTTPError::NotFoundError(Some(error.to_string())),
+        ResourceError::NotFoundError(_) => HTTPError::NotFoundError(Some(error.to_string())),
 
-        ActionLogEntryError::PostgresError(error) => {
+        ResourceError::PostgresError(error) => {
 
           match error.as_db_error() {
 
@@ -86,7 +86,7 @@ async fn handle_get_action_log_entry_request(
   let mut postgres_client = state.database_pool.get().await.map_err(map_postgres_error_to_http_error)?;
   let action_log_entry = get_action_log_entry_from_id(&action_log_entry_id, &http_transaction, &mut postgres_client).await?;
   let user = get_user_from_option_user(&user, &http_transaction, &mut postgres_client).await?;
-  let resource_hierarchy = get_resource_hierarchy_for_action_log_entry(&action_log_entry, &http_transaction, &mut postgres_client).await?;
+  let resource_hierarchy = get_resource_hierarchy(&action_log_entry, &AccessPolicyResourceType::ActionLogEntry, &action_log_entry.id, &http_transaction, &mut postgres_client).await?;
   let get_action_log_entries_action = get_action_from_name("slashstep.actionLogEntries.get", &http_transaction, &mut postgres_client).await?;
   verify_user_permissions(&user, &get_action_log_entries_action, &resource_hierarchy, &http_transaction, &AccessPolicyPermissionLevel::User, &mut postgres_client).await?;
   
@@ -117,7 +117,7 @@ async fn handle_delete_action_log_entry_request(
   let mut postgres_client = state.database_pool.get().await.map_err(map_postgres_error_to_http_error)?;
   let target_action_log_entry = get_action_log_entry_from_id(&action_log_entry_id, &http_transaction, &mut postgres_client).await?;
   let user = get_user_from_option_user(&user, &http_transaction, &mut postgres_client).await?;
-  let resource_hierarchy = get_resource_hierarchy_for_action_log_entry(&target_action_log_entry, &http_transaction, &mut postgres_client).await?;
+  let resource_hierarchy = get_resource_hierarchy(&target_action_log_entry, &AccessPolicyResourceType::ActionLogEntry, &target_action_log_entry.id, &http_transaction, &mut postgres_client).await?;
   let delete_action_log_entries_action = get_action_from_name("slashstep.actionLogEntries.delete", &http_transaction, &mut postgres_client).await?;
   verify_user_permissions(&user, &delete_action_log_entries_action, &resource_hierarchy, &http_transaction, &AccessPolicyPermissionLevel::User, &mut postgres_client).await?;
 
