@@ -2,7 +2,7 @@ use postgres::error::SqlState;
 use postgres_types::{FromSql, ToSql};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
-use crate::{resources::{ResourceError, access_policy::IndividualPrincipal}, utilities::slashstepql::{self, SlashstepQLError, SlashstepQLFilterSanitizer, SlashstepQLParsedParameter, SlashstepQLSanitizeFunctionOptions}};
+use crate::{resources::{DeletableResource, ResourceError, access_policy::IndividualPrincipal}, utilities::slashstepql::{self, SlashstepQLError, SlashstepQLFilterSanitizer, SlashstepQLParsedParameter, SlashstepQLSanitizeFunctionOptions}};
 
 #[cfg(test)]
 mod tests;
@@ -174,15 +174,6 @@ impl App {
 
   }
 
-  /// Deletes an app.
-  pub async fn delete(&self, postgres_client: &mut deadpool_postgres::Client) -> Result<(), ResourceError> {
-
-    let query = include_str!("../../queries/apps/delete-app-row-by-id.sql");
-    postgres_client.execute(query, &[&self.id]).await?;
-    return Ok(());
-
-  }
-
   /// Gets an app by its ID.
   pub async fn get_by_id(id: &Uuid, postgres_client: &mut deadpool_postgres::Client) -> Result<Self, ResourceError> {
 
@@ -269,6 +260,19 @@ impl App {
 
     let app = Self::convert_from_row(&row);
     return Ok(app);
+
+  }
+
+}
+
+impl DeletableResource for App {
+
+  /// Deletes this app.
+  async fn delete(&self, postgres_client: &mut deadpool_postgres::Client) -> Result<(), ResourceError> {
+
+    let query = include_str!("../../queries/apps/delete-app-row-by-id.sql");
+    postgres_client.execute(query, &[&self.id]).await?;
+    return Ok(());
 
   }
 

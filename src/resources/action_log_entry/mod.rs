@@ -1,7 +1,7 @@
 use postgres_types::{FromSql, ToSql};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
-use crate::{resources::{ResourceError, access_policy::IndividualPrincipal}, utilities::slashstepql::{self, SlashstepQLError, SlashstepQLFilterSanitizer, SlashstepQLParsedParameter, SlashstepQLSanitizeFunctionOptions}};
+use crate::{resources::{DeletableResource, ResourceError, access_policy::IndividualPrincipal}, utilities::slashstepql::{self, SlashstepQLError, SlashstepQLFilterSanitizer, SlashstepQLParsedParameter, SlashstepQLSanitizeFunctionOptions}};
 
 pub const DEFAULT_ACTION_LOG_ENTRY_LIST_LIMIT: i64 = 1000;
 pub const DEFAULT_MAXIMUM_ACTION_LOG_ENTRY_LIST_LIMIT: i64 = 1000;
@@ -389,15 +389,6 @@ impl ActionLogEntry {
     return Ok(action_log_entry);
 
   }
-
-  /// Deletes this action log entry.
-  pub async fn delete(&self, postgres_client: &mut deadpool_postgres::Client) -> Result<(), ResourceError> {
-
-    let query = include_str!("../../queries/action_log_entries/delete_action_log_entry_row.sql");
-    postgres_client.execute(query, &[&self.id]).await?;
-    return Ok(());
-
-  }
   
   /// Initializes the action_log_entries table.
   pub async fn initialize_action_log_entries_table(postgres_client: &mut deadpool_postgres::Client) -> Result<(), ResourceError> {
@@ -447,6 +438,19 @@ impl ActionLogEntry {
     }
 
     return Ok(Box::new(value));
+
+  }
+
+}
+
+impl DeletableResource for ActionLogEntry {
+
+  /// Deletes this action log entry.
+  async fn delete(&self, postgres_client: &mut deadpool_postgres::Client) -> Result<(), ResourceError> {
+
+    let query = include_str!("../../queries/action_log_entries/delete_action_log_entry_row.sql");
+    postgres_client.execute(query, &[&self.id]).await?;
+    return Ok(());
 
   }
 

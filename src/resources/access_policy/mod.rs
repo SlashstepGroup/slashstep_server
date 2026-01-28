@@ -20,7 +20,7 @@ use postgres::{
 use postgres_types::FromSql;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
-use crate::{resources::ResourceError, 
+use crate::{resources::{DeletableResource, ResourceError}, 
   utilities::slashstepql::{
     self, SlashstepQLError, SlashstepQLFilterSanitizer, SlashstepQLParsedParameter, SlashstepQLSanitizeFunctionOptions
   }}
@@ -805,16 +805,6 @@ impl AccessPolicy {
 
   }
 
-  /* Instance methods */
-  /// Deletes this access policy.
-  pub async fn delete(&self, postgres_client: &mut deadpool_postgres::Client) -> Result<(), ResourceError> {
-
-    let query = include_str!("../../queries/access_policies/delete-access-policy-row.sql");
-    postgres_client.execute(query, &[&self.id]).await?;
-    return Ok(());
-
-  }
-
   fn add_parameter<T: ToSql + Sync + Clone + Send + 'static>(mut parameter_boxes: Vec<Box<dyn ToSql + Sync + Send>>, mut query: String, key: &str, parameter_value: &Option<T>) -> (Vec<Box<dyn ToSql + Sync + Send>>, String) {
 
     if let Some(parameter_value) = parameter_value.clone() {
@@ -876,6 +866,19 @@ impl AccessPolicy {
     };
 
     return scoped_resource_id;
+
+  }
+
+}
+
+impl DeletableResource for AccessPolicy {
+
+  /// Deletes this access policy.
+  async fn delete(&self, postgres_client: &mut deadpool_postgres::Client) -> Result<(), ResourceError> {
+
+    let query = include_str!("../../queries/access_policies/delete-access-policy-row.sql");
+    postgres_client.execute(query, &[&self.id]).await?;
+    return Ok(());
 
   }
 

@@ -2,7 +2,7 @@ use std::sync::Arc;
 use axum::{Extension, Json, Router, extract::{Path, Query, State, rejection::JsonRejection}};
 use axum_extra::response::ErasedJson;
 use pg_escape::quote_literal;
-use crate::{AppState, HTTPError, middleware::authentication_middleware, resources::{access_policy::{AccessPolicy, AccessPolicyPermissionLevel, AccessPolicyResourceType, InitialAccessPolicyProperties, InitialAccessPolicyPropertiesForPredefinedScope}, action_log_entry::{ActionLogEntry, ActionLogEntryActorType, ActionLogEntryTargetResourceType, InitialActionLogEntryProperties}, http_transaction::HTTPTransaction, server_log_entry::ServerLogEntry, user::User}, utilities::{reusable_route_handlers::{AccessPolicyListQueryParameters, list_access_policies}, route_handler_utilities::{get_action_from_id, get_action_from_name, get_resource_hierarchy_for_action, get_user_from_option_user, map_postgres_error_to_http_error, verify_user_permissions}}};
+use crate::{AppState, HTTPError, middleware::authentication_middleware, resources::{access_policy::{AccessPolicy, AccessPolicyPermissionLevel, AccessPolicyResourceType, InitialAccessPolicyProperties, InitialAccessPolicyPropertiesForPredefinedScope}, action_log_entry::{ActionLogEntry, ActionLogEntryActorType, ActionLogEntryTargetResourceType, InitialActionLogEntryProperties}, http_transaction::HTTPTransaction, server_log_entry::ServerLogEntry, user::User}, utilities::{reusable_route_handlers::{AccessPolicyListQueryParameters, list_access_policies}, route_handler_utilities::{get_action_from_id, get_action_from_name, get_resource_hierarchy, get_user_from_option_user, map_postgres_error_to_http_error, verify_user_permissions}}};
 
 #[axum::debug_handler]
 async fn handle_list_access_policies_request(
@@ -71,7 +71,7 @@ async fn handle_create_access_policy_request(
   // Make sure the user can create access policies for the target action.
   let target_action = get_action_from_id(&action_id, &http_transaction, &mut postgres_client).await?;
   let user = get_user_from_option_user(&user, &http_transaction, &mut postgres_client).await?;
-  let resource_hierarchy = get_resource_hierarchy_for_action(&target_action, &http_transaction, &mut postgres_client).await?;
+  let resource_hierarchy = get_resource_hierarchy(&target_action, &AccessPolicyResourceType::Action, &target_action.id, &http_transaction, &mut postgres_client).await?;
   let create_access_policies_action = get_action_from_name("slashstep.accessPolicies.create", &http_transaction, &mut postgres_client).await?;
   verify_user_permissions(&user, &create_access_policies_action, &resource_hierarchy, &http_transaction, &AccessPolicyPermissionLevel::User, &mut postgres_client).await?;
 

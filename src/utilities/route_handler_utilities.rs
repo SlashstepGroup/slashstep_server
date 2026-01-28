@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use crate::{HTTPError, resources::{ResourceError, access_policy::{AccessPolicyPermissionLevel, AccessPolicyResourceType, Principal, ResourceHierarchy}, action::Action, action_log_entry::ActionLogEntry, app::App, http_transaction::HTTPTransaction, server_log_entry::ServerLogEntry, user::User}, utilities::{principal_permission_verifier::{PrincipalPermissionVerifier, PrincipalPermissionVerifierError}, resource_hierarchy::{self, ResourceHierarchyError}, slashstepql::SlashstepQLError}};
+use crate::{HTTPError, resources::{DeletableResource, ResourceError, access_policy::{AccessPolicyPermissionLevel, AccessPolicyResourceType, Principal, ResourceHierarchy}, action::Action, app::App, http_transaction::HTTPTransaction, server_log_entry::ServerLogEntry, user::User}, utilities::{principal_permission_verifier::{PrincipalPermissionVerifier, PrincipalPermissionVerifierError}, resource_hierarchy::{self, ResourceHierarchyError}, slashstepql::SlashstepQLError}};
 use colored::Colorize;
 use postgres::error::SqlState;
 use uuid::Uuid;
@@ -171,53 +171,11 @@ pub async fn get_app_from_id(app_id_string: &str, http_transaction: &HTTPTransac
 
 }
 
-pub async fn get_resource_hierarchy_for_app(app: &App, http_transaction: &HTTPTransaction, mut postgres_client: &mut deadpool_postgres::Client) -> Result<ResourceHierarchy, HTTPError> {
+pub async fn get_resource_hierarchy<T: DeletableResource>(deletable_resource: &T, resource_type: &AccessPolicyResourceType, resource_id: &Uuid, http_transaction: &HTTPTransaction, mut postgres_client: &mut deadpool_postgres::Client) -> Result<ResourceHierarchy, HTTPError> {
 
-  ServerLogEntry::trace(&format!("Getting resource hierarchy for app {}...", app.id), Some(&http_transaction.id), &mut postgres_client).await.ok();
-  let resource_hierarchy = match resource_hierarchy::get_hierarchy(&AccessPolicyResourceType::App, &Some(app.id), &mut postgres_client).await {
-
-    Ok(resource_hierarchy) => resource_hierarchy,
-
-    Err(error) => {
-
-      let http_error = match error {
-
-        ResourceHierarchyError::ScopedResourceIDMissingError(scoped_resource_type) => {
-
-          ServerLogEntry::trace(&format!("Deleting orphaned app {}...", app.id), Some(&http_transaction.id), &mut postgres_client).await.ok();
-
-          let http_error = match app.delete(&mut postgres_client).await {
-
-            Ok(_) => HTTPError::GoneError(Some(format!("The {} resource has been deleted because it was orphaned.", scoped_resource_type))),
-
-            Err(error) => HTTPError::InternalServerError(Some(format!("Failed to delete orphaned app: {:?}", error)))
-
-          };
-          
-          http_error.print_and_save(Some(&http_transaction.id), &mut postgres_client).await.ok();
-          return Err(http_error);
-
-        },
-
-        _ => HTTPError::InternalServerError(Some(error.to_string()))
-
-      };
-      
-      ServerLogEntry::from_http_error(&http_error, Some(&http_transaction.id), &mut postgres_client).await.ok();
-      return Err(http_error);
-
-    }
-
-  };
-
-  return Ok(resource_hierarchy);
-
-}
-
-pub async fn get_resource_hierarchy_for_action(action: &Action, http_transaction: &HTTPTransaction, mut postgres_client: &mut deadpool_postgres::Client) -> Result<ResourceHierarchy, HTTPError> {
-
-  ServerLogEntry::trace(&format!("Getting resource hierarchy for action {}...", action.id), Some(&http_transaction.id), &mut postgres_client).await.ok();
-  let resource_hierarchy = match resource_hierarchy::get_hierarchy(&AccessPolicyResourceType::Action, &Some(action.id), &mut postgres_client).await {
+  let resource_type_string = resource_type.to_string().to_lowercase();
+  ServerLogEntry::trace(&format!("Getting resource hierarchy for {} {}...", resource_type_string, resource_id), Some(&http_transaction.id), &mut postgres_client).await.ok();
+  let resource_hierarchy = match resource_hierarchy::get_hierarchy(&resource_type, &Some(*resource_id), &mut postgres_client).await {
 
     Ok(resource_hierarchy) => resource_hierarchy,
 
@@ -227,13 +185,13 @@ pub async fn get_resource_hierarchy_for_action(action: &Action, http_transaction
 
         ResourceHierarchyError::ScopedResourceIDMissingError(scoped_resource_type) => {
 
-          ServerLogEntry::trace(&format!("Deleting orphaned action {}...", action.id), Some(&http_transaction.id), &mut postgres_client).await.ok();
+          ServerLogEntry::trace(&format!("Deleting orphaned {} {}...", resource_type_string, resource_id), Some(&http_transaction.id), &mut postgres_client).await.ok();
 
-          let http_error = match action.delete(&mut postgres_client).await {
+          let http_error = match deletable_resource.delete(&mut postgres_client).await {
 
             Ok(_) => HTTPError::GoneError(Some(format!("The {} resource has been deleted because it was orphaned.", scoped_resource_type))),
 
-            Err(error) => HTTPError::InternalServerError(Some(format!("Failed to delete orphaned action: {:?}", error)))
+            Err(error) => HTTPError::InternalServerError(Some(format!("Failed to delete orphaned {}: {:?}", resource_type_string, error)))
 
           };
           
@@ -242,48 +200,6 @@ pub async fn get_resource_hierarchy_for_action(action: &Action, http_transaction
 
         },
 
-        _ => HTTPError::InternalServerError(Some(error.to_string()))
-
-      };
-      
-      ServerLogEntry::from_http_error(&http_error, Some(&http_transaction.id), &mut postgres_client).await.ok();
-      return Err(http_error);
-
-    }
-
-  };
-
-  return Ok(resource_hierarchy);
-
-}
-
-pub async fn get_resource_hierarchy_for_action_log_entry(action_log_entry: &ActionLogEntry, http_transaction: &HTTPTransaction, mut postgres_client: &mut deadpool_postgres::Client) -> Result<ResourceHierarchy, HTTPError> {
-
-  ServerLogEntry::trace(&format!("Getting resource hierarchy for action log entry {}...", action_log_entry.id), Some(&http_transaction.id), &mut postgres_client).await.ok();
-  let resource_hierarchy = match resource_hierarchy::get_hierarchy(&AccessPolicyResourceType::ActionLogEntry, &Some(action_log_entry.id), &mut postgres_client).await {
-
-    Ok(resource_hierarchy) => resource_hierarchy,
-
-    Err(error) => {
-
-      let http_error = match error {
-
-        ResourceHierarchyError::ScopedResourceIDMissingError(scoped_resource_type) => {
-
-          ServerLogEntry::trace(&format!("Deleting orphaned action log entry {}...", action_log_entry.id), Some(&http_transaction.id), &mut postgres_client).await.ok();
-          let http_error = match action_log_entry.delete(&mut postgres_client).await {
-
-            Ok(_) => HTTPError::GoneError(Some(format!("The {} resource has been deleted because it was orphaned.", scoped_resource_type))),
-
-            Err(error) => HTTPError::InternalServerError(Some(format!("Failed to delete orphaned action log entry: {:?}", error)))
-
-          };
-          
-          http_error.print_and_save(Some(&http_transaction.id), &mut postgres_client).await.ok();
-          return Err(http_error);
-
-        },
-        
         _ => HTTPError::InternalServerError(Some(error.to_string()))
 
       };

@@ -13,7 +13,7 @@ use postgres::error::SqlState;
 use postgres_types::{FromSql, ToSql};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
-use crate::{resources::{ResourceError, access_policy::IndividualPrincipal}, utilities::slashstepql::{self, SlashstepQLError, SlashstepQLFilterSanitizer, SlashstepQLParsedParameter, SlashstepQLSanitizeFunctionOptions}};
+use crate::{resources::{DeletableResource, ResourceError, access_policy::IndividualPrincipal}, utilities::slashstepql::{self, SlashstepQLError, SlashstepQLFilterSanitizer, SlashstepQLParsedParameter, SlashstepQLSanitizeFunctionOptions}};
 
 pub const DEFAULT_ACTION_LIST_LIMIT: i64 = 1000;
 pub const DEFAULT_MAXIMUM_ACTION_LIST_LIMIT: i64 = 1000;
@@ -181,14 +181,6 @@ impl Action {
 
   }
 
-  pub async fn delete(&self, postgres_client: &mut deadpool_postgres::Client) -> Result<(), ResourceError> {
-
-    let query = include_str!("../../queries/actions/delete-action-row.sql");
-    postgres_client.execute(query, &[&self.id]).await?;
-    return Ok(());
-
-  }
-
   pub async fn get_by_name(name: &str, postgres_client: &mut deadpool_postgres::Client) -> Result<Action, ResourceError> {
 
     let query = include_str!("../../queries/actions/get-action-row-by-name.sql");
@@ -308,6 +300,19 @@ impl Action {
 
     let access_policy = Action::convert_from_row(&row);
     return Ok(access_policy);
+
+  }
+
+}
+
+impl DeletableResource for Action {
+
+  /// Deletes this action.
+  async fn delete(&self, postgres_client: &mut deadpool_postgres::Client) -> Result<(), ResourceError> {
+
+    let query = include_str!("../../queries/actions/delete-action-row.sql");
+    postgres_client.execute(query, &[&self.id]).await?;
+    return Ok(());
 
   }
 
