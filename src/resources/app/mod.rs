@@ -83,7 +83,27 @@ pub struct InitialAppProperties {
   pub parent_user_id: Option<Uuid>
 }
 
+pub struct EditableAppProperties {
+  pub name: Option<String>,
+  pub display_name: Option<String>,
+  pub description: Option<String>,
+  pub client_type: Option<AppClientType>
+}
+
 impl App {
+
+  fn add_parameter<T: ToSql + Sync + Clone + Send + 'static>(mut parameter_boxes: Vec<Box<dyn ToSql + Sync + Send>>, mut query: String, key: &str, parameter_value: &Option<T>) -> (Vec<Box<dyn ToSql + Sync + Send>>, String) {
+
+    if let Some(parameter_value) = parameter_value.clone() {
+
+      query.push_str(format!("{}{} = ${}", if parameter_boxes.len() > 0 { ", " } else { "" }, key, parameter_boxes.len() + 1).as_str());
+      parameter_boxes.push(Box::new(parameter_value));
+
+    }
+    
+    return (parameter_boxes, query);
+
+  }
 
   /// Initializes the apps table.
   pub async fn initialize_apps_table(postgres_client: &mut deadpool_postgres::Client) -> Result<(), AppError> {
@@ -241,6 +261,29 @@ impl App {
     }
 
     return Ok(Box::new(value));
+
+  }
+
+  /// Updates this app and returns a new instance of the app.
+  pub async fn update(&self, properties: &EditableAppProperties, postgres_client: &mut deadpool_postgres::Client) -> Result<Self, AppError> {
+
+    let query = String::from("UPDATE apps SET ");
+    let parameter_boxes: Vec<Box<dyn ToSql + Sync + Send>> = Vec::new();
+
+    postgres_client.query("BEGIN;", &[]).await?;
+    let (parameter_boxes, query) = Self::add_parameter(parameter_boxes, query, "name", &properties.name);
+    let (parameter_boxes, query) = Self::add_parameter(parameter_boxes, query, "display_name", &properties.display_name);
+    let (parameter_boxes, query) = Self::add_parameter(parameter_boxes, query, "description", &properties.description);
+    let (mut parameter_boxes, mut query) = Self::add_parameter(parameter_boxes, query, "client_type", &properties.client_type);
+
+    query.push_str(format!(" WHERE id = ${} RETURNING *;", parameter_boxes.len() + 1).as_str());
+    parameter_boxes.push(Box::new(&self.id));
+    let parameters: Vec<&(dyn ToSql + Sync)> = parameter_boxes.iter().map(|parameter| parameter.as_ref() as &(dyn ToSql + Sync)).collect();
+    let row = postgres_client.query_one(&query, &parameters).await?;
+    postgres_client.query("COMMIT;", &[]).await?;
+
+    let app = Self::convert_from_row(&row);
+    return Ok(app);
 
   }
 
