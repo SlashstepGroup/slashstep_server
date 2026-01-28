@@ -583,37 +583,37 @@ async fn verify_uuid_when_patching_by_id() -> Result<(), TestSlashstepServerErro
 
 }
 
-// /// Verifies that the router can return a 401 status code if the user needs authentication.
-// #[tokio::test]
-// async fn verify_authentication_when_patching_action_by_id() -> Result<(), TestSlashstepServerError> {
+/// Verifies that the router can return a 401 status code if the user needs authentication.
+#[tokio::test]
+async fn verify_authentication_when_patching_by_id() -> Result<(), TestSlashstepServerError> {
 
-//   let test_environment = TestEnvironment::new().await?;
-//   let mut postgres_client = test_environment.postgres_pool.get().await?;
-//   initialize_required_tables(&mut postgres_client).await?;
-//   initialize_pre_defined_actions(&mut postgres_client).await?;
-//   initialize_pre_defined_roles(&mut postgres_client).await?;
+  let test_environment = TestEnvironment::new().await?;
+  let mut postgres_client = test_environment.postgres_pool.get().await?;
+  initialize_required_tables(&mut postgres_client).await?;
+  initialize_pre_defined_actions(&mut postgres_client).await?;
+  initialize_pre_defined_roles(&mut postgres_client).await?;
   
-//   // Set up the server and send the request.
-//   let action = test_environment.create_random_action().await?;
-//   let state = AppState {
-//     database_pool: test_environment.postgres_pool.clone(),
-//   };
-//   let router = super::get_router(state.clone())
-//     .layer(middleware::from_fn_with_state(state.clone(), http_request_middleware::create_http_request))
-//     .with_state(state)
-//     .into_make_service_with_connect_info::<SocketAddr>();
-//   let test_server = TestServer::new(router)?;
-//   let response = test_server.patch(&format!("/apps/{}", action.id))
-//     .json(&serde_json::json!({
-//       "display_name": Uuid::now_v7().to_string()
-//     }))
-//     .await;
+  // Set up the server and send the request.
+  let app = test_environment.create_random_app().await?;
+  let state = AppState {
+    database_pool: test_environment.postgres_pool.clone(),
+  };
+  let router = super::get_router(state.clone())
+    .layer(middleware::from_fn_with_state(state.clone(), http_request_middleware::create_http_request))
+    .with_state(state)
+    .into_make_service_with_connect_info::<SocketAddr>();
+  let test_server = TestServer::new(router)?;
+  let response = test_server.patch(&format!("/apps/{}", app.id))
+    .json(&serde_json::json!({
+      "display_name": Uuid::now_v7().to_string()
+    }))
+    .await;
   
-//   assert_eq!(response.status_code(), 401);
+  assert_eq!(response.status_code(), 401);
 
-//   return Ok(());
+  return Ok(());
 
-// }
+}
 
 // /// Verifies that the router can return a 403 status code if the user does not have permission to patch the action.
 // #[tokio::test]
