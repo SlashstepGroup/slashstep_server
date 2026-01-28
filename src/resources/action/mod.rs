@@ -36,6 +36,21 @@ pub enum ActionParentResourceType {
   App
 }
 
+#[derive(Debug, Serialize, Deserialize)]
+pub struct InitialActionPropertiesForPredefinedScope {
+
+  /// The action's name.
+  pub name: String,
+
+  /// The action's display name.
+  pub display_name: String,
+
+  /// The action's description.
+  pub description: String
+
+}
+
+
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Action {
 
@@ -59,6 +74,7 @@ pub struct Action {
 
 }
 
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct InitialActionProperties {
 
   /// The action's name.
