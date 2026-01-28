@@ -3,6 +3,7 @@ use axum::middleware;
 use axum_extra::extract::cookie::Cookie;
 use axum_test::TestServer;
 use ntest::timeout;
+use uuid::Uuid;
 use crate::{
   Action, 
   AppState,
@@ -20,7 +21,7 @@ use crate::{
       AccessPolicyResourceType, 
       InitialAccessPolicyProperties
     },
-    app::App, 
+    app::{App, AppClientType}, 
     session::Session
   }, 
   tests::{TestEnvironment, TestSlashstepServerError}
@@ -226,8 +227,8 @@ async fn verify_not_found_when_getting_app_by_id() -> Result<(), TestSlashstepSe
 //   let json_web_token_private_key = Session::get_json_web_token_private_key().await?;
 //   let session_token = session.generate_json_web_token(&json_web_token_private_key).await?;
 
-//   // Grant access to the "slashstep.actions.delete" action to the user.
-//   let delete_actions_action = Action::get_by_name("slashstep.actions.delete", &mut postgres_client).await?;
+//   // Grant access to the "slashstep.apps.delete" action to the user.
+//   let delete_actions_action = Action::get_by_name("slashstep.apps.delete", &mut postgres_client).await?;
 //   AccessPolicy::create(&InitialAccessPolicyProperties {
 //     action_id: delete_actions_action.id,
 //     permission_level: AccessPolicyPermissionLevel::User,
@@ -248,7 +249,7 @@ async fn verify_not_found_when_getting_app_by_id() -> Result<(), TestSlashstepSe
 //     .with_state(state)
 //     .into_make_service_with_connect_info::<SocketAddr>();
 //   let test_server = TestServer::new(router)?;
-//   let response = test_server.delete(&format!("/actions/{}", action.id))
+//   let response = test_server.delete(&format!("/apps/{}", action.id))
 //     .add_cookie(Cookie::new("sessionToken", format!("Bearer {}", session_token)))
 //     .await;
   
@@ -285,7 +286,7 @@ async fn verify_not_found_when_getting_app_by_id() -> Result<(), TestSlashstepSe
 //     .into_make_service_with_connect_info::<SocketAddr>();
 //   let test_server = TestServer::new(router)?;
 
-//   let response = test_server.delete("/actions/not-a-uuid")
+//   let response = test_server.delete("/apps/not-a-uuid")
 //     .await;
   
 //   assert_eq!(response.status_code(), 400);
@@ -315,7 +316,7 @@ async fn verify_not_found_when_getting_app_by_id() -> Result<(), TestSlashstepSe
 //     .with_state(state)
 //     .into_make_service_with_connect_info::<SocketAddr>();
 //   let test_server = TestServer::new(router)?;
-//   let response = test_server.delete(&format!("/actions/{}", action.id))
+//   let response = test_server.delete(&format!("/apps/{}", action.id))
 //     .await;
   
 //   // Verify the response.
@@ -352,7 +353,7 @@ async fn verify_not_found_when_getting_app_by_id() -> Result<(), TestSlashstepSe
 //     .with_state(state)
 //     .into_make_service_with_connect_info::<SocketAddr>();
 //   let test_server = TestServer::new(router)?;
-//   let response = test_server.delete(&format!("/actions/{}", action.id))
+//   let response = test_server.delete(&format!("/apps/{}", action.id))
 //     .add_cookie(Cookie::new("sessionToken", format!("Bearer {}", session_token)))
 //     .await;
   
@@ -384,7 +385,7 @@ async fn verify_not_found_when_getting_app_by_id() -> Result<(), TestSlashstepSe
 //     .with_state(state)
 //     .into_make_service_with_connect_info::<SocketAddr>();
 //   let test_server = TestServer::new(router)?;
-//   let response = test_server.delete(&format!("/actions/{}", uuid::Uuid::now_v7()))
+//   let response = test_server.delete(&format!("/apps/{}", uuid::Uuid::now_v7()))
 //     .add_cookie(Cookie::new("sessionToken", format!("Bearer {}", session_token)))
 //     .await;
   
@@ -394,69 +395,73 @@ async fn verify_not_found_when_getting_app_by_id() -> Result<(), TestSlashstepSe
 
 // }
 
-// /// Verifies that the router can return a 200 status code if the action is successfully patched.
-// #[tokio::test]
-// async fn verify_successful_patch_action_by_id() -> Result<(), TestSlashstepServerError> {
+/// Verifies that the router can return a 200 status code if the resource is successfully patched.
+#[tokio::test]
+async fn verify_successful_patch_by_id() -> Result<(), TestSlashstepServerError> {
 
-//   let test_environment = TestEnvironment::new().await?;
-//   let mut postgres_client = test_environment.postgres_pool.get().await?;
-//   initialize_required_tables(&mut postgres_client).await?;
-//   initialize_pre_defined_actions(&mut postgres_client).await?;
-//   initialize_pre_defined_roles(&mut postgres_client).await?;
+  let test_environment = TestEnvironment::new().await?;
+  let mut postgres_client = test_environment.postgres_pool.get().await?;
+  initialize_required_tables(&mut postgres_client).await?;
+  initialize_pre_defined_actions(&mut postgres_client).await?;
+  initialize_pre_defined_roles(&mut postgres_client).await?;
   
-//   // Create the user and the session.
-//   let user = test_environment.create_random_user().await?;
-//   let session = test_environment.create_session(&user.id).await?;
-//   let json_web_token_private_key = Session::get_json_web_token_private_key().await?;
-//   let session_token = session.generate_json_web_token(&json_web_token_private_key).await?;
-//   let get_actions_action = Action::get_by_name("slashstep.actions.update", &mut postgres_client).await?;
-//   AccessPolicy::create(&InitialAccessPolicyProperties {
-//     action_id: get_actions_action.id,
-//     permission_level: AccessPolicyPermissionLevel::Editor,
-//     is_inheritance_enabled: true,
-//     principal_type: AccessPolicyPrincipalType::User,
-//     principal_user_id: Some(user.id),
-//     scoped_resource_type: AccessPolicyResourceType::Instance,
-//     ..Default::default()
-//   }, &mut postgres_client).await?;
+  // Create the user and the session.
+  let user = test_environment.create_random_user().await?;
+  let session = test_environment.create_session(&user.id).await?;
+  let json_web_token_private_key = Session::get_json_web_token_private_key().await?;
+  let session_token = session.generate_json_web_token(&json_web_token_private_key).await?;
+  let update_apps_action = Action::get_by_name("slashstep.apps.update", &mut postgres_client).await?;
+  AccessPolicy::create(&InitialAccessPolicyProperties {
+    action_id: update_apps_action.id,
+    permission_level: AccessPolicyPermissionLevel::Editor,
+    is_inheritance_enabled: true,
+    principal_type: AccessPolicyPrincipalType::User,
+    principal_user_id: Some(user.id),
+    scoped_resource_type: AccessPolicyResourceType::Instance,
+    ..Default::default()
+  }, &mut postgres_client).await?;
 
-//   // Set up the server and send the request.
-//   let original_action = test_environment.create_random_action().await?;
-//   let new_name = format!("slashstep.{}.{}", Uuid::now_v7().to_string(), Uuid::now_v7().to_string());
-//   let new_display_name = Uuid::now_v7().to_string();
-//   let new_description = Uuid::now_v7().to_string();
+  // Set up the server and send the request.
+  let original_app = test_environment.create_random_app().await?;
+  let new_name = Uuid::now_v7().to_string();
+  let new_display_name = Uuid::now_v7().to_string();
+  let new_description = Some(Uuid::now_v7().to_string());
+  let new_client_type = AppClientType::Confidential;
 
-//   let state = AppState {
-//     database_pool: test_environment.postgres_pool.clone(),
-//   };
-//   let router = super::get_router(state.clone())
-//     .layer(middleware::from_fn_with_state(state.clone(), http_request_middleware::create_http_request))
-//     .with_state(state)
-//     .into_make_service_with_connect_info::<SocketAddr>();
-//   let test_server = TestServer::new(router)?;
-//   let response = test_server.patch(&format!("/actions/{}", original_action.id))
-//     .add_cookie(Cookie::new("sessionToken", format!("Bearer {}", session_token)))
-//     .json(&serde_json::json!({
-//       "name": new_name,
-//       "display_name": new_display_name,
-//       "description": new_description
-//     }))
-//     .await;
+  let state = AppState {
+    database_pool: test_environment.postgres_pool.clone(),
+  };
+  let router = super::get_router(state.clone())
+    .layer(middleware::from_fn_with_state(state.clone(), http_request_middleware::create_http_request))
+    .with_state(state)
+    .into_make_service_with_connect_info::<SocketAddr>();
+  let test_server = TestServer::new(router)?;
+  let response = test_server.patch(&format!("/apps/{}", original_app.id))
+    .add_cookie(Cookie::new("sessionToken", format!("Bearer {}", session_token)))
+    .json(&serde_json::json!({
+      "name": new_name.clone(),
+      "display_name": new_display_name.clone(),
+      "description": new_description.clone(),
+      "client_type": new_client_type.clone()
+    }))
+    .await;
   
-//   // Verify the response.
-//   assert_eq!(response.status_code(), 200);
+  // Verify the response.
+  assert_eq!(response.status_code(), 200);
 
-//   let updated_action: Action = response.json();
-//   assert_eq!(original_action.id, updated_action.id);
-//   assert_eq!(new_name, updated_action.name);
-//   assert_eq!(new_display_name, updated_action.display_name);
-//   assert_eq!(new_description, updated_action.description);
-//   assert_eq!(original_action.app_id, updated_action.app_id);
-//   assert_eq!(original_action.parent_resource_type, updated_action.parent_resource_type);
+  let updated_app: App = response.json();
+  assert_eq!(original_app.id, updated_app.id);
+  assert_eq!(updated_app.name, new_name);
+  assert_eq!(updated_app.display_name, new_display_name);
+  assert_eq!(updated_app.description, new_description);
+  assert_eq!(updated_app.client_type, new_client_type);
+  assert_eq!(original_app.parent_resource_type, updated_app.parent_resource_type);
+  assert_eq!(original_app.parent_workspace_id, updated_app.parent_workspace_id);
+  assert_eq!(original_app.parent_user_id, updated_app.parent_user_id);
 
-//   return Ok(());
+  return Ok(());
 
-// }
+}
 
 // /// Verifies that the router can return a 400 status code if the request doesn't have a valid content type.
 // #[tokio::test]
@@ -477,7 +482,7 @@ async fn verify_not_found_when_getting_app_by_id() -> Result<(), TestSlashstepSe
 //     .with_state(state)
 //     .into_make_service_with_connect_info::<SocketAddr>();
 //   let test_server = TestServer::new(router)?;
-//   let response = test_server.patch("/actions/not-a-uuid")
+//   let response = test_server.patch("/apps/not-a-uuid")
 //     .await;
   
 //   // Verify the response.
@@ -505,7 +510,7 @@ async fn verify_not_found_when_getting_app_by_id() -> Result<(), TestSlashstepSe
 //     .with_state(state)
 //     .into_make_service_with_connect_info::<SocketAddr>();
 //   let test_server = TestServer::new(router)?;
-//   let response = test_server.patch("/actions/not-a-uuid")
+//   let response = test_server.patch("/apps/not-a-uuid")
 //     .add_header("Content-Type", "application/json")
 //     .await;
   
@@ -534,7 +539,7 @@ async fn verify_not_found_when_getting_app_by_id() -> Result<(), TestSlashstepSe
 //     .with_state(state)
 //     .into_make_service_with_connect_info::<SocketAddr>();
 //   let test_server = TestServer::new(router)?;
-//   let response = test_server.patch(&format!("/actions/{}", uuid::Uuid::now_v7()))
+//   let response = test_server.patch(&format!("/apps/{}", uuid::Uuid::now_v7()))
 //     .add_header("Content-Type", "application/json")
 //     .json(&serde_json::json!({
 //       "name": "Super Duper Admin",
@@ -566,7 +571,7 @@ async fn verify_not_found_when_getting_app_by_id() -> Result<(), TestSlashstepSe
 //     .with_state(state)
 //     .into_make_service_with_connect_info::<SocketAddr>();
 //   let test_server = TestServer::new(router)?;
-//   let response = test_server.patch("/actions/not-a-uuid")
+//   let response = test_server.patch("/apps/not-a-uuid")
 //     .add_header("Content-Type", "application/json")
 //     .json(&serde_json::json!({
 //       "display_name": Uuid::now_v7().to_string()
@@ -598,7 +603,7 @@ async fn verify_not_found_when_getting_app_by_id() -> Result<(), TestSlashstepSe
 //     .with_state(state)
 //     .into_make_service_with_connect_info::<SocketAddr>();
 //   let test_server = TestServer::new(router)?;
-//   let response = test_server.patch(&format!("/actions/{}", action.id))
+//   let response = test_server.patch(&format!("/apps/{}", action.id))
 //     .json(&serde_json::json!({
 //       "display_name": Uuid::now_v7().to_string()
 //     }))
@@ -636,7 +641,7 @@ async fn verify_not_found_when_getting_app_by_id() -> Result<(), TestSlashstepSe
 //     .with_state(state)
 //     .into_make_service_with_connect_info::<SocketAddr>();
 //   let test_server = TestServer::new(router)?;
-//   let response = test_server.patch(&format!("/actions/{}", action.id))
+//   let response = test_server.patch(&format!("/apps/{}", action.id))
 //     .add_cookie(Cookie::new("sessionToken", format!("Bearer {}", session_token)))
 //     .json(&serde_json::json!({
 //       "display_name": Uuid::now_v7().to_string()
@@ -669,7 +674,7 @@ async fn verify_not_found_when_getting_app_by_id() -> Result<(), TestSlashstepSe
 //     .with_state(state)
 //     .into_make_service_with_connect_info::<SocketAddr>();
 //   let test_server = TestServer::new(router)?;
-//   let response = test_server.patch(&format!("/actions/{}", Uuid::now_v7()))
+//   let response = test_server.patch(&format!("/apps/{}", Uuid::now_v7()))
 //     .json(&serde_json::json!({
 //       "display_name": Uuid::now_v7().to_string()
 //     }))
