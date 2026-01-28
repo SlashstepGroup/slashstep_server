@@ -1,4 +1,5 @@
 use uuid::Uuid;
+use crate::resources::DeletableResource;
 
 use crate::{initialize_required_tables, resources::app::{App, AppClientType, EditableAppProperties}, tests::{TestEnvironment, TestSlashstepServerError}};
 
@@ -47,6 +48,25 @@ async fn verify_update() -> Result<(), TestSlashstepServerError> {
   assert_eq!(original_app.parent_resource_type, updated_app.parent_resource_type);
   assert_eq!(original_app.parent_workspace_id, updated_app.parent_workspace_id);
   assert_eq!(original_app.parent_user_id, updated_app.parent_user_id);
+
+  return Ok(());
+
+}
+
+#[tokio::test]
+async fn verify_deletion() -> Result<(), TestSlashstepServerError> {
+
+  // Create the access policy.
+  let test_environment = TestEnvironment::new().await?;
+  let mut postgres_client = test_environment.postgres_pool.get().await?;
+  initialize_required_tables(&mut postgres_client).await?;
+  let created_app = test_environment.create_random_app().await?;
+
+  created_app.delete(&mut postgres_client).await?;
+
+  // Ensure that the access policy is no longer in the database.
+  let retrieved_action_result = App::get_by_id(&created_app.id, &mut postgres_client).await;
+  assert!(retrieved_action_result.is_err());
 
   return Ok(());
 
