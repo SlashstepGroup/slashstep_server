@@ -4,7 +4,7 @@ pub mod resources;
 pub mod utilities;
 pub mod middleware;
 mod routes;
-mod pre_definitions;
+mod predefinitions;
 #[cfg(test)]
 mod tests;
 
@@ -21,7 +21,7 @@ use colored::Colorize;
 use uuid::Uuid;
 use thiserror::Error;
 use crate::{
-  pre_definitions::{
+  predefinitions::{
     initialize_pre_defined_actions, 
     initialize_pre_defined_roles
   }, 

@@ -1,6 +1,6 @@
 use uuid::Uuid;
 use crate::{
-  initialize_required_tables, pre_definitions::initialize_pre_defined_actions, resources::{
+  initialize_required_tables, predefinitions::initialize_pre_defined_actions, resources::{
     access_policy::{ 
       AccessPolicy, 
       AccessPolicyPermissionLevel, 
