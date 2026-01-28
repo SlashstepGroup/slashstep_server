@@ -94,7 +94,7 @@ async fn handle_patch_app_request(
 
     Err(error) => {
 
-      let http_error = HTTPError::InternalServerError(Some(format!("Failed to update action: {:?}", error)));
+      let http_error = HTTPError::InternalServerError(Some(format!("Failed to update app: {:?}", error)));
       http_error.print_and_save(Some(&http_transaction.id), &mut postgres_client).await.ok();
       return Err(http_error);
 

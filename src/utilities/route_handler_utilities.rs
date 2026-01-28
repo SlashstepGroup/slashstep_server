@@ -138,7 +138,7 @@ pub async fn get_app_from_id(app_id_string: &str, http_transaction: &HTTPTransac
 
     Err(_) => {
 
-      let http_error = HTTPError::BadRequestError(Some("You must provide a valid UUID for the action ID.".to_string()));
+      let http_error = HTTPError::BadRequestError(Some("You must provide a valid UUID for the app ID.".to_string()));
       ServerLogEntry::from_http_error(&http_error, Some(&http_transaction.id), &mut postgres_client).await.ok();
       return Err(http_error);
 
