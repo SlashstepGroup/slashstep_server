@@ -2,6 +2,7 @@ use std::sync::Arc;
 
 use crate::{HTTPError, resources::{access_policy::{AccessPolicyPermissionLevel, AccessPolicyResourceType, Principal, ResourceHierarchy}, action::{Action, ActionError}, action_log_entry::ActionLogEntry, app::{App, AppError}, http_transaction::HTTPTransaction, server_log_entry::ServerLogEntry, user::User}, utilities::{principal_permission_verifier::{PrincipalPermissionVerifier, PrincipalPermissionVerifierError}, resource_hierarchy::{self, ResourceHierarchyError}, slashstepql::SlashstepQLError}};
 use colored::Colorize;
+use postgres::error::SqlState;
 use uuid::Uuid;
 
 pub fn map_postgres_error_to_http_error(error: deadpool_postgres::PoolError) -> HTTPError {
@@ -309,6 +310,26 @@ pub fn match_slashstepql_error(error: &SlashstepQLError, maximum_limit: &i64, re
     SlashstepQLError::InvalidQueryError(()) => HTTPError::UnprocessableEntity(Some(format!("The provided query is invalid."))),
 
     _ => HTTPError::InternalServerError(Some(format!("Failed to list {}: {:?}", resource_type, error)))
+
+  };
+
+  return http_error;
+
+}
+
+pub fn match_db_error(error: &postgres::Error, resource_type: &str) -> HTTPError {
+
+  let http_error = match error.as_db_error() {
+
+    Some(db_error) => match db_error.code() {
+
+      &SqlState::UNDEFINED_FUNCTION => HTTPError::UnprocessableEntity(Some(format!("The provided query is invalid."))),
+
+      _ => HTTPError::InternalServerError(Some(format!("Failed to list {}: {:?}", resource_type, error)))
+
+    },
+
+    None => HTTPError::InternalServerError(Some(format!("Failed to list {}: {:?}", resource_type, error)))
 
   };
 

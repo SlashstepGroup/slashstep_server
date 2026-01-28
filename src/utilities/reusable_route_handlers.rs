@@ -2,7 +2,7 @@ use std::sync::Arc;
 use axum::{Extension, extract::{Query, State}};
 use axum_extra::response::ErasedJson;
 use serde::{Deserialize, Serialize};
-use crate::{AppState, HTTPError, resources::{access_policy::{AccessPolicy, AccessPolicyError, AccessPolicyPermissionLevel, AccessPolicyResourceType, DEFAULT_MAXIMUM_ACCESS_POLICY_LIST_LIMIT, IndividualPrincipal}, action_log_entry::{ActionLogEntry, ActionLogEntryActorType, ActionLogEntryTargetResourceType, InitialActionLogEntryProperties}, http_transaction::HTTPTransaction, server_log_entry::ServerLogEntry, user::User}, utilities::{resource_hierarchy::ResourceHierarchy, route_handler_utilities::{get_action_from_name, get_user_from_option_user, map_postgres_error_to_http_error, match_slashstepql_error, verify_user_permissions}, slashstepql::SlashstepQLError}};
+use crate::{AppState, HTTPError, resources::{access_policy::{AccessPolicy, AccessPolicyError, AccessPolicyPermissionLevel, AccessPolicyResourceType, DEFAULT_MAXIMUM_ACCESS_POLICY_LIST_LIMIT, IndividualPrincipal}, action_log_entry::{ActionLogEntry, ActionLogEntryActorType, ActionLogEntryTargetResourceType, InitialActionLogEntryProperties}, http_transaction::HTTPTransaction, server_log_entry::ServerLogEntry, user::User}, utilities::{resource_hierarchy::ResourceHierarchy, route_handler_utilities::{get_action_from_name, get_user_from_option_user, map_postgres_error_to_http_error, match_db_error, match_slashstepql_error, verify_user_permissions}, slashstepql::SlashstepQLError}};
 
 #[derive(Debug, Deserialize)]
 pub struct AccessPolicyListQueryParameters {
@@ -38,6 +38,8 @@ pub async fn list_access_policies(
       let http_error = match error {
 
         AccessPolicyError::SlashstepQLError(error) => match_slashstepql_error(&error, &DEFAULT_MAXIMUM_ACCESS_POLICY_LIST_LIMIT, "access policies"),
+
+        AccessPolicyError::PostgresError(error) => match_db_error(&error, "access policies"),
 
         _ => HTTPError::InternalServerError(Some(format!("Failed to list access policies: {:?}", error)))
 

@@ -3,7 +3,7 @@ use colored::Colorize;
 
 pub async fn initialize_pre_defined_actions(postgres_client: &mut deadpool_postgres::Client) -> Result<Vec<Action>, ActionError> {
 
-  println!("{}", "Initializing pre-defined actions...".dimmed());
+  println!("{}", "Initializing predefined actions...".dimmed());
 
   let pre_defined_actions: Vec<InitialActionProperties> = vec![
     InitialActionProperties {
@@ -116,7 +116,7 @@ pub async fn initialize_pre_defined_actions(postgres_client: &mut deadpool_postg
 
       if action.name == pre_defined_action.name {
 
-        println!("{}", format!("Skipping pre-defined action \"{}\" because it already exists.", pre_defined_action.name).yellow());
+        println!("{}", format!("Skipping predefined action \"{}\" because it already exists.", pre_defined_action.name).yellow());
         should_continue = true;
 
       }
@@ -157,7 +157,7 @@ pub async fn initialize_pre_defined_actions(postgres_client: &mut deadpool_postg
 
   }
 
-  println!("{}", format!("Successfully initialized {} pre-defined actions.", actions.len()).blue());
+  println!("{}", format!("Successfully initialized {} predefined actions.", actions.len()).blue());
 
   return Ok(actions);
 
@@ -165,7 +165,7 @@ pub async fn initialize_pre_defined_actions(postgres_client: &mut deadpool_postg
 
 pub async fn initialize_pre_defined_roles(postgres_client: &mut deadpool_postgres::Client) -> Result<Vec<Role>, RoleError> {
 
-  println!("{}", "Initializing pre-defined roles...".dimmed());
+  println!("{}", "Initializing predefined roles...".dimmed());
 
   let pre_defined_roles: Vec<InitialRoleProperties> = vec![
     InitialRoleProperties {
@@ -189,7 +189,7 @@ pub async fn initialize_pre_defined_roles(postgres_client: &mut deadpool_postgre
 
       if role.name == pre_defined_role.name {
 
-        println!("{}", format!("Skipping pre-defined role \"{}\" because it already exists.", pre_defined_role.name).yellow());
+        println!("{}", format!("Skipping predefined role \"{}\" because it already exists.", pre_defined_role.name).yellow());
         should_continue = true;
 
       }
@@ -208,7 +208,7 @@ pub async fn initialize_pre_defined_roles(postgres_client: &mut deadpool_postgre
 
   }
 
-  println!("{}", format!("Successfully initialized {} pre-defined roles.", roles.len()).blue());
+  println!("{}", format!("Successfully initialized {} predefined roles.", roles.len()).blue());
 
   return Ok(roles);
 
