@@ -520,39 +520,39 @@ async fn verify_request_body_exists_when_patching_by_id() -> Result<(), TestSlas
 
 }
 
-// /// Verifies that the router can return a 400 status code if the request body includes unwanted data.
-// #[tokio::test]
-// async fn verify_request_body_json_when_patching_action_by_id() -> Result<(), TestSlashstepServerError> {
+/// Verifies that the router can return a 400 status code if the request body includes unwanted data.
+#[tokio::test]
+async fn verify_request_body_json_when_patching_by_id() -> Result<(), TestSlashstepServerError> {
 
-//   let test_environment = TestEnvironment::new().await?;
-//   let mut postgres_client = test_environment.postgres_pool.get().await?;
-//   initialize_required_tables(&mut postgres_client).await?;
-//   initialize_pre_defined_actions(&mut postgres_client).await?;
-//   initialize_pre_defined_roles(&mut postgres_client).await?;
+  let test_environment = TestEnvironment::new().await?;
+  let mut postgres_client = test_environment.postgres_pool.get().await?;
+  initialize_required_tables(&mut postgres_client).await?;
+  initialize_pre_defined_actions(&mut postgres_client).await?;
+  initialize_pre_defined_roles(&mut postgres_client).await?;
   
-//   // Set up the server and send the request.
-//   let state = AppState {
-//     database_pool: test_environment.postgres_pool.clone(),
-//   };
-//   let router = super::get_router(state.clone())
-//     .layer(middleware::from_fn_with_state(state.clone(), http_request_middleware::create_http_request))
-//     .with_state(state)
-//     .into_make_service_with_connect_info::<SocketAddr>();
-//   let test_server = TestServer::new(router)?;
-//   let response = test_server.patch(&format!("/apps/{}", uuid::Uuid::now_v7()))
-//     .add_header("Content-Type", "application/json")
-//     .json(&serde_json::json!({
-//       "name": "Super Duper Admin",
-//       "display_name": "true",
-//       "description": true,
-//     }))
-//     .await;
+  // Set up the server and send the request.
+  let state = AppState {
+    database_pool: test_environment.postgres_pool.clone(),
+  };
+  let router = super::get_router(state.clone())
+    .layer(middleware::from_fn_with_state(state.clone(), http_request_middleware::create_http_request))
+    .with_state(state)
+    .into_make_service_with_connect_info::<SocketAddr>();
+  let test_server = TestServer::new(router)?;
+  let response = test_server.patch(&format!("/apps/{}", uuid::Uuid::now_v7()))
+    .add_header("Content-Type", "application/json")
+    .json(&serde_json::json!({
+      "name": "Super Duper Admin",
+      "display_name": "true",
+      "description": true,
+    }))
+    .await;
   
-//   // Verify the response.
-//   assert_eq!(response.status_code(), 400);
-//   return Ok(());
+  // Verify the response.
+  assert_eq!(response.status_code(), 400);
+  return Ok(());
 
-// }
+}
 
 // /// Verifies that the router can return a 400 status code if the action ID is not a UUID.
 // #[tokio::test]
