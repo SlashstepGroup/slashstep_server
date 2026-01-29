@@ -2,14 +2,23 @@ use std::net::IpAddr;
 use chrono::{DateTime, Utc};
 use postgres_types::ToSql;
 use serde::{Deserialize, Serialize};
-use thiserror::Error;
 use uuid::Uuid;
 use crate::{resources::{ResourceError, access_policy::IndividualPrincipal}, utilities::slashstepql::{self, SlashstepQLError, SlashstepQLFilterSanitizer, SlashstepQLParsedParameter, SlashstepQLSanitizeFunctionOptions}};
 
 pub const DEFAULT_APP_CREDENTIAL_LIST_LIMIT: i64 = 1000;
 pub const DEFAULT_MAXIMUM_APP_CREDENTIAL_LIST_LIMIT: i64 = 1000;
-pub const ALLOWED_QUERY_KEYS: &[&str] = &[];
-pub const UUID_QUERY_KEYS: &[&str] = &[];
+pub const ALLOWED_QUERY_KEYS: &[&str] = &[
+  "id",
+  "app_id",
+  "description",
+  "expiration_date",
+  "creation_ip_address",
+  "public_key"
+];
+pub const UUID_QUERY_KEYS: &[&str] = &[
+  "id",
+  "app_id"
+];
 pub const RESOURCE_NAME: &str = "AppCredential";
 pub const DATABASE_TABLE_NAME: &str = "app_credentials";
 pub const GET_RESOURCE_ACTION_NAME: &str = "slashstep.appCredentials.get";
