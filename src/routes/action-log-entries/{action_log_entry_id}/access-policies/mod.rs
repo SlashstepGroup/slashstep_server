@@ -16,6 +16,11 @@ async fn handle_list_access_policies_request(
   Extension(user): Extension<Option<Arc<User>>>
 ) -> Result<ErasedJson, HTTPError> {
 
+  let http_transaction = http_transaction.clone();
+  let mut postgres_client = state.database_pool.get().await.map_err(map_postgres_error_to_http_error)?;
+  let action_log_entry = get_action_log_entry_from_id(&action_log_entry_id, &http_transaction, &mut postgres_client).await?;
+  let resource_hierarchy = get_resource_hierarchy(&action_log_entry, &AccessPolicyResourceType::ActionLogEntry, &action_log_entry.id, &http_transaction, &mut postgres_client).await?;
+
   let query = format!(
     "scoped_resource_type = 'ActionLogEntry' AND scoped_action_log_entry_id = {}{}", 
     quote_literal(&action_log_entry_id.to_string()), 
@@ -26,7 +31,7 @@ async fn handle_list_access_policies_request(
     query: Some(query)
   };
 
-  return list_access_policies(Query(query_parameters), State(state), Extension(http_transaction), Extension(user)).await;
+  return list_access_policies(Query(query_parameters), State(state), Extension(http_transaction), Extension(user), resource_hierarchy, ActionLogEntryTargetResourceType::ActionLogEntry, Some(action_log_entry.id)).await;
 
 }
 
