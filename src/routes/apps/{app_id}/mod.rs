@@ -12,6 +12,10 @@ use crate::{
   utilities::route_handler_utilities::{get_action_from_name, get_app_from_id, get_resource_hierarchy, get_user_from_option_user, map_postgres_error_to_http_error, verify_user_permissions}
 };
 
+mod actions;
+#[cfg(test)]
+mod tests;
+
 #[axum::debug_handler]
 async fn handle_get_app_request(
   Path(app_id): Path<String>,
@@ -170,10 +174,8 @@ pub fn get_router(state: AppState) -> Router<AppState> {
     .route("/apps/{action_id}", axum::routing::get(handle_get_app_request))
     .route("/apps/{action_id}", axum::routing::delete(handle_delete_app_request))
     .route("/apps/{action_id}", axum::routing::patch(handle_patch_app_request))
-    .layer(axum::middleware::from_fn_with_state(state.clone(), authentication_middleware::authenticate_user));
+    .layer(axum::middleware::from_fn_with_state(state.clone(), authentication_middleware::authenticate_user))
+    .merge(actions::get_router(state.clone()));
   return router;
 
 }
-
-#[cfg(test)]
-mod tests;
