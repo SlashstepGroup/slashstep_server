@@ -8,28 +8,33 @@ use crate::{AppState, HTTPError, middleware::authentication_middleware, resource
 #[cfg(test)]
 mod tests;
 
-// #[axum::debug_handler]
-// async fn handle_list_access_policies_request(
-//   Path(action_id): Path<String>,
-//   Query(query_parameters): Query<AccessPolicyListQueryParameters>,
-//   State(state): State<AppState>, 
-//   Extension(http_transaction): Extension<Arc<HTTPTransaction>>,
-//   Extension(user): Extension<Option<Arc<User>>>
-// ) -> Result<ErasedJson, HTTPError> {
+#[axum::debug_handler]
+async fn handle_list_access_policies_request(
+  Path(app_id): Path<String>,
+  Query(query_parameters): Query<AccessPolicyListQueryParameters>,
+  State(state): State<AppState>, 
+  Extension(http_transaction): Extension<Arc<HTTPTransaction>>,
+  Extension(user): Extension<Option<Arc<User>>>
+) -> Result<ErasedJson, HTTPError> {
 
-//   let query = format!(
-//     "scoped_resource_type = 'Action' AND scoped_action_id = {}{}", 
-//     quote_literal(&action_id.to_string()), 
-//     query_parameters.query.and_then(|query| Some(format!(" AND {}", query))).unwrap_or("".to_string())
-//   );
+  let http_transaction = http_transaction.clone();
+  let mut postgres_client = state.database_pool.get().await.map_err(map_postgres_error_to_http_error)?;
+  let app = get_app_from_id(&app_id, &http_transaction, &mut postgres_client).await?;
+  let resource_hierarchy = get_resource_hierarchy(&app, &AccessPolicyResourceType::App, &app.id, &http_transaction, &mut postgres_client).await?;
+
+  let query = format!(
+    "scoped_resource_type = 'App' AND scoped_app_id = {}{}", 
+    quote_literal(&app_id.to_string()), 
+    query_parameters.query.and_then(|query| Some(format!(" AND {}", query))).unwrap_or("".to_string())
+  );
   
-//   let query_parameters = AccessPolicyListQueryParameters {
-//     query: Some(query)
-//   };
+  let query_parameters = AccessPolicyListQueryParameters {
+    query: Some(query)
+  };
 
-//   return list_access_policies(Query(query_parameters), State(state), Extension(http_transaction), Extension(user)).await;
+  return list_access_policies(Query(query_parameters), State(state), Extension(http_transaction), Extension(user), resource_hierarchy, ActionLogEntryTargetResourceType::App, Some(app.id)).await;
 
-// }
+}
 
 #[axum::debug_handler]
 async fn handle_create_access_policy_request(
@@ -130,7 +135,7 @@ async fn handle_create_access_policy_request(
 pub fn get_router(state: AppState) -> Router<AppState> {
 
   let router = Router::<AppState>::new()
-    // .route("/actions/{action_id}/access-policies", axum::routing::get(handle_list_access_policies_request))
+    .route("/apps/{app_id}/access-policies", axum::routing::get(handle_list_access_policies_request))
     .route("/apps/{app_id}/access-policies", axum::routing::post(handle_create_access_policy_request))
     .layer(axum::middleware::from_fn_with_state(state.clone(), authentication_middleware::authenticate_user));
   return router;
