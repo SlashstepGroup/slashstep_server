@@ -1,8 +1,19 @@
+/**
+ * 
+ * Any functionality for /action-log-entries should be handled here.
+ * 
+ * Programmers: 
+ * - Christian Toney (https://christiantoney.com)
+ * 
+ * © 2026 Beastslash LLC
+ * 
+ */
+
 use std::sync::Arc;
 use axum::{Extension, Router, extract::{Query, State}};
 use axum_extra::response::ErasedJson;
 use serde::{Deserialize, Serialize};
-use crate::{AppState, HTTPError, middleware::{authentication_middleware, http_request_middleware}, resources::{ResourceError, access_policy::{AccessPolicyPermissionLevel, AccessPolicyResourceType, IndividualPrincipal, ResourceHierarchy}, action_log_entry::{ActionLogEntry, ActionLogEntryActorType, ActionLogEntryTargetResourceType, DEFAULT_MAXIMUM_ACTION_LOG_ENTRY_LIST_LIMIT, InitialActionLogEntryProperties}, http_transaction::HTTPTransaction, server_log_entry::ServerLogEntry, user::User}, utilities::route_handler_utilities::{get_action_from_name, get_user_from_option_user, map_postgres_error_to_http_error, match_db_error, match_slashstepql_error, verify_user_permissions}};
+use crate::{AppState, HTTPError, middleware::{authentication_middleware, http_request_middleware}, resources::{ResourceError, access_policy::{AccessPolicyPermissionLevel, AccessPolicyResourceType, ResourceHierarchy}, action_log_entry::{ActionLogEntry, ActionLogEntryActorType, ActionLogEntryTargetResourceType, DEFAULT_MAXIMUM_ACTION_LOG_ENTRY_LIST_LIMIT, InitialActionLogEntryProperties}, app::App, http_transaction::HTTPTransaction, server_log_entry::ServerLogEntry, user::User}, utilities::route_handler_utilities::{AuthenticatedPrincipal, get_action_from_name, get_authenticated_principal, get_individual_principal_from_authenticated_principal, map_postgres_error_to_http_error, match_db_error, match_slashstepql_error, verify_principal_permissions}};
 
 #[path = "./{action_log_entry_id}/mod.rs"]
 mod action_log_entry_id;
@@ -20,22 +31,30 @@ pub struct ListActionLogEntryResponseBody {
   total_count: i64
 }
 
+/// GET /action-log-entries
+/// 
+/// Lists action log entries.
 #[axum::debug_handler]
 async fn handle_list_action_log_entries_request(
   Query(query_parameters): Query<ActionLogEntryListQueryParameters>,
   State(state): State<AppState>, 
   Extension(http_transaction): Extension<Arc<HTTPTransaction>>,
-  Extension(user): Extension<Option<Arc<User>>>
+  Extension(user): Extension<Option<Arc<User>>>,
+  Extension(app): Extension<Option<Arc<App>>>
 ) -> Result<ErasedJson, HTTPError> {
 
+  // Make sure the principal has access to list resources.
   let http_transaction = http_transaction.clone();
   let mut postgres_client = state.database_pool.get().await.map_err(map_postgres_error_to_http_error)?;
   let list_action_log_entries_action = get_action_from_name("slashstep.actionLogEntries.list", &http_transaction, &mut postgres_client).await?;
-  let user = get_user_from_option_user(&user, &http_transaction, &mut postgres_client).await?;
   let resource_hierarchy: ResourceHierarchy = vec![(AccessPolicyResourceType::Instance, None)];
-  verify_user_permissions(&user, &list_action_log_entries_action, &resource_hierarchy, &http_transaction, &AccessPolicyPermissionLevel::User, &mut postgres_client).await?;
+  let authenticated_principal = get_authenticated_principal(&user, &app)?;
+  verify_principal_permissions(&authenticated_principal, &list_action_log_entries_action, &resource_hierarchy, &http_transaction, &AccessPolicyPermissionLevel::User, &mut postgres_client).await?;
+
+  // Get the list of resources.
+  let individual_principal = get_individual_principal_from_authenticated_principal(&authenticated_principal);
   let query = query_parameters.query.unwrap_or("".to_string());
-  let action_log_entries = match ActionLogEntry::list(&query, &mut postgres_client, Some(&IndividualPrincipal::User(user.id))).await {
+  let action_log_entries = match ActionLogEntry::list(&query, &mut postgres_client, Some(&individual_principal)).await {
 
     Ok(actions) => actions,
 
@@ -59,7 +78,7 @@ async fn handle_list_action_log_entries_request(
   };
 
   ServerLogEntry::trace(&format!("Counting action log entries..."), Some(&http_transaction.id), &mut postgres_client).await.ok();
-  let action_log_entry_count = match ActionLogEntry::count(&query, &mut postgres_client, Some(&IndividualPrincipal::User(user.id))).await {
+  let action_log_entry_count = match ActionLogEntry::count(&query, &mut postgres_client, Some(&individual_principal)).await {
 
     Ok(action_log_entry_count) => action_log_entry_count,
 
@@ -76,8 +95,9 @@ async fn handle_list_action_log_entries_request(
   ActionLogEntry::create(&InitialActionLogEntryProperties {
     action_id: list_action_log_entries_action.id,
     http_transaction_id: Some(http_transaction.id),
-    actor_type: ActionLogEntryActorType::User,
-    actor_user_id: Some(user.id),
+    actor_type: if let AuthenticatedPrincipal::User(_) = &authenticated_principal { ActionLogEntryActorType::User } else { ActionLogEntryActorType::App },
+    actor_user_id: if let AuthenticatedPrincipal::User(user) = &authenticated_principal { Some(user.id.clone()) } else { None },
+    actor_app_id: if let AuthenticatedPrincipal::App(app) = &authenticated_principal { Some(app.id.clone()) } else { None },
     target_resource_type: ActionLogEntryTargetResourceType::Instance,
     ..Default::default()
   }, &mut postgres_client).await.ok();
