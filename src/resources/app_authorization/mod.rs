@@ -3,6 +3,9 @@ use uuid::Uuid;
 use postgres_types::{FromSql, ToSql};
 use crate::resources::{DeletableResource, ResourceError};
 
+#[cfg(test)]
+mod tests;
+
 #[derive(Debug, Clone, ToSql, FromSql, Serialize, Deserialize, Default, PartialEq, Eq)]
 #[postgres(name = "app_authorization_authorizing_resource_type")]
 pub enum AppAuthorizationAuthorizingResourceType {

@@ -29,9 +29,10 @@ pub const UUID_QUERY_KEYS: &[&str] = &[
   "parent_app_id"
 ];
 
-#[derive(Debug, Clone, ToSql, FromSql, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, ToSql, FromSql, Serialize, Deserialize, PartialEq, Eq, Default)]
 #[postgres(name = "action_parent_resource_type")]
 pub enum ActionParentResourceType {
+  #[default]
   Instance,
   App
 }
@@ -74,7 +75,7 @@ pub struct Action {
 
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone, Default)]
 pub struct InitialActionProperties {
 
   /// The action's name.
