@@ -1,11 +1,12 @@
 use std::sync::Arc;
 
-use axum::{Extension, body::Body, extract::{Request, State}, middleware::Next, response::{IntoResponse, Response}};
+use axum::{Extension, body::Body, extract::{Request, State}, http::HeaderMap, middleware::Next, response::{IntoResponse, Response}};
 use axum_extra::extract::CookieJar;
+use reqwest::header;
 use uuid::Uuid;
-use crate::{AppState, HTTPError, handle_pool_error, resources::{http_transaction::HTTPTransaction, role::Role, role_memberships::{InitialRoleMembershipProperties, RoleMembership}, server_log_entry::ServerLogEntry, session::{Session, SessionError, SessionTokenClaims}, user::{InitialUserProperties, User, UserError}}};
+use crate::{AppState, HTTPError, handle_pool_error, resources::{app::App, http_transaction::HTTPTransaction, role::Role, role_memberships::{InitialRoleMembershipProperties, RoleMembership}, server_log_entry::ServerLogEntry, session::{Session, SessionError, SessionTokenClaims}, user::{InitialUserProperties, User, UserError}}, utilities::route_handler_utilities::{get_app_credential_from_id, get_app_from_id, map_postgres_error_to_http_error}};
 
-async fn get_jwt_public_key(http_transaction_id: &Uuid, postgres_client: &mut deadpool_postgres::Client) -> Result<String, Response> {
+async fn get_jwt_public_key(http_transaction_id: &Uuid, postgres_client: &mut deadpool_postgres::Client) -> Result<String, HTTPError> {
 
   let jwt_public_key = match Session::get_json_web_token_public_key().await {
 
@@ -15,7 +16,7 @@ async fn get_jwt_public_key(http_transaction_id: &Uuid, postgres_client: &mut de
 
       let http_error = HTTPError::InternalServerError(Some(format!("{:?}", error)));
       http_error.print_and_save(Some(http_transaction_id), postgres_client).await.ok();
-      return Err(http_error.into_response());
+      return Err(http_error);
 
     }
 
@@ -25,7 +26,7 @@ async fn get_jwt_public_key(http_transaction_id: &Uuid, postgres_client: &mut de
 
 }
 
-async fn get_decoding_key(http_transaction_id: &Uuid, postgres_client: &mut deadpool_postgres::Client, jwt_public_key: &str) -> Result<jsonwebtoken::DecodingKey, Response> {
+async fn get_decoding_key(http_transaction_id: &Uuid, postgres_client: &mut deadpool_postgres::Client, jwt_public_key: &str) -> Result<jsonwebtoken::DecodingKey, HTTPError> {
 
   let decoding_key = match jsonwebtoken::DecodingKey::from_rsa_pem(&jwt_public_key.as_bytes()) {
     Ok(decoding_key) => decoding_key,
@@ -33,7 +34,7 @@ async fn get_decoding_key(http_transaction_id: &Uuid, postgres_client: &mut dead
       
       let http_error = HTTPError::InternalServerError(Some(format!("Failed to decode JWT public key: {:?}", error)));
       http_error.print_and_save(Some(&http_transaction_id), postgres_client).await.ok();
-      return Err(http_error.into_response());
+      return Err(http_error);
 
     }
   };
@@ -42,7 +43,7 @@ async fn get_decoding_key(http_transaction_id: &Uuid, postgres_client: &mut dead
 
 }
 
-async fn get_decoded_claims(http_transaction_id: &Uuid, postgres_client: &mut deadpool_postgres::Client, session_token: &str, decoding_key: &jsonwebtoken::DecodingKey, validation: &jsonwebtoken::Validation) -> Result<jsonwebtoken::TokenData<SessionTokenClaims>, Response> {
+async fn get_decoded_claims(http_transaction_id: &Uuid, postgres_client: &mut deadpool_postgres::Client, session_token: &str, decoding_key: &jsonwebtoken::DecodingKey, validation: &jsonwebtoken::Validation) -> Result<jsonwebtoken::TokenData<SessionTokenClaims>, HTTPError> {
 
   let decoded_claims = match jsonwebtoken::decode::<SessionTokenClaims>(&session_token, &decoding_key, &validation) {
     Ok(decoded_claims) => decoded_claims,
@@ -64,7 +65,7 @@ async fn get_decoded_claims(http_transaction_id: &Uuid, postgres_client: &mut de
       };
 
       http_error.print_and_save(Some(&http_transaction_id), postgres_client).await.ok();
-      return Err(http_error.into_response());
+      return Err(http_error);
 
     }
   };
@@ -73,7 +74,7 @@ async fn get_decoded_claims(http_transaction_id: &Uuid, postgres_client: &mut de
 
 }
 
-async fn get_user_by_id(http_transaction_id: &Uuid, postgres_client: &mut deadpool_postgres::Client, user_id: &Uuid) -> Result<User, Response> {
+async fn get_user_by_id(http_transaction_id: &Uuid, postgres_client: &mut deadpool_postgres::Client, user_id: &Uuid) -> Result<User, HTTPError> {
 
   let user = match User::get_by_id(&user_id, postgres_client).await {
     Ok(user) => user,
@@ -89,7 +90,7 @@ async fn get_user_by_id(http_transaction_id: &Uuid, postgres_client: &mut deadpo
 
       http_error.print_and_save(Some(&http_transaction_id), postgres_client).await.ok();
 
-      return Err(http_error.into_response());
+      return Err(http_error);
 
     }
   };
@@ -98,7 +99,7 @@ async fn get_user_by_id(http_transaction_id: &Uuid, postgres_client: &mut deadpo
 
 }
 
-async fn get_session_by_id(http_transaction_id: &Uuid, postgres_client: &mut deadpool_postgres::Client, session_id: &Uuid) -> Result<Session, Response> {
+async fn get_session_by_id(http_transaction_id: &Uuid, postgres_client: &mut deadpool_postgres::Client, session_id: &Uuid) -> Result<Session, HTTPError> {
 
   let session = match Session::get_by_id(&session_id, postgres_client).await {
     Ok(session) => session,
@@ -118,7 +119,7 @@ async fn get_session_by_id(http_transaction_id: &Uuid, postgres_client: &mut dea
 
       ServerLogEntry::from_http_error(&http_error, Some(&http_transaction_id), postgres_client).await.ok();
 
-      return Err(http_error.into_response());
+      return Err(http_error);
 
     }
   };
@@ -134,10 +135,10 @@ pub async fn authenticate_user(
   cookie_jar: CookieJar, 
   mut request: Request<Body>,
   next: Next
-) -> Result<Response, Response> {
+) -> Result<Response, HTTPError> {
 
   // Get the cookie from the request.
-  let mut postgres_client = state.database_pool.get().await.map_err(handle_pool_error)?;
+  let mut postgres_client = state.database_pool.get().await.map_err(map_postgres_error_to_http_error)?;
 
   let Some(session_token) = cookie_jar.get("sessionToken") else {
 
@@ -169,7 +170,7 @@ pub async fn authenticate_user(
 
                 let http_error = HTTPError::InternalServerError(Some(format!("Failed to create anonymous user: {:?}", error)));
                 http_error.print_and_save(Some(&http_transaction.id), &mut postgres_client).await.ok();
-                return Err(http_error.into_response());
+                return Err(http_error);
 
               }
 
@@ -183,7 +184,7 @@ pub async fn authenticate_user(
     
             let http_error = HTTPError::InternalServerError(Some(format!("Failed to get anonymous user: {:?}", error)));
             http_error.print_and_save(Some(&http_transaction.id), &mut postgres_client).await.ok();
-            return Err(http_error.into_response());
+            return Err(http_error);
     
           }
     
@@ -202,7 +203,7 @@ pub async fn authenticate_user(
 
         let http_error = HTTPError::InternalServerError(Some(format!("Failed to get anonymous-users role: {:?}", error)));
         http_error.print_and_save(Some(&http_transaction.id), &mut postgres_client).await.ok();
-        return Err(http_error.into_response());
+        return Err(http_error);
 
       }
 
@@ -216,7 +217,7 @@ pub async fn authenticate_user(
 
         let http_error = HTTPError::InternalServerError(Some(format!("Failed to get role memberships: {:?}", error)));
         http_error.print_and_save(Some(&http_transaction.id), &mut postgres_client).await.ok();
-        return Err(http_error.into_response());
+        return Err(http_error);
 
       }
 
@@ -249,7 +250,7 @@ pub async fn authenticate_user(
 
     let http_error = HTTPError::UnauthorizedError(Some("Please provide a valid session token.".to_string()));
     http_error.print_and_save(Some(&http_transaction.id), &mut postgres_client).await.ok();
-    return Err(http_error.into_response());
+    return Err(http_error);
 
   }
 
@@ -271,7 +272,7 @@ pub async fn authenticate_user(
 
       let http_error = HTTPError::BadRequestError(Some("You must provide a valid UUID for the user ID.".to_string()));
       http_error.print_and_save(Some(&http_transaction.id), &mut postgres_client).await.ok();
-      return Err(http_error.into_response());
+      return Err(http_error);
 
     }
     
@@ -283,7 +284,7 @@ pub async fn authenticate_user(
 
       let http_error = HTTPError::BadRequestError(Some("You must provide a valid UUID for the user ID.".to_string()));
       http_error.print_and_save(Some(&http_transaction.id), &mut postgres_client).await.ok();
-      return Err(http_error.into_response());
+      return Err(http_error);
 
     }
     
@@ -304,16 +305,134 @@ pub async fn authenticate_user(
 
 }
 
-pub async fn authenticate_app(request: Request, next: Next) -> Result<Response, Response> {
-  // Perform actions before the handler
+#[axum_macros::debug_middleware]
+pub async fn authenticate_app(
+  State(state): State<AppState>, 
+  Extension(http_transaction): Extension<Arc<HTTPTransaction>>, 
+  headers: HeaderMap,
+  mut request: Request<Body>,
+  next: Next
+) -> Result<Response, HTTPError> {
   
-  println!("Request received: {}", request.uri());
+  // Get the cookie from the request.
+  let mut postgres_client = state.database_pool.get().await.map_err(map_postgres_error_to_http_error)?;
 
-  // Call the next service in the stack (the handler or next middleware)
+  let Some(authorization_token) = headers.get(header::AUTHORIZATION) else {
+
+    ServerLogEntry::info(&format!("App token not found in request."), Some(&http_transaction.id), &mut postgres_client).await.ok();
+    request.extensions_mut().insert(None as Option<Arc<App>>);
+    return Ok(next.run(request).await);
+
+  };
+
+  let authorization_token = match authorization_token.to_str() {
+
+    Ok(authorization_token) => authorization_token,
+
+    Err(_) => {
+
+      let http_error = HTTPError::BadRequestError(Some("Please provide a valid app token.".to_string()));
+      http_error.print_and_save(Some(&http_transaction.id), &mut postgres_client).await.ok();
+      return Err(http_error);
+
+    }
+
+  };
+
+  if !authorization_token.starts_with("App ") {
+
+    let http_error = HTTPError::UnauthorizedError(Some("Please provide a valid app token.".to_string()));
+    http_error.print_and_save(Some(&http_transaction.id), &mut postgres_client).await.ok();
+    return Err(http_error);
+
+  }
+
+  let authorization_token = authorization_token.to_string().replace("App ", "");
+
+  // Make sure the user token is valid.
+  ServerLogEntry::trace("Decoding app token...", Some(&http_transaction.id), &mut postgres_client).await.ok();
+
+  let jwt_public_key = get_jwt_public_key(&http_transaction.id, &mut postgres_client).await?;
+  let validation = jsonwebtoken::Validation::new(jsonwebtoken::Algorithm::EdDSA);
+  let decoding_key = get_decoding_key(&http_transaction.id, &mut postgres_client, &jwt_public_key).await?;
+  let decoded_claims = get_decoded_claims(&http_transaction.id, &mut postgres_client, &authorization_token, &decoding_key, &validation).await?;
+
+  // Set the user and session in the request extensions.
+  let app_credential_id = match Uuid::parse_str(&decoded_claims.claims.jti) {
+    
+    Ok(app_credential_id) => app_credential_id,
+
+    Err(_) => {
+
+      let http_error = HTTPError::InternalServerError(Some("App credential ID is not a valid UUID.".to_string()));
+      http_error.print_and_save(Some(&http_transaction.id), &mut postgres_client).await.ok();
+      return Err(http_error);
+
+    }
+    
+  };
+
+  let app_id = match Uuid::parse_str(&decoded_claims.claims.sub) {
+    
+    Ok(app_id) => app_id,
+    Err(_) => {
+
+      let http_error = HTTPError::InternalServerError(Some("App ID is not a valid UUID.".to_string()));
+      http_error.print_and_save(Some(&http_transaction.id), &mut postgres_client).await.ok();
+      return Err(http_error);
+
+    }
+    
+  };
+
+  let app_credential = match get_app_credential_from_id(&app_credential_id.to_string(), &http_transaction, &mut postgres_client).await {
+
+    Ok(app_credential) => app_credential,
+
+    Err(error) => match error {
+
+      HTTPError::BadRequestError(_) | HTTPError::NotFoundError(_) => {
+
+        let http_error = HTTPError::UnauthorizedError(Some("Please provide a valid app token.".to_string()));
+        http_error.print_and_save(Some(&http_transaction.id), &mut postgres_client).await.ok();
+        return Err(http_error);
+
+      },
+
+      _ => return Err(error)
+
+    }
+
+  };
+
+  let app = match get_app_from_id(&app_credential.app_id.to_string(), &http_transaction, &mut postgres_client).await {
+
+    Ok(app) => app,
+
+    Err(error) => match error {
+
+      HTTPError::BadRequestError(_) | HTTPError::NotFoundError(_) => {
+
+        let http_error = HTTPError::UnauthorizedError(Some("Please provide a valid app token.".to_string()));
+        http_error.print_and_save(Some(&http_transaction.id), &mut postgres_client).await.ok();
+        return Err(http_error);
+
+      },
+
+      _ => return Err(error)
+
+    }
+
+  };
+  
+  ServerLogEntry::trace("Adding app and app credential to request extensions...", Some(&http_transaction.id), &mut postgres_client).await.ok();
+  request.extensions_mut().insert(Some(Arc::new(app.clone())));
+  request.extensions_mut().insert(Some(Arc::new(app_credential.clone())));
+
+  ServerLogEntry::info(&format!("Successfully authenticated as app {}.", app.id), Some(&http_transaction.id), &mut postgres_client).await.ok();
+
   let response = next.run(request).await;
 
-  // Perform actions after the handler
-  println!("Response status: {}", response.status());
-
   return Ok(response);
+
 }

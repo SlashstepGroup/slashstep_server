@@ -14,7 +14,7 @@ use std::sync::Arc;
 use axum::{Extension, Json, Router, extract::{Path, State}};
 use reqwest::{StatusCode};
 use uuid::Uuid;
-use crate::{AppState, HTTPError, middleware::authentication_middleware, resources::{DeletableResource, ResourceError, access_policy::{AccessPolicyPermissionLevel, AccessPolicyResourceType}, action_log_entry::{ActionLogEntry, ActionLogEntryActorType, ActionLogEntryTargetResourceType, InitialActionLogEntryProperties}, http_transaction::HTTPTransaction, server_log_entry::ServerLogEntry, user::User}, utilities::route_handler_utilities::{get_action_from_name, get_resource_hierarchy, get_user_from_option_user, map_postgres_error_to_http_error, verify_user_permissions}};
+use crate::{AppState, HTTPError, middleware::{authentication_middleware, http_request_middleware}, resources::{DeletableResource, ResourceError, access_policy::{AccessPolicyPermissionLevel, AccessPolicyResourceType}, action_log_entry::{ActionLogEntry, ActionLogEntryActorType, ActionLogEntryTargetResourceType, InitialActionLogEntryProperties}, http_transaction::HTTPTransaction, server_log_entry::ServerLogEntry, user::User}, utilities::route_handler_utilities::{get_action_from_name, get_resource_hierarchy, get_user_from_option_user, map_postgres_error_to_http_error, verify_user_permissions}};
 
 #[path = "./access-policies/mod.rs"]
 mod access_policies;
@@ -155,8 +155,9 @@ pub fn get_router(state: AppState) -> Router<AppState> {
   let router = Router::<AppState>::new()
     .route("/action-log-entries/{action_log_entry_id}", axum::routing::get(handle_get_action_log_entry_request))
     .route("/action-log-entries/{action_log_entry_id}", axum::routing::delete(handle_delete_action_log_entry_request))
-    .merge(access_policies::get_router(state.clone()))
-    .layer(axum::middleware::from_fn_with_state(state, authentication_middleware::authenticate_user));
+    .layer(axum::middleware::from_fn_with_state(state.clone(), authentication_middleware::authenticate_user))
+    .layer(axum::middleware::from_fn_with_state(state.clone(), http_request_middleware::create_http_request))
+    .merge(access_policies::get_router(state.clone()));
   return router;
 
 }

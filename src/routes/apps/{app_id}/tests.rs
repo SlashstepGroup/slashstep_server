@@ -40,7 +40,6 @@ async fn verify_returned_app_by_id() -> Result<(), TestSlashstepServerError> {
   };
 
   let router = super::get_router(state.clone())
-    .layer(middleware::from_fn_with_state(state.clone(), http_request_middleware::create_http_request))
     .with_state(state)
     .into_make_service_with_connect_info::<SocketAddr>();
   let test_server = TestServer::new(router)?;
@@ -97,7 +96,6 @@ async fn verify_uuid_when_getting_app_by_id() -> Result<(), TestSlashstepServerE
   };
 
   let router = super::get_router(state.clone())
-    .layer(middleware::from_fn_with_state(state.clone(), http_request_middleware::create_http_request))
     .with_state(state)
     .into_make_service_with_connect_info::<SocketAddr>();
   let test_server = TestServer::new(router)?;
@@ -124,7 +122,6 @@ async fn verify_authentication_when_getting_app_by_id() -> Result<(), TestSlashs
   };
 
   let router = super::get_router(state.clone())
-    .layer(middleware::from_fn_with_state(state.clone(), http_request_middleware::create_http_request))
     .with_state(state)
     .into_make_service_with_connect_info::<SocketAddr>();
   let test_server = TestServer::new(router)?;
@@ -162,7 +159,6 @@ async fn verify_permission_when_getting_app_by_id() -> Result<(), TestSlashstepS
     database_pool: test_environment.postgres_pool.clone(),
   };
   let router = super::get_router(state.clone())
-    .layer(middleware::from_fn_with_state(state.clone(), http_request_middleware::create_http_request))
     .with_state(state)
     .into_make_service_with_connect_info::<SocketAddr>();
   let test_server = TestServer::new(router)?;
@@ -195,7 +191,6 @@ async fn verify_not_found_when_getting_app_by_id() -> Result<(), TestSlashstepSe
     database_pool: test_environment.postgres_pool.clone(),
   };
   let router = super::get_router(state.clone())
-    .layer(middleware::from_fn_with_state(state.clone(), http_request_middleware::create_http_request))
     .with_state(state)
     .into_make_service_with_connect_info::<SocketAddr>();
   let test_server = TestServer::new(router)?;
@@ -243,7 +238,6 @@ async fn verify_successful_deletion_when_deleting_by_id() -> Result<(), TestSlas
     database_pool: test_environment.postgres_pool.clone(),
   };
   let router = super::get_router(state.clone())
-    .layer(middleware::from_fn_with_state(state.clone(), http_request_middleware::create_http_request))
     .with_state(state)
     .into_make_service_with_connect_info::<SocketAddr>();
   let test_server = TestServer::new(router)?;
@@ -279,7 +273,6 @@ async fn verify_uuid_when_deleting_by_id() -> Result<(), TestSlashstepServerErro
   };
 
   let router = super::get_router(state.clone())
-    .layer(middleware::from_fn_with_state(state.clone(), http_request_middleware::create_http_request))
     .with_state(state)
     .into_make_service_with_connect_info::<SocketAddr>();
   let test_server = TestServer::new(router)?;
@@ -310,7 +303,6 @@ async fn verify_authentication_when_deleting_by_id() -> Result<(), TestSlashstep
     database_pool: test_environment.postgres_pool.clone(),
   };
   let router = super::get_router(state.clone())
-    .layer(middleware::from_fn_with_state(state.clone(), http_request_middleware::create_http_request))
     .with_state(state)
     .into_make_service_with_connect_info::<SocketAddr>();
   let test_server = TestServer::new(router)?;
@@ -347,7 +339,6 @@ async fn verify_permission_when_deleting_by_id() -> Result<(), TestSlashstepServ
     database_pool: test_environment.postgres_pool.clone(),
   };
   let router = super::get_router(state.clone())
-    .layer(middleware::from_fn_with_state(state.clone(), http_request_middleware::create_http_request))
     .with_state(state)
     .into_make_service_with_connect_info::<SocketAddr>();
   let test_server = TestServer::new(router)?;
@@ -379,7 +370,6 @@ async fn verify_resource_exists_when_deleting_by_id() -> Result<(), TestSlashste
     database_pool: test_environment.postgres_pool.clone(),
   };
   let router = super::get_router(state.clone())
-    .layer(middleware::from_fn_with_state(state.clone(), http_request_middleware::create_http_request))
     .with_state(state)
     .into_make_service_with_connect_info::<SocketAddr>();
   let test_server = TestServer::new(router)?;
@@ -430,7 +420,6 @@ async fn verify_successful_patch_by_id() -> Result<(), TestSlashstepServerError>
     database_pool: test_environment.postgres_pool.clone(),
   };
   let router = super::get_router(state.clone())
-    .layer(middleware::from_fn_with_state(state.clone(), http_request_middleware::create_http_request))
     .with_state(state)
     .into_make_service_with_connect_info::<SocketAddr>();
   let test_server = TestServer::new(router)?;
@@ -476,7 +465,6 @@ async fn verify_content_type_when_patching_by_id() -> Result<(), TestSlashstepSe
     database_pool: test_environment.postgres_pool.clone(),
   };
   let router = super::get_router(state.clone())
-    .layer(middleware::from_fn_with_state(state.clone(), http_request_middleware::create_http_request))
     .with_state(state)
     .into_make_service_with_connect_info::<SocketAddr>();
   let test_server = TestServer::new(router)?;
@@ -504,7 +492,6 @@ async fn verify_request_body_exists_when_patching_by_id() -> Result<(), TestSlas
     database_pool: test_environment.postgres_pool.clone(),
   };
   let router = super::get_router(state.clone())
-    .layer(middleware::from_fn_with_state(state.clone(), http_request_middleware::create_http_request))
     .with_state(state)
     .into_make_service_with_connect_info::<SocketAddr>();
   let test_server = TestServer::new(router)?;
@@ -533,7 +520,6 @@ async fn verify_request_body_json_when_patching_by_id() -> Result<(), TestSlashs
     database_pool: test_environment.postgres_pool.clone(),
   };
   let router = super::get_router(state.clone())
-    .layer(middleware::from_fn_with_state(state.clone(), http_request_middleware::create_http_request))
     .with_state(state)
     .into_make_service_with_connect_info::<SocketAddr>();
   let test_server = TestServer::new(router)?;
@@ -565,7 +551,6 @@ async fn verify_uuid_when_patching_by_id() -> Result<(), TestSlashstepServerErro
     database_pool: test_environment.postgres_pool.clone(),
   };
   let router = super::get_router(state.clone())
-    .layer(middleware::from_fn_with_state(state.clone(), http_request_middleware::create_http_request))
     .with_state(state)
     .into_make_service_with_connect_info::<SocketAddr>();
   let test_server = TestServer::new(router)?;
@@ -597,7 +582,6 @@ async fn verify_authentication_when_patching_by_id() -> Result<(), TestSlashstep
     database_pool: test_environment.postgres_pool.clone(),
   };
   let router = super::get_router(state.clone())
-    .layer(middleware::from_fn_with_state(state.clone(), http_request_middleware::create_http_request))
     .with_state(state)
     .into_make_service_with_connect_info::<SocketAddr>();
   let test_server = TestServer::new(router)?;
@@ -635,7 +619,6 @@ async fn verify_permission_when_patching() -> Result<(), TestSlashstepServerErro
     database_pool: test_environment.postgres_pool.clone(),
   };
   let router = super::get_router(state.clone())
-    .layer(middleware::from_fn_with_state(state.clone(), http_request_middleware::create_http_request))
     .with_state(state)
     .into_make_service_with_connect_info::<SocketAddr>();
   let test_server = TestServer::new(router)?;
@@ -668,7 +651,6 @@ async fn verify_resource_exists_when_patching() -> Result<(), TestSlashstepServe
     database_pool: test_environment.postgres_pool.clone(),
   };
   let router = super::get_router(state.clone())
-    .layer(middleware::from_fn_with_state(state.clone(), http_request_middleware::create_http_request))
     .with_state(state)
     .into_make_service_with_connect_info::<SocketAddr>();
   let test_server = TestServer::new(router)?;

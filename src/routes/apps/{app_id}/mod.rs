@@ -4,7 +4,7 @@ use reqwest::StatusCode;
 use crate::{
   AppState, 
   HTTPError, 
-  middleware::authentication_middleware, 
+  middleware::{authentication_middleware, http_request_middleware}, 
   resources::{
     DeletableResource,
     access_policy::{AccessPolicyPermissionLevel, AccessPolicyResourceType}, action_log_entry::{ActionLogEntry, ActionLogEntryActorType, ActionLogEntryTargetResourceType, InitialActionLogEntryProperties}, app::{App, EditableAppProperties}, http_transaction::HTTPTransaction, server_log_entry::ServerLogEntry, user::User
@@ -179,6 +179,7 @@ pub fn get_router(state: AppState) -> Router<AppState> {
     .route("/apps/{action_id}", axum::routing::delete(handle_delete_app_request))
     .route("/apps/{action_id}", axum::routing::patch(handle_patch_app_request))
     .layer(axum::middleware::from_fn_with_state(state.clone(), authentication_middleware::authenticate_user))
+    .layer(axum::middleware::from_fn_with_state(state.clone(), http_request_middleware::create_http_request))
     .merge(actions::get_router(state.clone()))
     .merge(access_policies::get_router(state.clone()))
     .merge(app_credentials::get_router(state.clone()));

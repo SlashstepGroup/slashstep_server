@@ -22,7 +22,7 @@ pub async fn create_http_request(
   // Create the HTTP request and add it to the request extension.
   let mut postgres_client = state.database_pool.get().await.map_err(handle_pool_error)?;
 
-  let http_request = match HTTPTransaction::create(&InitialHTTPTransactionProperties {
+  let http_transaction = match HTTPTransaction::create(&InitialHTTPTransactionProperties {
     method,
     url,
     ip_address: client_ip,
@@ -57,9 +57,9 @@ pub async fn create_http_request(
 
   };
 
-  request.extensions_mut().insert(http_request.clone());
+  request.extensions_mut().insert(http_transaction.clone());
   
-  ServerLogEntry::info(&format!("HTTP request handling started."), Some(&http_request.id), &mut postgres_client).await.ok();
+  ServerLogEntry::info(&format!("HTTP request handling started."), Some(&http_transaction.id), &mut postgres_client).await.ok();
   let response = next.run(request).await;
   return Ok(response);
 

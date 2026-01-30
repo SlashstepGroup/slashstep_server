@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use crate::{HTTPError, resources::{DeletableResource, ResourceError, access_policy::{AccessPolicyPermissionLevel, AccessPolicyResourceType, Principal, ResourceHierarchy}, action::Action, app::App, http_transaction::HTTPTransaction, server_log_entry::ServerLogEntry, user::User}, utilities::{principal_permission_verifier::{PrincipalPermissionVerifier, PrincipalPermissionVerifierError}, resource_hierarchy::{self, ResourceHierarchyError}, slashstepql::SlashstepQLError}};
+use crate::{HTTPError, resources::{DeletableResource, ResourceError, access_policy::{AccessPolicyPermissionLevel, AccessPolicyResourceType, Principal, ResourceHierarchy}, action::Action, app::App, app_credential::AppCredential, http_transaction::HTTPTransaction, server_log_entry::ServerLogEntry, user::User}, utilities::{principal_permission_verifier::{PrincipalPermissionVerifier, PrincipalPermissionVerifierError}, resource_hierarchy::{self, ResourceHierarchyError}, slashstepql::SlashstepQLError}};
 use colored::Colorize;
 use postgres::error::SqlState;
 use uuid::Uuid;
@@ -127,6 +127,47 @@ pub async fn get_action_from_id(action_id_string: &str, http_transaction: &HTTPT
   };
 
   return Ok(action);
+
+}
+
+pub async fn get_app_credential_from_id(app_credential_id: &str, http_transaction: &HTTPTransaction, mut postgres_client: &mut deadpool_postgres::Client) -> Result<AppCredential, HTTPError> {
+
+  let app_credential_id = match Uuid::parse_str(&app_credential_id) {
+
+    Ok(app_credential_id) => app_credential_id,
+
+    Err(_) => {
+
+      let http_error = HTTPError::BadRequestError(Some("You must provide a valid UUID for the app ID.".to_string()));
+      ServerLogEntry::from_http_error(&http_error, Some(&http_transaction.id), &mut postgres_client).await.ok();
+      return Err(http_error);
+
+    }
+
+  };
+
+  ServerLogEntry::trace(&format!("Getting app credential {}...", app_credential_id), Some(&http_transaction.id), postgres_client).await.ok();
+  let app_credential = match AppCredential::get_by_id(&app_credential_id, postgres_client).await {
+
+    Ok(app_credential) => app_credential,
+
+    Err(error) => {
+
+      let http_error = match error {
+        
+        ResourceError::NotFoundError(message) => HTTPError::NotFoundError(Some(message)),
+
+        error => HTTPError::InternalServerError(Some(format!("Failed to get app credential {}: {:?}", app_credential_id, error)))
+
+      };
+      http_error.print_and_save(Some(&http_transaction.id), &mut postgres_client).await.ok();
+      return Err(http_error);
+
+    }
+
+  };
+
+  return Ok(app_credential);
 
 }
 

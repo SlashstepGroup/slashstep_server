@@ -4,6 +4,7 @@ use axum::middleware;
 use axum_extra::extract::cookie::Cookie;
 use axum_test::TestServer;
 use ntest::timeout;
+use reqwest::StatusCode;
 use uuid::Uuid;
 use crate::{
   Action, 
@@ -41,7 +42,6 @@ async fn verify_returned_access_policy_by_id() -> Result<(), TestSlashstepServer
   };
 
   let router = super::get_router(state.clone())
-    .layer(middleware::from_fn_with_state(state.clone(), http_request_middleware::create_http_request))
     .with_state(state)
     .into_make_service_with_connect_info::<SocketAddr>();
   let test_server = TestServer::new(router)?;
@@ -65,8 +65,8 @@ async fn verify_returned_access_policy_by_id() -> Result<(), TestSlashstepServer
   let response = test_server.get(&format!("/access-policies/{}", access_policy.id))
     .add_cookie(Cookie::new("sessionToken", format!("Bearer {}", session_token)))
     .await;
-  
-  assert_eq!(response.status_code(), 200);
+  println!("{}", response.text());
+  assert_eq!(response.status_code(), StatusCode::OK);
 
   let response_access_policy: AccessPolicy = response.json();
   assert_eq!(response_access_policy.id, access_policy.id);
@@ -107,7 +107,6 @@ async fn verify_uuid_when_getting_access_policy_by_id() -> Result<(), TestSlashs
   };
 
   let router = super::get_router(state.clone())
-    .layer(middleware::from_fn_with_state(state.clone(), http_request_middleware::create_http_request))
     .with_state(state)
     .into_make_service_with_connect_info::<SocketAddr>();
   let test_server = TestServer::new(router)?;
@@ -134,7 +133,6 @@ async fn verify_authentication_when_getting_access_policy_by_id() -> Result<(), 
   };
 
   let router = super::get_router(state.clone())
-    .layer(middleware::from_fn_with_state(state.clone(), http_request_middleware::create_http_request))
     .with_state(state)
     .into_make_service_with_connect_info::<SocketAddr>();
   let test_server = TestServer::new(router)?;
@@ -164,7 +162,6 @@ async fn verify_permission_when_getting_access_policy_by_id() -> Result<(), Test
   };
 
   let router = super::get_router(state.clone())
-    .layer(middleware::from_fn_with_state(state.clone(), http_request_middleware::create_http_request))
     .with_state(state)
     .into_make_service_with_connect_info::<SocketAddr>();
   let test_server = TestServer::new(router)?;
@@ -196,7 +193,6 @@ async fn verify_not_found_when_getting_access_policy_by_id() -> Result<(), TestS
   };
 
   let router = super::get_router(state.clone())
-    .layer(middleware::from_fn_with_state(state.clone(), http_request_middleware::create_http_request))
     .with_state(state)
     .into_make_service_with_connect_info::<SocketAddr>();
   let test_server = TestServer::new(router)?;
@@ -229,7 +225,6 @@ async fn verify_successful_deletion_when_deleting_access_policy_by_id() -> Resul
   };
 
   let router = super::get_router(state.clone())
-    .layer(middleware::from_fn_with_state(state.clone(), http_request_middleware::create_http_request))
     .with_state(state)
     .into_make_service_with_connect_info::<SocketAddr>();
   let test_server = TestServer::new(router)?;
@@ -282,7 +277,6 @@ async fn verify_uuid_when_deleting_access_policy_by_id() -> Result<(), TestSlash
   };
 
   let router = super::get_router(state.clone())
-    .layer(middleware::from_fn_with_state(state.clone(), http_request_middleware::create_http_request))
     .with_state(state)
     .into_make_service_with_connect_info::<SocketAddr>();
   let test_server = TestServer::new(router)?;
@@ -309,7 +303,6 @@ async fn verify_authentication_when_deleting_access_policy_by_id() -> Result<(),
   };
 
   let router = super::get_router(state.clone())
-    .layer(middleware::from_fn_with_state(state.clone(), http_request_middleware::create_http_request))
     .with_state(state)
     .into_make_service_with_connect_info::<SocketAddr>();
   let test_server = TestServer::new(router)?;
@@ -338,7 +331,6 @@ async fn verify_permission_when_deleting_access_policy_by_id() -> Result<(), Tes
   };
 
   let router = super::get_router(state.clone())
-    .layer(middleware::from_fn_with_state(state.clone(), http_request_middleware::create_http_request))
     .with_state(state)
     .into_make_service_with_connect_info::<SocketAddr>();
   let test_server = TestServer::new(router)?;
@@ -369,7 +361,6 @@ async fn verify_access_policy_exists_when_deleting_access_policy_by_id() -> Resu
   };
 
   let router = super::get_router(state.clone())
-    .layer(middleware::from_fn_with_state(state.clone(), http_request_middleware::create_http_request))
     .with_state(state)
     .into_make_service_with_connect_info::<SocketAddr>();
   let test_server = TestServer::new(router)?;
@@ -402,7 +393,6 @@ async fn verify_successful_patch_access_policy_by_id() -> Result<(), TestSlashst
   };
 
   let router = super::get_router(state.clone())
-    .layer(middleware::from_fn_with_state(state.clone(), http_request_middleware::create_http_request))
     .with_state(state)
     .into_make_service_with_connect_info::<SocketAddr>();
   let test_server = TestServer::new(router)?;
@@ -472,7 +462,6 @@ async fn verify_content_type_when_patching_access_policy_by_id() -> Result<(), T
   };
 
   let router = super::get_router(state.clone())
-    .layer(middleware::from_fn_with_state(state.clone(), http_request_middleware::create_http_request))
     .with_state(state)
     .into_make_service_with_connect_info::<SocketAddr>();
   let test_server = TestServer::new(router)?;
@@ -499,7 +488,6 @@ async fn verify_request_body_exists_when_patching_access_policy_by_id() -> Resul
   };
 
   let router = super::get_router(state.clone())
-    .layer(middleware::from_fn_with_state(state.clone(), http_request_middleware::create_http_request))
     .with_state(state)
     .into_make_service_with_connect_info::<SocketAddr>();
   let test_server = TestServer::new(router)?;
@@ -527,7 +515,6 @@ async fn verify_request_body_json_when_patching_access_policy_by_id() -> Result<
   };
 
   let router = super::get_router(state.clone())
-    .layer(middleware::from_fn_with_state(state.clone(), http_request_middleware::create_http_request))
     .with_state(state)
     .into_make_service_with_connect_info::<SocketAddr>();
   let test_server = TestServer::new(router)?;
@@ -560,7 +547,6 @@ async fn verify_uuid_when_patching_access_policy_by_id() -> Result<(), TestSlash
   };
 
   let router = super::get_router(state.clone())
-    .layer(middleware::from_fn_with_state(state.clone(), http_request_middleware::create_http_request))
     .with_state(state)
     .into_make_service_with_connect_info::<SocketAddr>();
   let test_server = TestServer::new(router)?;
@@ -592,7 +578,6 @@ async fn verify_authentication_when_patching_access_policy_by_id() -> Result<(),
   };
 
   let router = super::get_router(state.clone())
-    .layer(middleware::from_fn_with_state(state.clone(), http_request_middleware::create_http_request))
     .with_state(state)
     .into_make_service_with_connect_info::<SocketAddr>();
   let test_server = TestServer::new(router)?;
@@ -637,7 +622,6 @@ async fn verify_permission_when_patching_access_policy() -> Result<(), TestSlash
   };
 
   let router = super::get_router(state.clone())
-    .layer(middleware::from_fn_with_state(state.clone(), http_request_middleware::create_http_request))
     .with_state(state)
     .into_make_service_with_connect_info::<SocketAddr>();
   let test_server = TestServer::new(router)?;
@@ -686,7 +670,6 @@ async fn verify_access_policy_exists_when_patching_access_policy() -> Result<(),
   };
 
   let router = super::get_router(state.clone())
-    .layer(middleware::from_fn_with_state(state.clone(), http_request_middleware::create_http_request))
     .with_state(state)
     .into_make_service_with_connect_info::<SocketAddr>();
   let test_server = TestServer::new(router)?;

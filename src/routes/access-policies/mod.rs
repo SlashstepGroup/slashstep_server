@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use axum::{Extension, Router, extract::{Query, State}};
 use axum_extra::response::ErasedJson;
-use crate::{AppState, HTTPError, middleware::authentication_middleware, resources::{access_policy::AccessPolicyResourceType, action_log_entry::ActionLogEntryTargetResourceType, http_transaction::HTTPTransaction, user::User}, utilities::{resource_hierarchy::{self, ResourceHierarchy}, reusable_route_handlers::{AccessPolicyListQueryParameters, list_access_policies}}};
+use crate::{AppState, HTTPError, middleware::{authentication_middleware, http_request_middleware}, resources::{access_policy::AccessPolicyResourceType, action_log_entry::ActionLogEntryTargetResourceType, http_transaction::HTTPTransaction, user::User}, utilities::{resource_hierarchy::{self, ResourceHierarchy}, reusable_route_handlers::{AccessPolicyListQueryParameters, list_access_policies}}};
 
 #[path = "./{access_policy_id}/mod.rs"]
 mod access_policy_id;
@@ -25,6 +25,7 @@ pub fn get_router(state: AppState) -> Router<AppState> {
   let router = Router::<AppState>::new()
     .route("/access-policies", axum::routing::get(handle_list_access_policies_request))
     .layer(axum::middleware::from_fn_with_state(state.clone(), authentication_middleware::authenticate_user))
+    .layer(axum::middleware::from_fn_with_state(state.clone(), http_request_middleware::create_http_request))
     .merge(access_policy_id::get_router(state.clone()));
   return router;
 

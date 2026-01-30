@@ -25,7 +25,7 @@ pub const GET_RESOURCE_ACTION_NAME: &str = "slashstep.appCredentials.get";
 
 /// A credential that can be used to generate JSON web tokens (JWT) for apps so that they can authenticate with Slashstep Server.
 /// To protect the app, Slashstep Server only stores the app credential's metadata and public key. App admins are responsible for managing the private key. 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct AppCredential {
 
   /// The app credential's ID.

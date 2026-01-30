@@ -3,7 +3,7 @@ use std::sync::Arc;
 use axum::{Extension, Router, extract::{Query, State}};
 use axum_extra::response::ErasedJson;
 use serde::{Deserialize, Serialize};
-use crate::{AppState, HTTPError, middleware::authentication_middleware, resources::{ResourceError, access_policy::{AccessPolicyPermissionLevel, AccessPolicyResourceType, IndividualPrincipal, ResourceHierarchy}, action_log_entry::{ActionLogEntry, ActionLogEntryActorType, ActionLogEntryTargetResourceType, InitialActionLogEntryProperties}, app::{App, DEFAULT_MAXIMUM_APP_LIST_LIMIT}, http_transaction::HTTPTransaction, server_log_entry::ServerLogEntry, user::User}, utilities::route_handler_utilities::{get_action_from_name, get_user_from_option_user, map_postgres_error_to_http_error, match_db_error, match_slashstepql_error, verify_user_permissions}};
+use crate::{AppState, HTTPError, middleware::{authentication_middleware, http_request_middleware}, resources::{ResourceError, access_policy::{AccessPolicyPermissionLevel, AccessPolicyResourceType, IndividualPrincipal, ResourceHierarchy}, action_log_entry::{ActionLogEntry, ActionLogEntryActorType, ActionLogEntryTargetResourceType, InitialActionLogEntryProperties}, app::{App, DEFAULT_MAXIMUM_APP_LIST_LIMIT}, http_transaction::HTTPTransaction, server_log_entry::ServerLogEntry, user::User}, utilities::route_handler_utilities::{get_action_from_name, get_user_from_option_user, map_postgres_error_to_http_error, match_db_error, match_slashstepql_error, verify_user_permissions}};
 
 #[path = "./{app_id}/mod.rs"]
 mod app_id;
@@ -101,6 +101,7 @@ pub fn get_router(state: AppState) -> Router<AppState> {
   let router = Router::<AppState>::new()
     .route("/apps", axum::routing::get(handle_list_apps_request))
     .layer(axum::middleware::from_fn_with_state(state.clone(), authentication_middleware::authenticate_user))
+    .layer(axum::middleware::from_fn_with_state(state.clone(), http_request_middleware::create_http_request))
     .merge(app_id::get_router(state.clone()));
   return router;
 

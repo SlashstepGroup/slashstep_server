@@ -2,7 +2,7 @@ use std::sync::Arc;
 use axum::{Extension, Json, Router, extract::{Path, Query, State, rejection::JsonRejection}};
 use axum_extra::response::ErasedJson;
 use pg_escape::quote_literal;
-use crate::{AppState, HTTPError, middleware::authentication_middleware, resources::{access_policy::{AccessPolicy, AccessPolicyPermissionLevel, AccessPolicyResourceType, InitialAccessPolicyProperties, InitialAccessPolicyPropertiesForPredefinedScope}, action_log_entry::{ActionLogEntry, ActionLogEntryActorType, ActionLogEntryTargetResourceType, InitialActionLogEntryProperties}, http_transaction::HTTPTransaction, server_log_entry::ServerLogEntry, user::User}, routes::action_log_entries::action_log_entry_id::get_action_log_entry_from_id, utilities::{reusable_route_handlers::{AccessPolicyListQueryParameters, list_access_policies}, route_handler_utilities::{get_action_from_id, get_action_from_name, get_resource_hierarchy, get_user_from_option_user, map_postgres_error_to_http_error, verify_user_permissions}}};
+use crate::{AppState, HTTPError, middleware::{authentication_middleware, http_request_middleware}, resources::{access_policy::{AccessPolicy, AccessPolicyPermissionLevel, AccessPolicyResourceType, InitialAccessPolicyProperties, InitialAccessPolicyPropertiesForPredefinedScope}, action_log_entry::{ActionLogEntry, ActionLogEntryActorType, ActionLogEntryTargetResourceType, InitialActionLogEntryProperties}, http_transaction::HTTPTransaction, server_log_entry::ServerLogEntry, user::User}, routes::action_log_entries::action_log_entry_id::get_action_log_entry_from_id, utilities::{reusable_route_handlers::{AccessPolicyListQueryParameters, list_access_policies}, route_handler_utilities::{get_action_from_id, get_action_from_name, get_resource_hierarchy, get_user_from_option_user, map_postgres_error_to_http_error, verify_user_permissions}}};
 
 #[cfg(test)]
 mod tests;
@@ -136,7 +136,8 @@ pub fn get_router(state: AppState) -> Router<AppState> {
   let router = Router::<AppState>::new()
     .route("/action-log-entries/{action_log_entry_id}/access-policies", axum::routing::get(handle_list_access_policies_request))
     .route("/action-log-entries/{action_log_entry_id}/access-policies", axum::routing::post(handle_create_access_policy_request))
-    .layer(axum::middleware::from_fn_with_state(state.clone(), authentication_middleware::authenticate_user));
+    .layer(axum::middleware::from_fn_with_state(state.clone(), authentication_middleware::authenticate_user))
+    .layer(axum::middleware::from_fn_with_state(state.clone(), http_request_middleware::create_http_request));
   return router;
 
 }

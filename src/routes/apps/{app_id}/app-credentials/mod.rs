@@ -6,7 +6,7 @@ use ed25519_dalek::{SigningKey, ed25519::signature::rand_core::OsRng, pkcs8::{En
 use reqwest::StatusCode;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
-use crate::{AppState, HTTPError, middleware::authentication_middleware, resources::{ResourceError, access_policy::{AccessPolicyPermissionLevel, AccessPolicyResourceType, IndividualPrincipal}, action_log_entry::{ActionLogEntry, ActionLogEntryActorType, ActionLogEntryTargetResourceType, InitialActionLogEntryProperties}, app_credential::{AppCredential, DEFAULT_MAXIMUM_APP_CREDENTIAL_LIST_LIMIT, InitialAppCredentialProperties, InitialAppCredentialPropertiesForPredefinedScope}, http_transaction::HTTPTransaction, server_log_entry::ServerLogEntry, user::User}, utilities::{route_handler_utilities::{get_action_from_name, get_app_from_id, get_resource_hierarchy, get_user_from_option_user, map_postgres_error_to_http_error, match_db_error, match_slashstepql_error, verify_user_permissions}}};
+use crate::{AppState, HTTPError, middleware::{authentication_middleware, http_request_middleware}, resources::{ResourceError, access_policy::{AccessPolicyPermissionLevel, AccessPolicyResourceType, IndividualPrincipal}, action_log_entry::{ActionLogEntry, ActionLogEntryActorType, ActionLogEntryTargetResourceType, InitialActionLogEntryProperties}, app_credential::{AppCredential, DEFAULT_MAXIMUM_APP_CREDENTIAL_LIST_LIMIT, InitialAppCredentialProperties, InitialAppCredentialPropertiesForPredefinedScope}, http_transaction::HTTPTransaction, server_log_entry::ServerLogEntry, user::User}, utilities::route_handler_utilities::{get_action_from_name, get_app_from_id, get_resource_hierarchy, get_user_from_option_user, map_postgres_error_to_http_error, match_db_error, match_slashstepql_error, verify_user_permissions}};
 
 #[cfg(test)]
 mod tests;
@@ -243,7 +243,8 @@ pub fn get_router(state: AppState) -> Router<AppState> {
   let router = Router::<AppState>::new()
     .route("/apps/{app_id}/app-credentials", axum::routing::get(handle_list_app_credentials_request))
     .route("/apps/{app_id}/app-credentials", axum::routing::post(handle_create_app_credential_request))
-    .layer(axum::middleware::from_fn_with_state(state.clone(), authentication_middleware::authenticate_user));
+    .layer(axum::middleware::from_fn_with_state(state.clone(), authentication_middleware::authenticate_user))
+    .layer(axum::middleware::from_fn_with_state(state.clone(), http_request_middleware::create_http_request));
   return router;
 
 }

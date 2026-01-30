@@ -3,7 +3,7 @@ use axum::{Extension, Json, Router, extract::{Path, Query, State, rejection::Jso
 use axum_extra::response::ErasedJson;
 use pg_escape::quote_literal;
 use reqwest::StatusCode;
-use crate::{AppState, HTTPError, middleware::authentication_middleware, resources::{access_policy::{AccessPolicyPermissionLevel, AccessPolicyResourceType}, action::{Action, ActionParentResourceType, InitialActionProperties, InitialActionPropertiesForPredefinedScope}, action_log_entry::{ActionLogEntry, ActionLogEntryActorType, ActionLogEntryTargetResourceType, InitialActionLogEntryProperties}, http_transaction::HTTPTransaction, server_log_entry::ServerLogEntry, user::User}, utilities::{reusable_route_handlers::{ActionListQueryParameters, list_actions}, route_handler_utilities::{get_action_from_name, get_app_from_id, get_resource_hierarchy, get_user_from_option_user, map_postgres_error_to_http_error, verify_user_permissions}}};
+use crate::{AppState, HTTPError, middleware::{authentication_middleware, http_request_middleware}, resources::{access_policy::{AccessPolicyPermissionLevel, AccessPolicyResourceType}, action::{Action, ActionParentResourceType, InitialActionProperties, InitialActionPropertiesForPredefinedScope}, action_log_entry::{ActionLogEntry, ActionLogEntryActorType, ActionLogEntryTargetResourceType, InitialActionLogEntryProperties}, http_transaction::HTTPTransaction, server_log_entry::ServerLogEntry, user::User}, utilities::{reusable_route_handlers::{ActionListQueryParameters, list_actions}, route_handler_utilities::{get_action_from_name, get_app_from_id, get_resource_hierarchy, get_user_from_option_user, map_postgres_error_to_http_error, verify_user_permissions}}};
 
 #[axum::debug_handler]
 async fn handle_list_actions_request(
@@ -123,7 +123,8 @@ pub fn get_router(state: AppState) -> Router<AppState> {
   let router = Router::<AppState>::new()
     .route("/apps/{app_id}/actions", axum::routing::get(handle_list_actions_request))
     .route("/apps/{app_id}/actions", axum::routing::post(handle_create_action_request))
-    .layer(axum::middleware::from_fn_with_state(state.clone(), authentication_middleware::authenticate_user));
+    .layer(axum::middleware::from_fn_with_state(state.clone(), authentication_middleware::authenticate_user))
+    .layer(axum::middleware::from_fn_with_state(state.clone(), http_request_middleware::create_http_request));
   return router;
 
 }
