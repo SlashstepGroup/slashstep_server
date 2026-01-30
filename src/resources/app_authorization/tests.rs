@@ -1,6 +1,6 @@
 use crate::{
-  initialize_required_tables, resources::{
-    action::{
+  initialize_required_tables, predefinitions::initialize_predefined_actions, resources::{
+    access_policy::{AccessPolicy, InitialAccessPolicyProperties}, action::{
       Action, DEFAULT_ACTION_LIST_LIMIT
     }, app_authorization::{AppAuthorization, AppAuthorizationAuthorizingResourceType, DEFAULT_APP_AUTHORIZATION_LIST_LIMIT, InitialAppAuthorizationProperties}
   }, tests::{TestEnvironment, TestSlashstepServerError}
@@ -201,69 +201,70 @@ async fn verify_list_resources_without_query() -> Result<(), TestSlashstepServer
 
 }
 
-// /// Verifies that a list of access policies can be retrieved without a query.
-// #[tokio::test]
-// async fn list_access_policies_without_query_and_filter_based_on_requestor_permissions() -> Result<(), TestSlashstepServerError> {
+/// Verifies that a list of resources can be retrieved without a query.
+#[tokio::test]
+async fn verify_list_resources_without_query_and_filter_based_on_requestor_permissions() -> Result<(), TestSlashstepServerError> {
 
-//   // Make sure there are at least two actions.
-//   let test_environment = TestEnvironment::new().await?;
-//   initialize_required_tables(&test_environment.database_pool).await?;
-//   const MINIMUM_ACTION_COUNT: i32 = 2;
-//   let mut current_actions = Action::list("", &test_environment.database_pool, None).await?;
-//   if current_actions.len() < MINIMUM_ACTION_COUNT as usize {
+  // Make sure there are at least two actions.
+  let test_environment = TestEnvironment::new().await?;
+  initialize_required_tables(&test_environment.database_pool).await?;
+  initialize_predefined_actions(&test_environment.database_pool).await?;
 
-//     let remaining_action_count = MINIMUM_ACTION_COUNT - current_actions.len() as i32;
-//     for _ in 0..remaining_action_count {
+  const MINIMUM_ACTION_COUNT: i32 = 2;
+  let mut current_app_authorizations = AppAuthorization::list("", &test_environment.database_pool, None).await?;
+  if current_app_authorizations.len() < MINIMUM_ACTION_COUNT as usize {
 
-//       let action = test_environment.create_random_action(&None).await?;
-//       current_actions.push(action);
+    let remaining_action_count = MINIMUM_ACTION_COUNT - current_app_authorizations.len() as i32;
+    for _ in 0..remaining_action_count {
 
-//     }
+      let app_authorization = test_environment.create_random_app_authorization(&None).await?;
+      current_app_authorizations.push(app_authorization);
 
-//   }
+    }
 
-//   // Get the "slashstep.actions.get" action one time.
-//   initialize_predefined_actions(&test_environment.database_pool).await?;
-//   let user = test_environment.create_random_user().await?;
-//   let get_actions_action = Action::get_by_name("slashstep.actions.get", &test_environment.database_pool).await?;
+  }
 
-//   // Grant access to the "slashstep.actions.get" action to the user for half of the actions.
-//   let allowed_action_count = current_actions.len() / 2;
-//   let mut allowed_actions = Vec::new();
-//   for index in 0..allowed_action_count {
+  // Get the "slashstep.appAuthorizations.get" action one time.
+  let user = test_environment.create_random_user().await?;
+  let get_app_authorizations_action = Action::get_by_name("slashstep.appAuthorizations.get", &test_environment.database_pool).await?;
 
-//     let action = &current_actions[index];
+  // Grant access to the "slashstep.appAuthorizations.get" action to the user for half of the actions.
+  let allowed_action_count = current_app_authorizations.len() / 2;
+  let mut allowed_app_authorizations = Vec::new();
+  for index in 0..allowed_action_count {
 
-//     AccessPolicy::create(&InitialAccessPolicyProperties {
-//       action_id: get_actions_action.id.clone(),
-//       permission_level: AccessPolicyPermissionLevel::User,
-//       principal_type: AccessPolicyPrincipalType::User,
-//       principal_user_id: Some(user.id.clone()),
-//       scoped_resource_type: AccessPolicyResourceType::Action,
-//       scoped_action_id: Some(action.id.clone()),
-//       ..Default::default()
-//     }, &test_environment.database_pool).await?;
+    let scoped_app_authorization = &current_app_authorizations[index];
 
-//     allowed_actions.push(action.clone());
+    AccessPolicy::create(&InitialAccessPolicyProperties {
+      action_id: get_app_authorizations_action.id.clone(),
+      permission_level: crate::resources::access_policy::AccessPolicyPermissionLevel::User,
+      principal_type: crate::resources::access_policy::AccessPolicyPrincipalType::User,
+      principal_user_id: Some(user.id.clone()),
+      scoped_resource_type: crate::resources::access_policy::AccessPolicyResourceType::AppAuthorization,
+      scoped_app_authorization_id: Some(scoped_app_authorization.id.clone()),
+      ..Default::default()
+    }, &test_environment.database_pool).await?;
 
-//   }
+    allowed_app_authorizations.push(scoped_app_authorization.clone());
 
-//   // Make sure the user only sees the allowed actions.
-//   let individual_principal = IndividualPrincipal::User(user.id);
-//   let retrieved_actions = Action::list("", &test_environment.database_pool, Some(&individual_principal)).await?;
+  }
 
-//   assert_eq!(allowed_actions.len(), retrieved_actions.len());
-//   for allowed_action in allowed_actions {
+  // Make sure the user only sees the allowed actions.
+  let individual_principal = crate::resources::access_policy::IndividualPrincipal::User(user.id);
+  let retrieved_app_authorizations = AppAuthorization::list("", &test_environment.database_pool, Some(&individual_principal)).await?;
 
-//     let retrieved_action = &retrieved_actions.iter().find(|action| action.id == allowed_action.id).unwrap();
+  assert_eq!(allowed_app_authorizations.len(), retrieved_app_authorizations.len());
+  for allowed_app_authorization in allowed_app_authorizations {
 
-//     assert_actions_are_equal(&allowed_action, retrieved_action);
+    let retrieved_app_authorization = &retrieved_app_authorizations.iter().find(|action| action.id == allowed_app_authorization.id).unwrap();
 
-//   }
+    assert_app_authorizations_are_equal(&allowed_app_authorization, retrieved_app_authorization);
 
-//   return Ok(());
+  }
 
-// }
+  return Ok(());
+
+}
 
 // #[tokio::test]
 // async fn update_action() -> Result<(), TestSlashstepServerError> {
