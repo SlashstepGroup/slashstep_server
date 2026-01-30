@@ -1,9 +1,20 @@
+/**
+ * 
+ * Any functionality for /apps/{app_id}/actions should be handled here.
+ * 
+ * Programmers: 
+ * - Christian Toney (https://christiantoney.com)
+ * 
+ * © 2026 Beastslash LLC
+ * 
+ */
+
 use std::sync::Arc;
 use axum::{Extension, Json, Router, extract::{Path, Query, State, rejection::JsonRejection}};
 use axum_extra::response::ErasedJson;
 use pg_escape::quote_literal;
 use reqwest::StatusCode;
-use crate::{AppState, HTTPError, middleware::{authentication_middleware, http_request_middleware}, resources::{access_policy::{AccessPolicyPermissionLevel, AccessPolicyResourceType}, action::{Action, ActionParentResourceType, InitialActionProperties, InitialActionPropertiesForPredefinedScope}, action_log_entry::{ActionLogEntry, ActionLogEntryActorType, ActionLogEntryTargetResourceType, InitialActionLogEntryProperties}, http_transaction::HTTPTransaction, server_log_entry::ServerLogEntry, user::User}, utilities::{reusable_route_handlers::{ActionListQueryParameters, list_actions}, route_handler_utilities::{get_action_from_name, get_app_from_id, get_resource_hierarchy, map_postgres_error_to_http_error}}};
+use crate::{AppState, HTTPError, middleware::{authentication_middleware, http_request_middleware}, resources::{access_policy::{AccessPolicyPermissionLevel, AccessPolicyResourceType}, action::{Action, ActionParentResourceType, InitialActionProperties, InitialActionPropertiesForPredefinedScope}, action_log_entry::{ActionLogEntry, ActionLogEntryActorType, ActionLogEntryTargetResourceType, InitialActionLogEntryProperties}, app::App, http_transaction::HTTPTransaction, server_log_entry::ServerLogEntry, user::User}, utilities::{reusable_route_handlers::{ActionListQueryParameters, list_actions}, route_handler_utilities::{AuthenticatedPrincipal, get_action_from_name, get_app_from_id, get_authenticated_principal, get_resource_hierarchy, map_postgres_error_to_http_error, verify_principal_permissions}}};
 
 #[axum::debug_handler]
 async fn handle_list_actions_request(
@@ -11,7 +22,8 @@ async fn handle_list_actions_request(
   Query(query_parameters): Query<ActionListQueryParameters>,
   State(state): State<AppState>, 
   Extension(http_transaction): Extension<Arc<HTTPTransaction>>,
-  Extension(user): Extension<Option<Arc<User>>>
+  Extension(user): Extension<Option<Arc<User>>>,
+  Extension(app): Extension<Option<Arc<App>>>
 ) -> Result<ErasedJson, HTTPError> {
 
   let http_transaction = http_transaction.clone();
@@ -29,7 +41,7 @@ async fn handle_list_actions_request(
     query: Some(query)
   };
 
-  return list_actions(Query(query_parameters), State(state), Extension(http_transaction), Extension(user), resource_hierarchy, ActionLogEntryTargetResourceType::App, Some(authenticated_app.id)).await;
+  return list_actions(Query(query_parameters), State(state), Extension(http_transaction), Extension(user), Extension(app), resource_hierarchy, ActionLogEntryTargetResourceType::App, Some(authenticated_app.id)).await;
 
 }
 
@@ -38,7 +50,8 @@ async fn handle_create_action_request(
   Path(app_id): Path<String>,
   State(state): State<AppState>, 
   Extension(http_transaction): Extension<Arc<HTTPTransaction>>,
-  Extension(user): Extension<Option<Arc<User>>>,
+  Extension(authenticated_user): Extension<Option<Arc<User>>>,
+  Extension(authenticated_app): Extension<Option<Arc<App>>>,
   body: Result<Json<InitialActionPropertiesForPredefinedScope>, JsonRejection>
 ) -> Result<(StatusCode, Json<Action>), HTTPError> {
 
@@ -78,6 +91,7 @@ async fn handle_create_action_request(
   let target_app = get_app_from_id(&app_id, &http_transaction, &mut postgres_client).await?;
   let resource_hierarchy = get_resource_hierarchy(&target_app, &AccessPolicyResourceType::App, &target_app.id, &http_transaction, &mut postgres_client).await?;
   let create_actions_action = get_action_from_name("slashstep.actions.create", &http_transaction, &mut postgres_client).await?;
+  let authenticated_principal = get_authenticated_principal(&authenticated_user, &authenticated_app)?;
   verify_principal_permissions(&authenticated_principal, &create_actions_action, &resource_hierarchy, &http_transaction, &AccessPolicyPermissionLevel::User, &mut postgres_client).await?;
 
   // Create the action.
