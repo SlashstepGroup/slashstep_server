@@ -113,6 +113,9 @@ async fn get_action_from_id(action_id: &Uuid, http_transaction: &HTTPTransaction
 
 }
 
+/// GET /access-policies/{access_policy_id}
+/// 
+/// Gets a specific access policy by its ID.
 #[axum::debug_handler]
 async fn handle_get_access_policy_request(
   Path(access_policy_id): Path<String>,
@@ -146,6 +149,9 @@ async fn handle_get_access_policy_request(
 
 }
 
+/// PATCH /access-policies/{access_policy_id}
+/// 
+/// Updates an access policy by its ID.
 #[axum::debug_handler]
 async fn handle_patch_access_policy_request(
   Path(access_policy_id): Path<String>,
@@ -235,6 +241,9 @@ async fn handle_patch_access_policy_request(
 
 }
 
+/// DELETE /access-policies/{access_policy_id}
+/// 
+/// Deletes an access policy by its ID.
 #[axum::debug_handler]
 async fn handle_delete_access_policy_request(
   Path(access_policy_id): Path<String>,

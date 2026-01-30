@@ -3,7 +3,7 @@ use axum::{Extension, extract::{Query, State}};
 use axum_extra::response::ErasedJson;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
-use crate::{AppState, HTTPError, resources::{ResourceError, access_policy::{AccessPolicy, AccessPolicyPermissionLevel, AccessPolicyResourceType, DEFAULT_MAXIMUM_ACCESS_POLICY_LIST_LIMIT, IndividualPrincipal}, action::{Action, DEFAULT_MAXIMUM_ACTION_LIST_LIMIT}, action_log_entry::{ActionLogEntry, ActionLogEntryActorType, ActionLogEntryTargetResourceType, InitialActionLogEntryProperties}, http_transaction::HTTPTransaction, server_log_entry::ServerLogEntry, user::User}, utilities::{resource_hierarchy::ResourceHierarchy, route_handler_utilities::{get_action_from_name, get_user_from_option_user, map_postgres_error_to_http_error, match_db_error, match_slashstepql_error, verify_user_permissions}}};
+use crate::{AppState, HTTPError, resources::{ResourceError, access_policy::{AccessPolicy, AccessPolicyPermissionLevel, DEFAULT_MAXIMUM_ACCESS_POLICY_LIST_LIMIT, IndividualPrincipal}, action::{Action, DEFAULT_MAXIMUM_ACTION_LIST_LIMIT}, action_log_entry::{ActionLogEntry, ActionLogEntryActorType, ActionLogEntryTargetResourceType, InitialActionLogEntryProperties}, app::App, http_transaction::HTTPTransaction, server_log_entry::ServerLogEntry, user::User}, utilities::{resource_hierarchy::ResourceHierarchy, route_handler_utilities::{AuthenticatedPrincipal, get_action_from_name, get_authenticated_principal, map_postgres_error_to_http_error, match_db_error, match_slashstepql_error, verify_principal_permissions}}};
 
 #[derive(Debug, Deserialize)]
 pub struct AccessPolicyListQueryParameters {
@@ -32,6 +32,7 @@ pub async fn list_access_policies(
   State(state): State<AppState>, 
   Extension(http_transaction): Extension<Arc<HTTPTransaction>>,
   Extension(user): Extension<Option<Arc<User>>>,
+  Extension(app): Extension<Option<Arc<App>>>,
   resource_hierarchy: ResourceHierarchy,
   action_log_entry_target_resource_type: ActionLogEntryTargetResourceType,
   action_log_entry_target_resource_id: Option<Uuid>
@@ -40,10 +41,14 @@ pub async fn list_access_policies(
   let http_transaction = http_transaction.clone();
   let mut postgres_client = state.database_pool.get().await.map_err(map_postgres_error_to_http_error)?;
   let list_access_policies_action = get_action_from_name("slashstep.accessPolicies.list", &http_transaction, &mut postgres_client).await?;
-  let user = get_user_from_option_user(&user, &http_transaction, &mut postgres_client).await?;
-  verify_user_permissions(&user, &list_access_policies_action, &resource_hierarchy, &http_transaction, &AccessPolicyPermissionLevel::User, &mut postgres_client).await?;
+  let authenticated_principal = get_authenticated_principal(&user, &app)?;
+  verify_principal_permissions(&authenticated_principal, &list_access_policies_action, &resource_hierarchy, &http_transaction, &AccessPolicyPermissionLevel::User, &mut postgres_client).await?;
+  let individual_principal = match &authenticated_principal {
+    AuthenticatedPrincipal::User(user) => IndividualPrincipal::User(user.id),
+    AuthenticatedPrincipal::App(app) => IndividualPrincipal::App(app.id)
+  };
   let query = query_parameters.query.unwrap_or("".to_string());
-  let access_policies = match AccessPolicy::list(&query, &mut postgres_client, Some(&IndividualPrincipal::User(user.id))).await {
+  let access_policies = match AccessPolicy::list(&query, &mut postgres_client, Some(&individual_principal)).await {
 
     Ok(access_policies) => access_policies,
 
@@ -67,7 +72,7 @@ pub async fn list_access_policies(
   };
 
   ServerLogEntry::trace(&format!("Counting access policies..."), Some(&http_transaction.id), &mut postgres_client).await.ok();
-  let access_policy_count = match AccessPolicy::count(&query, &mut postgres_client, Some(&IndividualPrincipal::User(user.id))).await {
+  let access_policy_count = match AccessPolicy::count(&query, &mut postgres_client, Some(&individual_principal)).await {
 
     Ok(access_policy_count) => access_policy_count,
 
@@ -87,9 +92,9 @@ pub async fn list_access_policies(
     action_id: list_access_policies_action.id,
     http_transaction_id: Some(http_transaction.id),
     reason: None, // TODO: Support reasons.
-    actor_type: ActionLogEntryActorType::User,
-    actor_user_id: Some(user.id),
-    actor_app_id: None,
+    actor_type: if let AuthenticatedPrincipal::User(_) = &authenticated_principal { ActionLogEntryActorType::User } else { ActionLogEntryActorType::App },
+    actor_user_id: if let AuthenticatedPrincipal::User(user) = &authenticated_principal { Some(user.id.clone()) } else { None },
+    actor_app_id: if let AuthenticatedPrincipal::App(app) = &authenticated_principal { Some(app.id.clone()) } else { None },
     target_resource_type: action_log_entry_target_resource_type.clone(),
     target_access_policy_id: if action_log_entry_target_resource_type == ActionLogEntryTargetResourceType::AccessPolicy { action_log_entry_target_resource_id.clone() } else { None },
     target_action_id: if action_log_entry_target_resource_type == ActionLogEntryTargetResourceType::Action { action_log_entry_target_resource_id.clone() } else { None },
@@ -126,6 +131,7 @@ pub async fn list_actions(
   State(state): State<AppState>, 
   Extension(http_transaction): Extension<Arc<HTTPTransaction>>,
   Extension(user): Extension<Option<Arc<User>>>,
+  Extension(app): Extension<Option<Arc<App>>>,
   resource_hierarchy: ResourceHierarchy,
   action_log_entry_target_resource_type: ActionLogEntryTargetResourceType,
   action_log_entry_target_resource_id: Option<Uuid>
@@ -134,10 +140,14 @@ pub async fn list_actions(
   let http_transaction = http_transaction.clone();
   let mut postgres_client = state.database_pool.get().await.map_err(map_postgres_error_to_http_error)?;
   let list_actions_action = get_action_from_name("slashstep.actions.list", &http_transaction, &mut postgres_client).await?;
-  let user = get_user_from_option_user(&user, &http_transaction, &mut postgres_client).await?;
-  verify_user_permissions(&user, &list_actions_action, &resource_hierarchy, &http_transaction, &AccessPolicyPermissionLevel::User, &mut postgres_client).await?;
+  let authenticated_principal = get_authenticated_principal(&user, &app)?;
+  verify_principal_permissions(&authenticated_principal, &list_actions_action, &resource_hierarchy, &http_transaction, &AccessPolicyPermissionLevel::User, &mut postgres_client).await?;
+  let individual_principal = match &authenticated_principal {
+    AuthenticatedPrincipal::User(user) => IndividualPrincipal::User(user.id),
+    AuthenticatedPrincipal::App(app) => IndividualPrincipal::App(app.id)
+  };
   let query = query_parameters.query.unwrap_or("".to_string());
-  let actions = match Action::list(&query, &mut postgres_client, Some(&IndividualPrincipal::User(user.id))).await {
+  let actions = match Action::list(&query, &mut postgres_client, Some(&individual_principal)).await {
 
     Ok(actions) => actions,
 
@@ -161,7 +171,7 @@ pub async fn list_actions(
   };
 
   ServerLogEntry::trace(&format!("Counting actions..."), Some(&http_transaction.id), &mut postgres_client).await.ok();
-  let action_count = match Action::count(&query, &mut postgres_client, Some(&IndividualPrincipal::User(user.id))).await {
+  let action_count = match Action::count(&query, &mut postgres_client, Some(&individual_principal)).await {
 
     Ok(action_count) => action_count,
 
@@ -179,9 +189,9 @@ pub async fn list_actions(
     action_id: list_actions_action.id,
     http_transaction_id: Some(http_transaction.id),
     reason: None, // TODO: Support reasons.
-    actor_type: ActionLogEntryActorType::User,
-    actor_user_id: Some(user.id),
-    actor_app_id: None,
+    actor_type: if let AuthenticatedPrincipal::User(_) = &authenticated_principal { ActionLogEntryActorType::User } else { ActionLogEntryActorType::App },
+    actor_user_id: if let AuthenticatedPrincipal::User(user) = &authenticated_principal { Some(user.id.clone()) } else { None },
+    actor_app_id: if let AuthenticatedPrincipal::App(app) = &authenticated_principal { Some(app.id.clone()) } else { None },
     target_resource_type: action_log_entry_target_resource_type.clone(),
     target_access_policy_id: if action_log_entry_target_resource_type == ActionLogEntryTargetResourceType::AccessPolicy { action_log_entry_target_resource_id.clone() } else { None },
     target_action_id: if action_log_entry_target_resource_type == ActionLogEntryTargetResourceType::Action { action_log_entry_target_resource_id.clone() } else { None },
