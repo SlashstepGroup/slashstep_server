@@ -1,7 +1,7 @@
 use std::{net::SocketAddr, sync::Arc};
 use axum::{body::Body, extract::{ConnectInfo, Request, State}, middleware::Next, response::{IntoResponse, Response}};
 use chrono::{Duration, Utc};
-use crate::{AppState, HTTPError, handle_pool_error, resources::{http_transaction::{HTTPTransaction, HTTPTransactionError, InitialHTTPTransactionProperties}, server_log_entry::ServerLogEntry}};
+use crate::{AppState, HTTPError, resources::{ResourceError, http_transaction::{HTTPTransaction, InitialHTTPTransactionProperties}, server_log_entry::ServerLogEntry}};
 
 pub async fn create_http_request(
   ConnectInfo(address): ConnectInfo<SocketAddr>,
@@ -20,8 +20,6 @@ pub async fn create_http_request(
   let headers_json_string: serde_json::Value = format!("{:?}", safe_headers).into();
 
   // Create the HTTP request and add it to the request extension.
-  let postgres_client = state.database_pool.get().await.map_err(handle_pool_error)?;
-
   let http_transaction = match HTTPTransaction::create(&InitialHTTPTransactionProperties {
     method,
     url,
@@ -29,7 +27,7 @@ pub async fn create_http_request(
     headers: headers_json_string.to_string(),
     status_code: None,
     expiration_date: Some(Utc::now() + Duration::days(30))
-  }, &postgres_client).await {
+  }, &state.database_pool).await {
 
     Ok(http_request) => Arc::new(http_request),
 
@@ -37,7 +35,7 @@ pub async fn create_http_request(
 
       let http_error = match error {
 
-        HTTPTransactionError::PostgresError(postgres_error) => {
+        ResourceError::PostgresError(postgres_error) => {
           
           match postgres_error.as_db_error() {
             
@@ -47,10 +45,12 @@ pub async fn create_http_request(
 
           }
 
-        }
+        },
+
+        _ => HTTPError::InternalServerError(Some(error.to_string()))
 
       };
-      ServerLogEntry::from_http_error(&http_error, None, &postgres_client).await.ok();
+      ServerLogEntry::from_http_error(&http_error, None, &state.database_pool).await.ok();
       return Err(http_error.into_response());
 
     }
@@ -59,7 +59,7 @@ pub async fn create_http_request(
 
   request.extensions_mut().insert(http_transaction.clone());
   
-  ServerLogEntry::info(&format!("HTTP request handling started."), Some(&http_transaction.id), &postgres_client).await.ok();
+  ServerLogEntry::info(&format!("HTTP request handling started."), Some(&http_transaction.id), &state.database_pool).await.ok();
   let response = next.run(request).await;
   return Ok(response);
 

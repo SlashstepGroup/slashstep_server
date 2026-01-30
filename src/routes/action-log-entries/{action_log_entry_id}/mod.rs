@@ -13,12 +13,12 @@ use std::sync::Arc;
 use axum::{Extension, Json, Router, extract::{Path, State}};
 use reqwest::{StatusCode};
 use uuid::Uuid;
-use crate::{AppState, HTTPError, middleware::{authentication_middleware, http_request_middleware}, resources::{DeletableResource, ResourceError, access_policy::{AccessPolicyPermissionLevel, AccessPolicyResourceType}, action_log_entry::{ActionLogEntry, ActionLogEntryActorType, ActionLogEntryTargetResourceType, InitialActionLogEntryProperties}, app::App, http_transaction::HTTPTransaction, server_log_entry::ServerLogEntry, user::User}, utilities::route_handler_utilities::{AuthenticatedPrincipal, get_action_from_name, get_authenticated_principal, get_resource_hierarchy, map_postgres_error_to_http_error, verify_principal_permissions}};
+use crate::{AppState, HTTPError, middleware::{authentication_middleware, http_request_middleware}, resources::{DeletableResource, ResourceError, access_policy::{AccessPolicyPermissionLevel, AccessPolicyResourceType}, action_log_entry::{ActionLogEntry, ActionLogEntryActorType, ActionLogEntryTargetResourceType, InitialActionLogEntryProperties}, app::App, http_transaction::HTTPTransaction, server_log_entry::ServerLogEntry, user::User}, utilities::route_handler_utilities::{AuthenticatedPrincipal, get_action_from_name, get_authenticated_principal, get_resource_hierarchy, verify_principal_permissions}};
 
 #[path = "./access-policies/mod.rs"]
 mod access_policies;
 
-async fn get_action_log_entry_from_id(action_log_entry_id: &str, http_transaction: &HTTPTransaction, postgres_client: &deadpool_postgres::Client) -> Result<ActionLogEntry, HTTPError> {
+async fn get_action_log_entry_from_id(action_log_entry_id: &str, http_transaction: &HTTPTransaction, database_pool: &deadpool_postgres::Pool) -> Result<ActionLogEntry, HTTPError> {
 
   let action_log_entry_id = match Uuid::parse_str(&action_log_entry_id) {
 
@@ -27,16 +27,16 @@ async fn get_action_log_entry_from_id(action_log_entry_id: &str, http_transactio
     Err(_) => {
 
       let http_error = HTTPError::BadRequestError(Some("You must provide a valid UUID for the action log entry ID.".to_string()));
-      ServerLogEntry::from_http_error(&http_error, Some(&http_transaction.id), &postgres_client).await.ok();
+      ServerLogEntry::from_http_error(&http_error, Some(&http_transaction.id), &database_pool).await.ok();
       return Err(http_error);
 
     }
 
   };
 
-  ServerLogEntry::trace(&format!("Getting action log entry {}...", action_log_entry_id), Some(&http_transaction.id), &postgres_client).await.ok();
+  ServerLogEntry::trace(&format!("Getting action log entry {}...", action_log_entry_id), Some(&http_transaction.id), &database_pool).await.ok();
   
-  let action_log_entry = match ActionLogEntry::get_by_id(&action_log_entry_id, &postgres_client).await {
+  let action_log_entry = match ActionLogEntry::get_by_id(&action_log_entry_id, &database_pool).await {
 
     Ok(action_log_entry) => action_log_entry,
 
@@ -61,7 +61,7 @@ async fn get_action_log_entry_from_id(action_log_entry_id: &str, http_transactio
 
       };
 
-      ServerLogEntry::from_http_error(&http_error, Some(&http_transaction.id), &postgres_client).await.ok();
+      ServerLogEntry::from_http_error(&http_error, Some(&http_transaction.id), &database_pool).await.ok();
 
       return Err(http_error);
 
@@ -86,12 +86,11 @@ async fn handle_get_action_log_entry_request(
 ) -> Result<Json<ActionLogEntry>, HTTPError> {
 
   let http_transaction = http_transaction.clone();
-  let postgres_client = state.database_pool.get().await.map_err(map_postgres_error_to_http_error)?;
-  let action_log_entry = get_action_log_entry_from_id(&action_log_entry_id, &http_transaction, &postgres_client).await?;
-  let resource_hierarchy = get_resource_hierarchy(&action_log_entry, &AccessPolicyResourceType::ActionLogEntry, &action_log_entry.id, &http_transaction, &postgres_client).await?;
-  let get_action_log_entries_action = get_action_from_name("slashstep.actionLogEntries.get", &http_transaction, &postgres_client).await?;
+  let action_log_entry = get_action_log_entry_from_id(&action_log_entry_id, &http_transaction, &state.database_pool).await?;
+  let resource_hierarchy = get_resource_hierarchy(&action_log_entry, &AccessPolicyResourceType::ActionLogEntry, &action_log_entry.id, &http_transaction, &state.database_pool).await?;
+  let get_action_log_entries_action = get_action_from_name("slashstep.actionLogEntries.get", &http_transaction, &state.database_pool).await?;
   let authenticated_principal = get_authenticated_principal(&authenticated_user, &authenticated_app)?;
-  verify_principal_permissions(&authenticated_principal, &get_action_log_entries_action, &resource_hierarchy, &http_transaction, &AccessPolicyPermissionLevel::User, &postgres_client).await?;
+  verify_principal_permissions(&authenticated_principal, &get_action_log_entries_action, &resource_hierarchy, &http_transaction, &AccessPolicyPermissionLevel::User, &state.database_pool).await?;
   
   ActionLogEntry::create(&InitialActionLogEntryProperties {
     action_id: get_action_log_entries_action.id,
@@ -102,8 +101,8 @@ async fn handle_get_action_log_entry_request(
     target_resource_type: ActionLogEntryTargetResourceType::ActionLogEntry,
     target_action_log_entry_id: Some(action_log_entry.id),
     ..Default::default()
-  }, &postgres_client).await.ok();
-  ServerLogEntry::success(&format!("Successfully returned action log entry {}.", action_log_entry_id), Some(&http_transaction.id), &postgres_client).await.ok();
+  }, &state.database_pool).await.ok();
+  ServerLogEntry::success(&format!("Successfully returned action log entry {}.", action_log_entry_id), Some(&http_transaction.id), &state.database_pool).await.ok();
 
   return Ok(Json(action_log_entry));
 
@@ -122,21 +121,20 @@ async fn handle_delete_action_log_entry_request(
 ) -> Result<StatusCode, HTTPError> {
 
   let http_transaction = http_transaction.clone();
-  let postgres_client = state.database_pool.get().await.map_err(map_postgres_error_to_http_error)?;
-  let target_action_log_entry = get_action_log_entry_from_id(&action_log_entry_id, &http_transaction, &postgres_client).await?;
-  let resource_hierarchy = get_resource_hierarchy(&target_action_log_entry, &AccessPolicyResourceType::ActionLogEntry, &target_action_log_entry.id, &http_transaction, &postgres_client).await?;
-  let delete_action_log_entries_action = get_action_from_name("slashstep.actionLogEntries.delete", &http_transaction, &postgres_client).await?;
+  let target_action_log_entry = get_action_log_entry_from_id(&action_log_entry_id, &http_transaction, &state.database_pool).await?;
+  let resource_hierarchy = get_resource_hierarchy(&target_action_log_entry, &AccessPolicyResourceType::ActionLogEntry, &target_action_log_entry.id, &http_transaction, &state.database_pool).await?;
+  let delete_action_log_entries_action = get_action_from_name("slashstep.actionLogEntries.delete", &http_transaction, &state.database_pool).await?;
   let authenticated_principal = get_authenticated_principal(&authenticated_user, &authenticated_app)?;
-  verify_principal_permissions(&authenticated_principal, &delete_action_log_entries_action, &resource_hierarchy, &http_transaction, &AccessPolicyPermissionLevel::User, &postgres_client).await?;
+  verify_principal_permissions(&authenticated_principal, &delete_action_log_entries_action, &resource_hierarchy, &http_transaction, &AccessPolicyPermissionLevel::User, &state.database_pool).await?;
 
-  match target_action_log_entry.delete(&postgres_client).await {
+  match target_action_log_entry.delete(&state.database_pool).await {
 
     Ok(_) => {},
 
     Err(error) => {
 
       let http_error = HTTPError::InternalServerError(Some(format!("Failed to delete action log entry: {:?}", error)));
-      http_error.print_and_save(Some(&http_transaction.id), &postgres_client).await.ok();
+      http_error.print_and_save(Some(&http_transaction.id), &state.database_pool).await.ok();
       return Err(http_error);
 
     }
@@ -152,8 +150,8 @@ async fn handle_delete_action_log_entry_request(
     target_resource_type: ActionLogEntryTargetResourceType::ActionLogEntry,
     target_action_log_entry_id: Some(target_action_log_entry.id),
     ..Default::default()
-  }, &postgres_client).await.ok();
-  ServerLogEntry::success(&format!("Successfully deleted action log entry {}.", action_log_entry_id), Some(&http_transaction.id), &postgres_client).await.ok();
+  }, &state.database_pool).await.ok();
+  ServerLogEntry::success(&format!("Successfully deleted action log entry {}.", action_log_entry_id), Some(&http_transaction.id), &state.database_pool).await.ok();
 
   return Ok(StatusCode::NO_CONTENT);
 

@@ -41,12 +41,11 @@ use crate::{
 async fn verify_returned_access_policy_by_id() -> Result<(), TestSlashstepServerError> {
   
   let test_environment = TestEnvironment::new().await?;
-  let postgres_client = test_environment.postgres_pool.get().await?;
-  initialize_required_tables(&postgres_client).await?;
-  initialize_predefined_actions(&postgres_client).await?;
-  initialize_predefined_roles(&postgres_client).await?;
+  initialize_required_tables(&test_environment.database_pool).await?;
+  initialize_predefined_actions(&test_environment.database_pool).await?;
+  initialize_predefined_roles(&test_environment.database_pool).await?;
   let state = AppState {
-    database_pool: test_environment.postgres_pool.clone(),
+    database_pool: test_environment.database_pool.clone(),
   };
 
   let router = super::get_router(state.clone())
@@ -58,7 +57,7 @@ async fn verify_returned_access_policy_by_id() -> Result<(), TestSlashstepServer
   let session = test_environment.create_session(&user.id).await?;
   let json_web_token_private_key = Session::get_json_web_token_private_key().await?;
   let session_token = session.generate_json_web_token(&json_web_token_private_key).await?;
-  let get_access_policies_action = Action::get_by_name("slashstep.accessPolicies.get", &postgres_client).await?;
+  let get_access_policies_action = Action::get_by_name("slashstep.accessPolicies.get", &test_environment.database_pool).await?;
   let access_policy_properties = InitialAccessPolicyProperties {
     action_id: get_access_policies_action.id,
     permission_level: AccessPolicyPermissionLevel::User,
@@ -68,7 +67,7 @@ async fn verify_returned_access_policy_by_id() -> Result<(), TestSlashstepServer
     scoped_resource_type: AccessPolicyResourceType::Instance,
     ..Default::default()
   };
-  let access_policy = AccessPolicy::create(&access_policy_properties, &postgres_client).await?;
+  let access_policy = AccessPolicy::create(&access_policy_properties, &test_environment.database_pool).await?;
 
   let response = test_server.get(&format!("/access-policies/{}", access_policy.id))
     .add_cookie(Cookie::new("sessionToken", format!("Bearer {}", session_token)))
@@ -106,12 +105,11 @@ async fn verify_returned_access_policy_by_id() -> Result<(), TestSlashstepServer
 async fn verify_uuid_when_getting_access_policy_by_id() -> Result<(), TestSlashstepServerError> {
 
   let test_environment = TestEnvironment::new().await?;
-  let postgres_client = test_environment.postgres_pool.get().await?;
-  initialize_required_tables(&postgres_client).await?;
-  initialize_predefined_actions(&postgres_client).await?;
-  initialize_predefined_roles(&postgres_client).await?;
+  initialize_required_tables(&test_environment.database_pool).await?;
+  initialize_predefined_actions(&test_environment.database_pool).await?;
+  initialize_predefined_roles(&test_environment.database_pool).await?;
   let state = AppState {
-    database_pool: test_environment.postgres_pool.clone(),
+    database_pool: test_environment.database_pool.clone(),
   };
 
   let router = super::get_router(state.clone())
@@ -132,12 +130,11 @@ async fn verify_uuid_when_getting_access_policy_by_id() -> Result<(), TestSlashs
 async fn verify_authentication_when_getting_access_policy_by_id() -> Result<(), TestSlashstepServerError> {
 
   let test_environment = TestEnvironment::new().await?;
-  let postgres_client = test_environment.postgres_pool.get().await?;
-  initialize_required_tables(&postgres_client).await?;
-  initialize_predefined_actions(&postgres_client).await?;
-  initialize_predefined_roles(&postgres_client).await?;
+  initialize_required_tables(&test_environment.database_pool).await?;
+  initialize_predefined_actions(&test_environment.database_pool).await?;
+  initialize_predefined_roles(&test_environment.database_pool).await?;
   let state = AppState {
-    database_pool: test_environment.postgres_pool.clone(),
+    database_pool: test_environment.database_pool.clone(),
   };
 
   let router = super::get_router(state.clone())
@@ -161,12 +158,11 @@ async fn verify_authentication_when_getting_access_policy_by_id() -> Result<(), 
 async fn verify_permission_when_getting_access_policy_by_id() -> Result<(), TestSlashstepServerError> {
 
   let test_environment = TestEnvironment::new().await?;
-  let postgres_client = test_environment.postgres_pool.get().await?;
-  initialize_required_tables(&postgres_client).await?;
-  initialize_predefined_actions(&postgres_client).await?;
-  initialize_predefined_roles(&postgres_client).await?;
+  initialize_required_tables(&test_environment.database_pool).await?;
+  initialize_predefined_actions(&test_environment.database_pool).await?;
+  initialize_predefined_roles(&test_environment.database_pool).await?;
   let state = AppState {
-    database_pool: test_environment.postgres_pool.clone(),
+    database_pool: test_environment.database_pool.clone(),
   };
 
   let router = super::get_router(state.clone())
@@ -195,9 +191,9 @@ async fn verify_permission_when_getting_access_policy_by_id() -> Result<(), Test
 async fn verify_not_found_when_getting_access_policy_by_id() -> Result<(), TestSlashstepServerError> {
 
   let test_environment = TestEnvironment::new().await?;
-  initialize_required_tables(&mut test_environment.postgres_pool.get().await?).await?;
+  initialize_required_tables(&test_environment.database_pool).await?;
   let state = AppState {
-    database_pool: test_environment.postgres_pool.clone(),
+    database_pool: test_environment.database_pool.clone(),
   };
 
   let router = super::get_router(state.clone())
@@ -224,12 +220,11 @@ async fn verify_not_found_when_getting_access_policy_by_id() -> Result<(), TestS
 async fn verify_successful_deletion_when_deleting_access_policy_by_id() -> Result<(), TestSlashstepServerError> {
 
   let test_environment = TestEnvironment::new().await?;
-  let postgres_client = test_environment.postgres_pool.get().await?;
-  initialize_required_tables(&postgres_client).await?;
-  initialize_predefined_actions(&postgres_client).await?;
-  initialize_predefined_roles(&postgres_client).await?;
+  initialize_required_tables(&test_environment.database_pool).await?;
+  initialize_predefined_actions(&test_environment.database_pool).await?;
+  initialize_predefined_roles(&test_environment.database_pool).await?;
   let state = AppState {
-    database_pool: test_environment.postgres_pool.clone(),
+    database_pool: test_environment.database_pool.clone(),
   };
 
   let router = super::get_router(state.clone())
@@ -241,7 +236,7 @@ async fn verify_successful_deletion_when_deleting_access_policy_by_id() -> Resul
   let session = test_environment.create_session(&user.id).await?;
   let json_web_token_private_key = Session::get_json_web_token_private_key().await?;
   let session_token = session.generate_json_web_token(&json_web_token_private_key).await?;
-  let delete_access_policies_action = Action::get_by_name("slashstep.accessPolicies.delete", &postgres_client).await?;
+  let delete_access_policies_action = Action::get_by_name("slashstep.accessPolicies.delete", &test_environment.database_pool).await?;
   let access_policy_properties = InitialAccessPolicyProperties {
     action_id: delete_access_policies_action.id,
     permission_level: AccessPolicyPermissionLevel::Editor,
@@ -251,7 +246,7 @@ async fn verify_successful_deletion_when_deleting_access_policy_by_id() -> Resul
     scoped_resource_type: AccessPolicyResourceType::Instance,
     ..Default::default()
   };
-  let access_policy = AccessPolicy::create(&access_policy_properties, &postgres_client).await?;
+  let access_policy = AccessPolicy::create(&access_policy_properties, &test_environment.database_pool).await?;
 
   let response = test_server.delete(&format!("/access-policies/{}", access_policy.id))
     .add_cookie(Cookie::new("sessionToken", format!("Bearer {}", session_token)))
@@ -259,7 +254,7 @@ async fn verify_successful_deletion_when_deleting_access_policy_by_id() -> Resul
   
   assert_eq!(response.status_code(), 204);
 
-  match AccessPolicy::get_by_id(&access_policy.id, &postgres_client).await.expect_err("Expected an access policy not found error.") {
+  match AccessPolicy::get_by_id(&access_policy.id, &test_environment.database_pool).await.expect_err("Expected an access policy not found error.") {
 
     ResourceError::NotFoundError(_) => {},
 
@@ -276,12 +271,11 @@ async fn verify_successful_deletion_when_deleting_access_policy_by_id() -> Resul
 async fn verify_uuid_when_deleting_access_policy_by_id() -> Result<(), TestSlashstepServerError> {
 
   let test_environment = TestEnvironment::new().await?;
-  let postgres_client = test_environment.postgres_pool.get().await?;
-  initialize_required_tables(&postgres_client).await?;
-  initialize_predefined_actions(&postgres_client).await?;
-  initialize_predefined_roles(&postgres_client).await?;
+  initialize_required_tables(&test_environment.database_pool).await?;
+  initialize_predefined_actions(&test_environment.database_pool).await?;
+  initialize_predefined_roles(&test_environment.database_pool).await?;
   let state = AppState {
-    database_pool: test_environment.postgres_pool.clone(),
+    database_pool: test_environment.database_pool.clone(),
   };
 
   let router = super::get_router(state.clone())
@@ -302,12 +296,11 @@ async fn verify_uuid_when_deleting_access_policy_by_id() -> Result<(), TestSlash
 async fn verify_authentication_when_deleting_access_policy_by_id() -> Result<(), TestSlashstepServerError> {
 
   let test_environment = TestEnvironment::new().await?;
-  let postgres_client = test_environment.postgres_pool.get().await?;
-  initialize_required_tables(&postgres_client).await?;
-  initialize_predefined_actions(&postgres_client).await?;
-  initialize_predefined_roles(&postgres_client).await?;
+  initialize_required_tables(&test_environment.database_pool).await?;
+  initialize_predefined_actions(&test_environment.database_pool).await?;
+  initialize_predefined_roles(&test_environment.database_pool).await?;
   let state = AppState {
-    database_pool: test_environment.postgres_pool.clone(),
+    database_pool: test_environment.database_pool.clone(),
   };
 
   let router = super::get_router(state.clone())
@@ -330,12 +323,11 @@ async fn verify_authentication_when_deleting_access_policy_by_id() -> Result<(),
 async fn verify_permission_when_deleting_access_policy_by_id() -> Result<(), TestSlashstepServerError> {
 
   let test_environment = TestEnvironment::new().await?;
-  let postgres_client = test_environment.postgres_pool.get().await?;
-  initialize_required_tables(&postgres_client).await?;
-  initialize_predefined_actions(&postgres_client).await?;
-  initialize_predefined_roles(&postgres_client).await?;
+  initialize_required_tables(&test_environment.database_pool).await?;
+  initialize_predefined_actions(&test_environment.database_pool).await?;
+  initialize_predefined_roles(&test_environment.database_pool).await?;
   let state = AppState {
-    database_pool: test_environment.postgres_pool.clone(),
+    database_pool: test_environment.database_pool.clone(),
   };
 
   let router = super::get_router(state.clone())
@@ -363,9 +355,9 @@ async fn verify_permission_when_deleting_access_policy_by_id() -> Result<(), Tes
 async fn verify_access_policy_exists_when_deleting_access_policy_by_id() -> Result<(), TestSlashstepServerError> {
 
   let test_environment = TestEnvironment::new().await?;
-  initialize_required_tables(&mut test_environment.postgres_pool.get().await?).await?;
+  initialize_required_tables(&test_environment.database_pool).await?;
   let state = AppState {
-    database_pool: test_environment.postgres_pool.clone(),
+    database_pool: test_environment.database_pool.clone(),
   };
 
   let router = super::get_router(state.clone())
@@ -392,12 +384,11 @@ async fn verify_access_policy_exists_when_deleting_access_policy_by_id() -> Resu
 async fn verify_successful_patch_access_policy_by_id() -> Result<(), TestSlashstepServerError> {
 
   let test_environment = TestEnvironment::new().await?;
-  let postgres_client = test_environment.postgres_pool.get().await?;
-  initialize_required_tables(&postgres_client).await?;
-  initialize_predefined_actions(&postgres_client).await?;
-  initialize_predefined_roles(&postgres_client).await?;
+  initialize_required_tables(&test_environment.database_pool).await?;
+  initialize_predefined_actions(&test_environment.database_pool).await?;
+  initialize_predefined_roles(&test_environment.database_pool).await?;
   let state = AppState {
-    database_pool: test_environment.postgres_pool.clone(),
+    database_pool: test_environment.database_pool.clone(),
   };
 
   let router = super::get_router(state.clone())
@@ -409,7 +400,7 @@ async fn verify_successful_patch_access_policy_by_id() -> Result<(), TestSlashst
   let session = test_environment.create_session(&user.id).await?;
   let json_web_token_private_key = Session::get_json_web_token_private_key().await?;
   let session_token = session.generate_json_web_token(&json_web_token_private_key).await?;
-  let get_access_policies_action = Action::get_by_name("slashstep.accessPolicies.update", &postgres_client).await?;
+  let get_access_policies_action = Action::get_by_name("slashstep.accessPolicies.update", &test_environment.database_pool).await?;
   let access_policy_properties = InitialAccessPolicyProperties {
     action_id: get_access_policies_action.id,
     permission_level: AccessPolicyPermissionLevel::Editor,
@@ -419,7 +410,7 @@ async fn verify_successful_patch_access_policy_by_id() -> Result<(), TestSlashst
     scoped_resource_type: AccessPolicyResourceType::Instance,
     ..Default::default()
   };
-  let access_policy = AccessPolicy::create(&access_policy_properties, &postgres_client).await?;
+  let access_policy = AccessPolicy::create(&access_policy_properties, &test_environment.database_pool).await?;
 
   let response = test_server.patch(&format!("/access-policies/{}", access_policy.id))
     .add_cookie(Cookie::new("sessionToken", format!("Bearer {}", session_token)))
@@ -461,12 +452,11 @@ async fn verify_successful_patch_access_policy_by_id() -> Result<(), TestSlashst
 async fn verify_content_type_when_patching_access_policy_by_id() -> Result<(), TestSlashstepServerError> {
 
   let test_environment = TestEnvironment::new().await?;
-  let postgres_client = test_environment.postgres_pool.get().await?;
-  initialize_required_tables(&postgres_client).await?;
-  initialize_predefined_actions(&postgres_client).await?;
-  initialize_predefined_roles(&postgres_client).await?;
+  initialize_required_tables(&test_environment.database_pool).await?;
+  initialize_predefined_actions(&test_environment.database_pool).await?;
+  initialize_predefined_roles(&test_environment.database_pool).await?;
   let state = AppState {
-    database_pool: test_environment.postgres_pool.clone(),
+    database_pool: test_environment.database_pool.clone(),
   };
 
   let router = super::get_router(state.clone())
@@ -487,12 +477,11 @@ async fn verify_content_type_when_patching_access_policy_by_id() -> Result<(), T
 async fn verify_request_body_exists_when_patching_access_policy_by_id() -> Result<(), TestSlashstepServerError> {
 
   let test_environment = TestEnvironment::new().await?;
-  let postgres_client = test_environment.postgres_pool.get().await?;
-  initialize_required_tables(&postgres_client).await?;
-  initialize_predefined_actions(&postgres_client).await?;
-  initialize_predefined_roles(&postgres_client).await?;
+  initialize_required_tables(&test_environment.database_pool).await?;
+  initialize_predefined_actions(&test_environment.database_pool).await?;
+  initialize_predefined_roles(&test_environment.database_pool).await?;
   let state = AppState {
-    database_pool: test_environment.postgres_pool.clone(),
+    database_pool: test_environment.database_pool.clone(),
   };
 
   let router = super::get_router(state.clone())
@@ -514,12 +503,11 @@ async fn verify_request_body_exists_when_patching_access_policy_by_id() -> Resul
 async fn verify_request_body_json_when_patching_access_policy_by_id() -> Result<(), TestSlashstepServerError> {
 
   let test_environment = TestEnvironment::new().await?;
-  let postgres_client = test_environment.postgres_pool.get().await?;
-  initialize_required_tables(&postgres_client).await?;
-  initialize_predefined_actions(&postgres_client).await?;
-  initialize_predefined_roles(&postgres_client).await?;
+  initialize_required_tables(&test_environment.database_pool).await?;
+  initialize_predefined_actions(&test_environment.database_pool).await?;
+  initialize_predefined_roles(&test_environment.database_pool).await?;
   let state = AppState {
-    database_pool: test_environment.postgres_pool.clone(),
+    database_pool: test_environment.database_pool.clone(),
   };
 
   let router = super::get_router(state.clone())
@@ -546,12 +534,11 @@ async fn verify_request_body_json_when_patching_access_policy_by_id() -> Result<
 async fn verify_uuid_when_patching_access_policy_by_id() -> Result<(), TestSlashstepServerError> {
 
   let test_environment = TestEnvironment::new().await?;
-  let postgres_client = test_environment.postgres_pool.get().await?;
-  initialize_required_tables(&postgres_client).await?;
-  initialize_predefined_actions(&postgres_client).await?;
-  initialize_predefined_roles(&postgres_client).await?;
+  initialize_required_tables(&test_environment.database_pool).await?;
+  initialize_predefined_actions(&test_environment.database_pool).await?;
+  initialize_predefined_roles(&test_environment.database_pool).await?;
   let state = AppState {
-    database_pool: test_environment.postgres_pool.clone(),
+    database_pool: test_environment.database_pool.clone(),
   };
 
   let router = super::get_router(state.clone())
@@ -577,12 +564,11 @@ async fn verify_uuid_when_patching_access_policy_by_id() -> Result<(), TestSlash
 async fn verify_authentication_when_patching_access_policy_by_id() -> Result<(), TestSlashstepServerError> {
 
   let test_environment = TestEnvironment::new().await?;
-  let postgres_client = test_environment.postgres_pool.get().await?;
-  initialize_required_tables(&postgres_client).await?;
-  initialize_predefined_actions(&postgres_client).await?;
-  initialize_predefined_roles(&postgres_client).await?;
+  initialize_required_tables(&test_environment.database_pool).await?;
+  initialize_predefined_actions(&test_environment.database_pool).await?;
+  initialize_predefined_roles(&test_environment.database_pool).await?;
   let state = AppState {
-    database_pool: test_environment.postgres_pool.clone(),
+    database_pool: test_environment.database_pool.clone(),
   };
 
   let router = super::get_router(state.clone())
@@ -591,7 +577,7 @@ async fn verify_authentication_when_patching_access_policy_by_id() -> Result<(),
   let test_server = TestServer::new(router)?;
   
   let user = test_environment.create_random_user().await?;
-  let get_access_policies_action = Action::get_by_name("slashstep.accessPolicies.update", &postgres_client).await?;
+  let get_access_policies_action = Action::get_by_name("slashstep.accessPolicies.update", &test_environment.database_pool).await?;
   let access_policy_properties = InitialAccessPolicyProperties {
     action_id: get_access_policies_action.id,
     permission_level: AccessPolicyPermissionLevel::Editor,
@@ -601,7 +587,7 @@ async fn verify_authentication_when_patching_access_policy_by_id() -> Result<(),
     scoped_resource_type: AccessPolicyResourceType::Instance,
     ..Default::default()
   };
-  let access_policy = AccessPolicy::create(&access_policy_properties, &postgres_client).await?;
+  let access_policy = AccessPolicy::create(&access_policy_properties, &test_environment.database_pool).await?;
 
   let response = test_server.patch(&format!("/access-policies/{}", access_policy.id))
     .json(&serde_json::json!({
@@ -621,12 +607,11 @@ async fn verify_authentication_when_patching_access_policy_by_id() -> Result<(),
 async fn verify_permission_when_patching_access_policy() -> Result<(), TestSlashstepServerError> {
 
   let test_environment = TestEnvironment::new().await?;
-  let postgres_client = test_environment.postgres_pool.get().await?;
-  initialize_required_tables(&postgres_client).await?;
-  initialize_predefined_actions(&postgres_client).await?;
-  initialize_predefined_roles(&postgres_client).await?;
+  initialize_required_tables(&test_environment.database_pool).await?;
+  initialize_predefined_actions(&test_environment.database_pool).await?;
+  initialize_predefined_roles(&test_environment.database_pool).await?;
   let state = AppState {
-    database_pool: test_environment.postgres_pool.clone(),
+    database_pool: test_environment.database_pool.clone(),
   };
 
   let router = super::get_router(state.clone())
@@ -638,7 +623,7 @@ async fn verify_permission_when_patching_access_policy() -> Result<(), TestSlash
   let session = test_environment.create_session(&user.id).await?;
   let json_web_token_private_key = Session::get_json_web_token_private_key().await?;
   let session_token = session.generate_json_web_token(&json_web_token_private_key).await?;
-  let update_access_policies_action = Action::get_by_name("slashstep.accessPolicies.update", &postgres_client).await?;
+  let update_access_policies_action = Action::get_by_name("slashstep.accessPolicies.update", &test_environment.database_pool).await?;
   let access_policy_properties = InitialAccessPolicyProperties {
     action_id: update_access_policies_action.id,
     permission_level: AccessPolicyPermissionLevel::None,
@@ -648,7 +633,7 @@ async fn verify_permission_when_patching_access_policy() -> Result<(), TestSlash
     scoped_resource_type: AccessPolicyResourceType::Instance,
     ..Default::default()
   };
-  let access_policy = AccessPolicy::create(&access_policy_properties, &postgres_client).await?;
+  let access_policy = AccessPolicy::create(&access_policy_properties, &test_environment.database_pool).await?;
 
   let response = test_server.patch(&format!("/access-policies/{}", access_policy.id))
     .add_cookie(Cookie::new("sessionToken", format!("Bearer {}", session_token)))
@@ -669,12 +654,11 @@ async fn verify_permission_when_patching_access_policy() -> Result<(), TestSlash
 async fn verify_access_policy_exists_when_patching_access_policy() -> Result<(), TestSlashstepServerError> {
 
   let test_environment = TestEnvironment::new().await?;
-  let postgres_client = test_environment.postgres_pool.get().await?;
-  initialize_required_tables(&postgres_client).await?;
-  initialize_predefined_actions(&postgres_client).await?;
-  initialize_predefined_roles(&postgres_client).await?;
+  initialize_required_tables(&test_environment.database_pool).await?;
+  initialize_predefined_actions(&test_environment.database_pool).await?;
+  initialize_predefined_roles(&test_environment.database_pool).await?;
   let state = AppState {
-    database_pool: test_environment.postgres_pool.clone(),
+    database_pool: test_environment.database_pool.clone(),
   };
 
   let router = super::get_router(state.clone())

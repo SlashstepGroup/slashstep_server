@@ -14,7 +14,7 @@ use axum::{Extension, Json, Router, extract::{Path, Query, State, rejection::Jso
 use axum_extra::response::ErasedJson;
 use pg_escape::quote_literal;
 use reqwest::StatusCode;
-use crate::{AppState, HTTPError, middleware::{authentication_middleware, http_request_middleware}, resources::{access_policy::{AccessPolicyPermissionLevel, AccessPolicyResourceType}, action::{Action, ActionParentResourceType, InitialActionProperties, InitialActionPropertiesForPredefinedScope}, action_log_entry::{ActionLogEntry, ActionLogEntryActorType, ActionLogEntryTargetResourceType, InitialActionLogEntryProperties}, app::App, http_transaction::HTTPTransaction, server_log_entry::ServerLogEntry, user::User}, utilities::{reusable_route_handlers::{ActionListQueryParameters, list_actions}, route_handler_utilities::{AuthenticatedPrincipal, get_action_from_name, get_app_from_id, get_authenticated_principal, get_resource_hierarchy, map_postgres_error_to_http_error, verify_principal_permissions}}};
+use crate::{AppState, HTTPError, middleware::{authentication_middleware, http_request_middleware}, resources::{access_policy::{AccessPolicyPermissionLevel, AccessPolicyResourceType}, action::{Action, ActionParentResourceType, InitialActionProperties, InitialActionPropertiesForPredefinedScope}, action_log_entry::{ActionLogEntry, ActionLogEntryActorType, ActionLogEntryTargetResourceType, InitialActionLogEntryProperties}, app::App, http_transaction::HTTPTransaction, server_log_entry::ServerLogEntry, user::User}, utilities::{reusable_route_handlers::{ActionListQueryParameters, list_actions}, route_handler_utilities::{AuthenticatedPrincipal, get_action_from_name, get_app_from_id, get_authenticated_principal, get_resource_hierarchy, verify_principal_permissions}}};
 
 #[axum::debug_handler]
 async fn handle_list_actions_request(
@@ -27,9 +27,8 @@ async fn handle_list_actions_request(
 ) -> Result<ErasedJson, HTTPError> {
 
   let http_transaction = http_transaction.clone();
-  let postgres_client = state.database_pool.get().await.map_err(map_postgres_error_to_http_error)?;
-  let authenticated_app = get_app_from_id(&app_id, &http_transaction, &postgres_client).await?;
-  let resource_hierarchy = get_resource_hierarchy(&authenticated_app, &AccessPolicyResourceType::App, &authenticated_app.id, &http_transaction, &postgres_client).await?;
+  let authenticated_app = get_app_from_id(&app_id, &http_transaction, &state.database_pool).await?;
+  let resource_hierarchy = get_resource_hierarchy(&authenticated_app, &AccessPolicyResourceType::App, &authenticated_app.id, &http_transaction, &state.database_pool).await?;
 
   let query = format!(
     "parent_app_id = {}{}", 
@@ -56,10 +55,9 @@ async fn handle_create_action_request(
 ) -> Result<(StatusCode, Json<Action>), HTTPError> {
 
   let http_transaction = http_transaction.clone();
-  let postgres_client = state.database_pool.get().await.map_err(map_postgres_error_to_http_error)?;
 
   // Verify the request body.
-  ServerLogEntry::trace("Verifying request body...", Some(&http_transaction.id), &postgres_client).await.ok();
+  ServerLogEntry::trace("Verifying request body...", Some(&http_transaction.id), &state.database_pool).await.ok();
   let action_properties_json = match body {
 
     Ok(action_properties_json) => action_properties_json,
@@ -80,7 +78,7 @@ async fn handle_create_action_request(
 
       };
       
-      http_error.print_and_save(Some(&http_transaction.id), &postgres_client).await.ok();
+      http_error.print_and_save(Some(&http_transaction.id), &state.database_pool).await.ok();
       return Err(http_error);
 
     }
@@ -88,28 +86,28 @@ async fn handle_create_action_request(
   };
 
   // Make sure the user can create access policies for the target action.
-  let target_app = get_app_from_id(&app_id, &http_transaction, &postgres_client).await?;
-  let resource_hierarchy = get_resource_hierarchy(&target_app, &AccessPolicyResourceType::App, &target_app.id, &http_transaction, &postgres_client).await?;
-  let create_actions_action = get_action_from_name("slashstep.actions.create", &http_transaction, &postgres_client).await?;
+  let target_app = get_app_from_id(&app_id, &http_transaction, &state.database_pool).await?;
+  let resource_hierarchy = get_resource_hierarchy(&target_app, &AccessPolicyResourceType::App, &target_app.id, &http_transaction, &state.database_pool).await?;
+  let create_actions_action = get_action_from_name("slashstep.actions.create", &http_transaction, &state.database_pool).await?;
   let authenticated_principal = get_authenticated_principal(&authenticated_user, &authenticated_app)?;
-  verify_principal_permissions(&authenticated_principal, &create_actions_action, &resource_hierarchy, &http_transaction, &AccessPolicyPermissionLevel::User, &postgres_client).await?;
+  verify_principal_permissions(&authenticated_principal, &create_actions_action, &resource_hierarchy, &http_transaction, &AccessPolicyPermissionLevel::User, &state.database_pool).await?;
 
   // Create the action.
-  ServerLogEntry::trace(&format!("Creating action for authenticated_app {}...", target_app.id), Some(&http_transaction.id), &postgres_client).await.ok();
+  ServerLogEntry::trace(&format!("Creating action for authenticated_app {}...", target_app.id), Some(&http_transaction.id), &state.database_pool).await.ok();
   let created_action = match Action::create(&InitialActionProperties {
     name: action_properties_json.name.clone(),
     display_name: action_properties_json.display_name.clone(),
     description: action_properties_json.description.clone(),
     parent_app_id: Some(target_app.id),
     parent_resource_type: ActionParentResourceType::App
-  }, &postgres_client).await {
+  }, &state.database_pool).await {
 
     Ok(created_action) => created_action,
 
     Err(error) => {
 
       let http_error = HTTPError::InternalServerError(Some(format!("Failed to create action: {:?}", error)));
-      http_error.print_and_save(Some(&http_transaction.id), &postgres_client).await.ok();
+      http_error.print_and_save(Some(&http_transaction.id), &state.database_pool).await.ok();
       return Err(http_error)
 
     }
@@ -125,8 +123,8 @@ async fn handle_create_action_request(
     target_resource_type: ActionLogEntryTargetResourceType::Action,
     target_action_id: Some(created_action.id),
     ..Default::default()
-  }, &postgres_client).await.ok();
-  ServerLogEntry::success(&format!("Successfully created action {}.", created_action.id), Some(&http_transaction.id), &postgres_client).await.ok();
+  }, &state.database_pool).await.ok();
+  ServerLogEntry::success(&format!("Successfully created action {}.", created_action.id), Some(&http_transaction.id), &state.database_pool).await.ok();
 
   return Ok((StatusCode::CREATED, Json(created_action)));
 

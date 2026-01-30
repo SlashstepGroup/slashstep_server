@@ -13,7 +13,7 @@ use std::sync::Arc;
 use axum::{Extension, Json, Router, extract::{Path, Query, State, rejection::JsonRejection}};
 use axum_extra::response::ErasedJson;
 use pg_escape::quote_literal;
-use crate::{AppState, HTTPError, middleware::{authentication_middleware, http_request_middleware}, resources::{access_policy::{AccessPolicy, AccessPolicyPermissionLevel, AccessPolicyResourceType, InitialAccessPolicyProperties, InitialAccessPolicyPropertiesForPredefinedScope}, action_log_entry::{ActionLogEntry, ActionLogEntryActorType, ActionLogEntryTargetResourceType, InitialActionLogEntryProperties}, app::App, http_transaction::HTTPTransaction, server_log_entry::ServerLogEntry, user::User}, routes::action_log_entries::action_log_entry_id::get_action_log_entry_from_id, utilities::{reusable_route_handlers::{AccessPolicyListQueryParameters, list_access_policies}, route_handler_utilities::{AuthenticatedPrincipal, get_action_from_id, get_action_from_name, get_authenticated_principal, get_resource_hierarchy, map_postgres_error_to_http_error, verify_principal_permissions}}};
+use crate::{AppState, HTTPError, middleware::{authentication_middleware, http_request_middleware}, resources::{access_policy::{AccessPolicy, AccessPolicyPermissionLevel, AccessPolicyResourceType, InitialAccessPolicyProperties, InitialAccessPolicyPropertiesForPredefinedScope}, action_log_entry::{ActionLogEntry, ActionLogEntryActorType, ActionLogEntryTargetResourceType, InitialActionLogEntryProperties}, app::App, http_transaction::HTTPTransaction, server_log_entry::ServerLogEntry, user::User}, routes::action_log_entries::action_log_entry_id::get_action_log_entry_from_id, utilities::{reusable_route_handlers::{AccessPolicyListQueryParameters, list_access_policies}, route_handler_utilities::{AuthenticatedPrincipal, get_action_from_id, get_action_from_name, get_authenticated_principal, get_resource_hierarchy, verify_principal_permissions}}};
 
 #[cfg(test)]
 mod tests;
@@ -32,10 +32,8 @@ async fn handle_list_access_policies_request(
 ) -> Result<ErasedJson, HTTPError> {
 
   let http_transaction = http_transaction.clone();
-  println!("{:?}", state.database_pool.status());
-  let postgres_client = state.database_pool.get().await.map_err(map_postgres_error_to_http_error)?;
-  let action_log_entry = get_action_log_entry_from_id(&action_log_entry_id, &http_transaction, &postgres_client).await?;
-  let resource_hierarchy = get_resource_hierarchy(&action_log_entry, &AccessPolicyResourceType::ActionLogEntry, &action_log_entry.id, &http_transaction, &postgres_client).await?;
+  let action_log_entry = get_action_log_entry_from_id(&action_log_entry_id, &http_transaction, &state.database_pool).await?;
+  let resource_hierarchy = get_resource_hierarchy(&action_log_entry, &AccessPolicyResourceType::ActionLogEntry, &action_log_entry.id, &http_transaction, &state.database_pool).await?;
 
   let query = format!(
     "scoped_resource_type = 'ActionLogEntry' AND scoped_action_log_entry_id = {}{}", 
@@ -65,10 +63,9 @@ async fn handle_create_access_policy_request(
 ) -> Result<Json<AccessPolicy>, HTTPError> {
 
   let http_transaction = http_transaction.clone();
-  let postgres_client = state.database_pool.get().await.map_err(map_postgres_error_to_http_error)?;
 
   // Verify the request body.
-  ServerLogEntry::trace("Verifying request body...", Some(&http_transaction.id), &postgres_client).await.ok();
+  ServerLogEntry::trace("Verifying request body...", Some(&http_transaction.id), &state.database_pool).await.ok();
   let access_policy_properties_json = match body {
 
     Ok(access_policy_properties_json) => access_policy_properties_json,
@@ -89,7 +86,7 @@ async fn handle_create_access_policy_request(
 
       };
       
-      http_error.print_and_save(Some(&http_transaction.id), &postgres_client).await.ok();
+      http_error.print_and_save(Some(&http_transaction.id), &state.database_pool).await.ok();
       return Err(http_error);
 
     }
@@ -97,19 +94,19 @@ async fn handle_create_access_policy_request(
   };
 
   // Make sure the authenticated_user can create access policies for the target action log entry.
-  let target_action_log_entry = get_action_log_entry_from_id(&action_log_entry_id, &http_transaction, &postgres_client).await?;
-  let resource_hierarchy = get_resource_hierarchy(&target_action_log_entry, &AccessPolicyResourceType::ActionLogEntry, &target_action_log_entry.id, &http_transaction, &postgres_client).await?;
-  let create_access_policies_action = get_action_from_name("slashstep.accessPolicies.create", &http_transaction, &postgres_client).await?;
+  let target_action_log_entry = get_action_log_entry_from_id(&action_log_entry_id, &http_transaction, &state.database_pool).await?;
+  let resource_hierarchy = get_resource_hierarchy(&target_action_log_entry, &AccessPolicyResourceType::ActionLogEntry, &target_action_log_entry.id, &http_transaction, &state.database_pool).await?;
+  let create_access_policies_action = get_action_from_name("slashstep.accessPolicies.create", &http_transaction, &state.database_pool).await?;
   let authenticated_principal = get_authenticated_principal(&authenticated_user, &authenticated_app)?;
-  verify_principal_permissions(&authenticated_principal, &create_access_policies_action, &resource_hierarchy, &http_transaction, &AccessPolicyPermissionLevel::User, &postgres_client).await?;
+  verify_principal_permissions(&authenticated_principal, &create_access_policies_action, &resource_hierarchy, &http_transaction, &AccessPolicyPermissionLevel::User, &state.database_pool).await?;
 
   // Make sure the authenticated_user has at least editor access to the access policy's action.
-  let access_policy_action = get_action_from_id(&access_policy_properties_json.action_id.to_string(), &http_transaction, &postgres_client).await?;
+  let access_policy_action = get_action_from_id(&access_policy_properties_json.action_id.to_string(), &http_transaction, &state.database_pool).await?;
   let minimum_permission_level = if access_policy_properties_json.permission_level > AccessPolicyPermissionLevel::Editor { access_policy_properties_json.permission_level } else { AccessPolicyPermissionLevel::Editor };
-  verify_principal_permissions(&authenticated_principal, &access_policy_action, &resource_hierarchy, &http_transaction, &minimum_permission_level, &postgres_client).await?;
+  verify_principal_permissions(&authenticated_principal, &access_policy_action, &resource_hierarchy, &http_transaction, &minimum_permission_level, &state.database_pool).await?;
 
   // Create the access policy.
-  ServerLogEntry::trace(&format!("Creating access policy for action log entry {}...", action_log_entry_id), Some(&http_transaction.id), &postgres_client).await.ok();
+  ServerLogEntry::trace(&format!("Creating access policy for action log entry {}...", action_log_entry_id), Some(&http_transaction.id), &state.database_pool).await.ok();
   let access_policy = match AccessPolicy::create(&InitialAccessPolicyProperties {
     action_id: access_policy_properties_json.action_id,
     permission_level: access_policy_properties_json.permission_level,
@@ -122,14 +119,14 @@ async fn handle_create_access_policy_request(
     scoped_resource_type: AccessPolicyResourceType::ActionLogEntry,
     scoped_action_log_entry_id: Some(target_action_log_entry.id),
     ..Default::default()
-  }, &postgres_client).await {
+  }, &state.database_pool).await {
 
     Ok(access_policy) => access_policy,
 
     Err(error) => {
 
       let http_error = HTTPError::InternalServerError(Some(format!("Failed to create access policy: {:?}", error)));
-      http_error.print_and_save(Some(&http_transaction.id), &postgres_client).await.ok();
+      http_error.print_and_save(Some(&http_transaction.id), &state.database_pool).await.ok();
       return Err(http_error)
 
     }
@@ -145,8 +142,8 @@ async fn handle_create_access_policy_request(
     target_resource_type: ActionLogEntryTargetResourceType::AccessPolicy,
     target_access_policy_id: Some(access_policy.id),
     ..Default::default()
-  }, &postgres_client).await.ok();
-  ServerLogEntry::success(&format!("Successfully created access policy {}.", access_policy.id), Some(&http_transaction.id), &postgres_client).await.ok();
+  }, &state.database_pool).await.ok();
+  ServerLogEntry::success(&format!("Successfully created access policy {}.", access_policy.id), Some(&http_transaction.id), &state.database_pool).await.ok();
 
   return Ok(Json(access_policy));
 
