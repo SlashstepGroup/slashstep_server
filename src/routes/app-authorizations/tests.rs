@@ -294,32 +294,32 @@ async fn verify_query_when_listing_resources() -> Result<(), TestSlashstepServer
 
 }
 
-// /// Verifies that the server returns a 401 status code when the user lacks permissions and is unauthenticated.
-// #[tokio::test]
-// async fn verify_authentication_when_listing_actions() -> Result<(), TestSlashstepServerError> {
+/// Verifies that the server returns a 401 status code when the user lacks permissions and is unauthenticated.
+#[tokio::test]
+async fn verify_authentication_when_listing_resources() -> Result<(), TestSlashstepServerError> {
 
-//   let test_environment = TestEnvironment::new().await?;
-//   initialize_required_tables(&test_environment.database_pool).await?;
-//   initialize_predefined_actions(&test_environment.database_pool).await?;
-//   initialize_predefined_roles(&test_environment.database_pool).await?;
+  let test_environment = TestEnvironment::new().await?;
+  initialize_required_tables(&test_environment.database_pool).await?;
+  initialize_predefined_actions(&test_environment.database_pool).await?;
+  initialize_predefined_roles(&test_environment.database_pool).await?;
 
-//   // Set up the server and send the request.
-//   let state = AppState {
-//     database_pool: test_environment.database_pool.clone(),
-//   };
-//   let router = super::get_router(state.clone())
-//     .with_state(state)
-//     .into_make_service_with_connect_info::<SocketAddr>();
-//   let test_server = TestServer::new(router)?;
-//   let response = test_server.get(&format!("/app-authorizations"))
-//     .await;
+  // Set up the server and send the request.
+  let state = AppState {
+    database_pool: test_environment.database_pool.clone(),
+  };
+  let router = super::get_router(state.clone())
+    .with_state(state)
+    .into_make_service_with_connect_info::<SocketAddr>();
+  let test_server = TestServer::new(router)?;
+  let response = test_server.get(&format!("/app-authorizations"))
+    .await;
   
-//   // Verify the response.
-//   assert_eq!(response.status_code(), StatusCode::UNAUTHORIZED);
+  // Verify the response.
+  assert_eq!(response.status_code(), StatusCode::UNAUTHORIZED);
 
-//   return Ok(());
+  return Ok(());
 
-// }
+}
 
 // /// Verifies that the server returns a 403 status code when the user lacks permissions and is authenticated.
 // #[tokio::test]
