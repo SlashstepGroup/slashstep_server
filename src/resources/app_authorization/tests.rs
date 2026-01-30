@@ -1,18 +1,8 @@
-use uuid::Uuid;
 use crate::{
-  initialize_required_tables, predefinitions::initialize_predefined_actions, resources::{
-    DeletableResource,
-    access_policy::{ 
-      AccessPolicy, 
-      AccessPolicyPermissionLevel, 
-      AccessPolicyPrincipalType, 
-      AccessPolicyResourceType, 
-      IndividualPrincipal, 
-      InitialAccessPolicyProperties
-    }, 
+  initialize_required_tables, resources::{
     action::{
-      Action, ActionParentResourceType, DEFAULT_ACTION_LIST_LIMIT, EditableActionProperties, InitialActionProperties
-    }, app_authorization::{self, AppAuthorization, AppAuthorizationAuthorizingResourceType, DEFAULT_APP_AUTHORIZATION_LIST_LIMIT, InitialAppAuthorizationProperties}
+      Action, DEFAULT_ACTION_LIST_LIMIT
+    }, app_authorization::{AppAuthorization, AppAuthorizationAuthorizingResourceType, DEFAULT_APP_AUTHORIZATION_LIST_LIMIT, InitialAppAuthorizationProperties}
   }, tests::{TestEnvironment, TestSlashstepServerError}
 };
 
@@ -125,7 +115,7 @@ async fn verify_get_resource_by_id() -> Result<(), TestSlashstepServerError> {
 
 /// Verifies that the implementation can return up to a maximum number of resources by default.
 #[tokio::test]
-async fn list_resources_with_default_limit() -> Result<(), TestSlashstepServerError> {
+async fn verify_list_resources_with_default_limit() -> Result<(), TestSlashstepServerError> {
 
   let test_environment = TestEnvironment::new().await?;
   initialize_required_tables(&test_environment.database_pool).await?;
@@ -146,47 +136,41 @@ async fn list_resources_with_default_limit() -> Result<(), TestSlashstepServerEr
   
 }
 
-// /// Verifies that a list of resources can be retrieved with a query.
-// #[tokio::test]
-// async fn list_resources_with_query() -> Result<(), TestSlashstepServerError> {
+/// Verifies that a list of resources can be retrieved with a query.
+#[tokio::test]
+async fn verify_list_resources_with_query() -> Result<(), TestSlashstepServerError> {
 
-//   let test_environment = TestEnvironment::new().await?;
-//   initialize_required_tables(&test_environment.database_pool).await?;
-//   const MAXIMUM_ACTION_COUNT: i32 = 5;
-//   let mut created_app_authorizations: Vec<AppAuthorization> = Vec::new();
-//   for _ in 0..MAXIMUM_ACTION_COUNT {
+  let test_environment = TestEnvironment::new().await?;
+  initialize_required_tables(&test_environment.database_pool).await?;
+  const MAXIMUM_RESOURCE_COUNT: i32 = 5;
+  let mut created_app_authorizations: Vec<AppAuthorization> = Vec::new();
+  for _ in 0..MAXIMUM_RESOURCE_COUNT {
 
-//     let app_authorization = test_environment.create_random_app_authorization(&None).await?;
-//     created_app_authorizations.push(app_authorization);
+    let app_authorization = test_environment.create_random_app_authorization(&None).await?;
+    created_app_authorizations.push(app_authorization);
 
-//   }
+  }
   
-//   let app_authorization_with_same_app_id = AppAuthorization::create(&InitialAppAuthorizationProperties {
-//     app_id: created_app_authorizations[0].app_id,
-//     authorizing_resource_type: AppAuthorizationAuthorizingResourceType::Instance,
-//     authorizing_project_id: None,
-//     authorizing_workspace_id: None,
-//     authorizing_user_id: None
-//   }, &test_environment.database_pool).await?;
-//   created_actions.push(action_with_same_display_name);
+  let app_authorization_with_same_app_id = test_environment.create_random_app_authorization(&Some(created_app_authorizations[0].app_id)).await?;
+  created_app_authorizations.push(app_authorization_with_same_app_id);
 
-//   let query = format!("display_name = \"{}\"", created_actions[0].display_name);
-//   let retrieved_actions = Action::list(&query, &test_environment.database_pool, None).await?;
+  let query = format!("app_id = \"{}\"", created_app_authorizations[0].app_id);
+  let retrieved_app_authorizations = AppAuthorization::list(&query, &test_environment.database_pool, None).await?;
 
-//   let created_actions_with_specific_display_name: Vec<&Action> = created_actions.iter().filter(|action| action.display_name == created_actions[0].display_name).collect();
-//   assert_eq!(created_actions_with_specific_display_name.len(), retrieved_actions.len());
-//   for i in 0..created_actions_with_specific_display_name.len() {
+  let created_app_authorizations_with_specific_app_id: Vec<&AppAuthorization> = created_app_authorizations.iter().filter(|app_authorization| app_authorization.app_id == created_app_authorizations[0].app_id).collect();
+  assert_eq!(created_app_authorizations_with_specific_app_id.len(), retrieved_app_authorizations.len());
+  for i in 0..created_app_authorizations_with_specific_app_id.len() {
 
-//     let created_action = &created_actions_with_specific_display_name[i];
-//     let retrieved_action = &retrieved_actions[i];
+    let created_app_authorization = &created_app_authorizations_with_specific_app_id[i];
+    let retrieved_app_authorization = &retrieved_app_authorizations[i];
 
-//     assert_actions_are_equal(created_action, retrieved_action);
+    assert_app_authorizations_are_equal(created_app_authorization, retrieved_app_authorization);
 
-//   }
+  }
 
-//   return Ok(());
+  return Ok(());
 
-// }
+}
 
 // #[tokio::test]
 // async fn list_actions_without_query() -> Result<(), TestSlashstepServerError> {
