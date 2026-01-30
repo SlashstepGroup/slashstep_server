@@ -1,6 +1,5 @@
 
 use std::net::SocketAddr;
-use axum::middleware;
 use axum_extra::extract::cookie::Cookie;
 use axum_test::TestServer;
 use ntest::timeout;
@@ -10,7 +9,6 @@ use crate::{
   Action, 
   AppState,
   initialize_required_tables, 
-  middleware::http_request_middleware, 
   predefinitions::{
     initialize_predefined_actions, 
     initialize_predefined_roles

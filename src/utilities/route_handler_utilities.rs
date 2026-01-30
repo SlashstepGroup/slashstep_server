@@ -34,25 +34,21 @@ pub async fn get_action_from_name(action_name: &str, http_transaction: &HTTPTran
 
 }
 
-pub async fn get_user_from_option_user(user: &Option<Arc<User>>, http_transaction: &HTTPTransaction, mut postgres_client: &mut deadpool_postgres::Client) -> Result<Arc<User>, HTTPError> {
-
-  let Some(user) = user else {
-
-    let http_error = HTTPError::InternalServerError(Some(format!("Couldn't find a user for the request. This is a bug. Make sure the authentication middleware is installed and is working properly.")));
-    http_error.print_and_save(Some(&http_transaction.id), &mut postgres_client).await.ok();
-    return Err(http_error);
-
-  };
-
-  return Ok(user.clone());
-
+pub enum AuthenticatedPrincipal {
+  User(Arc<User>),
+  App(Arc<App>)
 }
 
-pub async fn verify_user_permissions(user: &User, action: &Action, resource_hierarchy: &ResourceHierarchy, http_transaction: &HTTPTransaction, minimum_permission_level: &AccessPolicyPermissionLevel, mut postgres_client: &mut deadpool_postgres::Client) -> Result<(), HTTPError> {
+pub async fn verify_principal_permissions(authenticated_principal: &AuthenticatedPrincipal, action: &Action, resource_hierarchy: &ResourceHierarchy, http_transaction: &HTTPTransaction, minimum_permission_level: &AccessPolicyPermissionLevel, mut postgres_client: &mut deadpool_postgres::Client) -> Result<(), HTTPError> {
 
   ServerLogEntry::trace(&format!("Verifying principal may use \"{}\" action...", action.name), Some(&http_transaction.id), &mut postgres_client).await.ok();
 
-  match PrincipalPermissionVerifier::verify_permissions(&Principal::User(user.id), &action.id, &resource_hierarchy, &minimum_permission_level, &mut postgres_client).await {
+  let principal = match authenticated_principal {
+    AuthenticatedPrincipal::User(user) => Principal::User(user.id),
+    AuthenticatedPrincipal::App(app) => Principal::App(app.id)
+  };
+
+  match PrincipalPermissionVerifier::verify_permissions(&principal, &action.id, &resource_hierarchy, &minimum_permission_level, &mut postgres_client).await {
 
     Ok(_) => {},
 
@@ -63,14 +59,9 @@ pub async fn verify_user_permissions(user: &User, action: &Action, resource_hier
         PrincipalPermissionVerifierError::ForbiddenError { .. } => {
           
           let message = format!("You need at least {} permission to the \"{}\" action.", minimum_permission_level.to_string(), action.name);
-          if user.is_anonymous {
-
-            HTTPError::UnauthorizedError(Some(message))
-
-          } else {
-
-            HTTPError::ForbiddenError(Some(message))
-          
+          match authenticated_principal {
+            AuthenticatedPrincipal::User(user) => if user.is_anonymous { HTTPError::UnauthorizedError(Some(message)) } else { HTTPError::ForbiddenError(Some(message)) },
+            AuthenticatedPrincipal::App(_) => HTTPError::ForbiddenError(Some(message))
           }
 
         },
@@ -291,5 +282,21 @@ pub fn match_db_error(error: &postgres::Error, resource_type: &str) -> HTTPError
   };
 
   return http_error;
+
+}
+
+pub fn get_authenticated_principal(user: &Option<Arc<User>>, app: &Option<Arc<App>>) -> Result<AuthenticatedPrincipal, HTTPError> {
+
+  if let Some(authenticated_principal) =
+    user.clone()
+    .and_then(|user| Some(AuthenticatedPrincipal::User(user)))
+    .or_else(|| app.clone().and_then(|app| Some(AuthenticatedPrincipal::App(app)))) 
+  {
+
+    return Ok(authenticated_principal);
+
+  }
+
+  return Err(HTTPError::InternalServerError(Some("Couldn't find a user or app for the request. This is a bug. Make sure the authentication middleware is installed and is working properly.".to_string())));
 
 }
