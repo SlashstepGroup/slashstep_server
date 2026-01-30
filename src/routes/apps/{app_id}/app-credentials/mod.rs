@@ -261,8 +261,8 @@ async fn handle_create_app_credential_request(
 pub fn get_router(state: AppState) -> Router<AppState> {
 
   let router = Router::<AppState>::new()
-    .route("/apps/{app_id}/authenticated_app-credentials", axum::routing::get(handle_list_app_credentials_request))
-    .route("/apps/{app_id}/authenticated_app-credentials", axum::routing::post(handle_create_app_credential_request))
+    .route("/apps/{app_id}/app-credentials", axum::routing::get(handle_list_app_credentials_request))
+    .route("/apps/{app_id}/app-credentials", axum::routing::post(handle_create_app_credential_request))
     .layer(axum::middleware::from_fn_with_state(state.clone(), authentication_middleware::authenticate_user))
     .layer(axum::middleware::from_fn_with_state(state.clone(), authentication_middleware::authenticate_app))
     .layer(axum::middleware::from_fn_with_state(state.clone(), http_request_middleware::create_http_request));
