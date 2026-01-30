@@ -25,12 +25,12 @@ async fn handle_list_access_policies_request(
   Query(query_parameters): Query<AccessPolicyListQueryParameters>,
   State(state): State<AppState>, 
   Extension(http_transaction): Extension<Arc<HTTPTransaction>>,
-  Extension(user): Extension<Option<Arc<User>>>,
-  Extension(app): Extension<Option<Arc<App>>>
+  Extension(authenticated_user): Extension<Option<Arc<User>>>,
+  Extension(authenticated_app): Extension<Option<Arc<App>>>
 ) -> Result<ErasedJson, HTTPError> {
 
   let resource_hierarchy: ResourceHierarchy = vec![(AccessPolicyResourceType::Instance, None)];
-  return list_access_policies(Query(query_parameters), State(state), Extension(http_transaction), Extension(user), Extension(app), resource_hierarchy, ActionLogEntryTargetResourceType::Instance, None).await;
+  return list_access_policies(Query(query_parameters), State(state), Extension(http_transaction), Extension(authenticated_user), Extension(authenticated_app), resource_hierarchy, ActionLogEntryTargetResourceType::Instance, None).await;
 
 }
 

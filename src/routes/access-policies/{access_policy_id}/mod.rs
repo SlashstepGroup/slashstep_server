@@ -132,8 +132,8 @@ async fn handle_get_access_policy_request(
   Path(access_policy_id): Path<String>,
   State(state): State<AppState>, 
   Extension(http_transaction): Extension<Arc<HTTPTransaction>>,
-  Extension(user): Extension<Option<Arc<User>>>,
-  Extension(app): Extension<Option<Arc<App>>>
+  Extension(authenticated_user): Extension<Option<Arc<User>>>,
+  Extension(authenticated_app): Extension<Option<Arc<App>>>
 ) -> Result<Json<AccessPolicy>, HTTPError> {
 
   let http_transaction = http_transaction.clone();
@@ -141,7 +141,7 @@ async fn handle_get_access_policy_request(
   let access_policy = get_access_policy(&access_policy_id, &http_transaction, &mut postgres_client).await?;
   let resource_hierarchy = get_resource_hierarchy(&access_policy, &http_transaction, &mut postgres_client).await?;
   let action = get_action_from_name("slashstep.accessPolicies.get", &http_transaction, &mut postgres_client).await?;
-  let authenticated_principal = get_authenticated_principal(&user, &app)?;
+  let authenticated_principal = get_authenticated_principal(&authenticated_user, &authenticated_app)?;
   verify_principal_permissions(&authenticated_principal, &action, &resource_hierarchy, &http_transaction, &AccessPolicyPermissionLevel::User, &mut postgres_client).await?;
   
   ServerLogEntry::success(&format!("Successfully returned access policy {}.", access_policy_id), Some(&http_transaction.id), &mut postgres_client).await.ok();
@@ -149,8 +149,8 @@ async fn handle_get_access_policy_request(
     action_id: action.id,
     http_transaction_id: Some(http_transaction.id),
     actor_type: if let AuthenticatedPrincipal::User(_) = &authenticated_principal { ActionLogEntryActorType::User } else { ActionLogEntryActorType::App },
-    actor_user_id: if let AuthenticatedPrincipal::User(user) = &authenticated_principal { Some(user.id.clone()) } else { None },
-    actor_app_id: if let AuthenticatedPrincipal::App(app) = &authenticated_principal { Some(app.id.clone()) } else { None },
+    actor_user_id: if let AuthenticatedPrincipal::User(authenticated_user) = &authenticated_principal { Some(authenticated_user.id.clone()) } else { None },
+    actor_app_id: if let AuthenticatedPrincipal::App(authenticated_app) = &authenticated_principal { Some(authenticated_app.id.clone()) } else { None },
     target_resource_type: ActionLogEntryTargetResourceType::AccessPolicy,
     target_access_policy_id: Some(access_policy.id),
     ..Default::default()
@@ -168,8 +168,8 @@ async fn handle_patch_access_policy_request(
   Path(access_policy_id): Path<String>,
   State(state): State<AppState>, 
   Extension(http_transaction): Extension<Arc<HTTPTransaction>>,
-  Extension(user): Extension<Option<Arc<User>>>,
-  Extension(app): Extension<Option<Arc<App>>>,
+  Extension(authenticated_user): Extension<Option<Arc<User>>>,
+  Extension(authenticated_app): Extension<Option<Arc<App>>>,
   body: Result<Json<EditableAccessPolicyProperties>, JsonRejection>
 ) -> Result<Json<AccessPolicy>, HTTPError> {
 
@@ -207,7 +207,7 @@ async fn handle_patch_access_policy_request(
   let access_policy = get_access_policy(&access_policy_id, &http_transaction, &mut postgres_client).await?;
   let resource_hierarchy = get_resource_hierarchy(&access_policy, &http_transaction, &mut postgres_client).await?;
   let update_access_policy_action = get_action_from_name("slashstep.accessPolicies.update", &http_transaction, &mut postgres_client).await?;
-  let authenticated_principal = get_authenticated_principal(&user, &app)?;
+  let authenticated_principal = get_authenticated_principal(&authenticated_user, &authenticated_app)?;
   verify_principal_permissions(&authenticated_principal, &update_access_policy_action, &resource_hierarchy, &http_transaction, &AccessPolicyPermissionLevel::User, &mut postgres_client).await?;
 
   let access_policy_action = get_action_from_id(&access_policy.action_id, &http_transaction, &mut postgres_client).await?;
@@ -239,8 +239,8 @@ async fn handle_patch_access_policy_request(
     action_id: update_access_policy_action.id,
     http_transaction_id: Some(http_transaction.id),
     actor_type: if let AuthenticatedPrincipal::User(_) = &authenticated_principal { ActionLogEntryActorType::User } else { ActionLogEntryActorType::App },
-    actor_user_id: if let AuthenticatedPrincipal::User(user) = &authenticated_principal { Some(user.id.clone()) } else { None },
-    actor_app_id: if let AuthenticatedPrincipal::App(app) = &authenticated_principal { Some(app.id.clone()) } else { None },
+    actor_user_id: if let AuthenticatedPrincipal::User(authenticated_user) = &authenticated_principal { Some(authenticated_user.id.clone()) } else { None },
+    actor_app_id: if let AuthenticatedPrincipal::App(authenticated_app) = &authenticated_principal { Some(authenticated_app.id.clone()) } else { None },
     target_resource_type: ActionLogEntryTargetResourceType::AccessPolicy,
     target_access_policy_id: Some(access_policy.id),
     ..Default::default()
@@ -260,8 +260,8 @@ async fn handle_delete_access_policy_request(
   Path(access_policy_id): Path<String>,
   State(state): State<AppState>, 
   Extension(http_transaction): Extension<Arc<HTTPTransaction>>,
-  Extension(user): Extension<Option<Arc<User>>>,
-  Extension(app): Extension<Option<Arc<App>>>
+  Extension(authenticated_user): Extension<Option<Arc<User>>>,
+  Extension(authenticated_app): Extension<Option<Arc<App>>>
 ) -> Result<StatusCode, HTTPError> {
 
   let http_transaction = http_transaction.clone();
@@ -269,7 +269,7 @@ async fn handle_delete_access_policy_request(
   let access_policy = get_access_policy(&access_policy_id, &http_transaction, &mut postgres_client).await?;
   let resource_hierarchy = get_resource_hierarchy(&access_policy, &http_transaction, &mut postgres_client).await?;
   let delete_access_policy_action = get_action_from_name("slashstep.accessPolicies.delete", &http_transaction, &mut postgres_client).await?;
-  let authenticated_principal = get_authenticated_principal(&user, &app)?;
+  let authenticated_principal = get_authenticated_principal(&authenticated_user, &authenticated_app)?;
   verify_principal_permissions(&authenticated_principal, &delete_access_policy_action, &resource_hierarchy, &http_transaction, &AccessPolicyPermissionLevel::User, &mut postgres_client).await?;
 
   let access_policy_action = get_action_from_id(&access_policy.action_id, &http_transaction, &mut postgres_client).await?;
@@ -293,8 +293,8 @@ async fn handle_delete_access_policy_request(
     action_id: delete_access_policy_action.id,
     http_transaction_id: Some(http_transaction.id),
     actor_type: if let AuthenticatedPrincipal::User(_) = &authenticated_principal { ActionLogEntryActorType::User } else { ActionLogEntryActorType::App },
-    actor_user_id: if let AuthenticatedPrincipal::User(user) = &authenticated_principal { Some(user.id.clone()) } else { None },
-    actor_app_id: if let AuthenticatedPrincipal::App(app) = &authenticated_principal { Some(app.id.clone()) } else { None },
+    actor_user_id: if let AuthenticatedPrincipal::User(authenticated_user) = &authenticated_principal { Some(authenticated_user.id.clone()) } else { None },
+    actor_app_id: if let AuthenticatedPrincipal::App(authenticated_app) = &authenticated_principal { Some(authenticated_app.id.clone()) } else { None },
     target_resource_type: ActionLogEntryTargetResourceType::AccessPolicy,
     target_access_policy_id: Some(access_policy.id),
     ..Default::default()

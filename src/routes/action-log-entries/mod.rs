@@ -39,8 +39,8 @@ async fn handle_list_action_log_entries_request(
   Query(query_parameters): Query<ActionLogEntryListQueryParameters>,
   State(state): State<AppState>, 
   Extension(http_transaction): Extension<Arc<HTTPTransaction>>,
-  Extension(user): Extension<Option<Arc<User>>>,
-  Extension(app): Extension<Option<Arc<App>>>
+  Extension(authenticated_user): Extension<Option<Arc<User>>>,
+  Extension(authenticated_app): Extension<Option<Arc<App>>>
 ) -> Result<ErasedJson, HTTPError> {
 
   // Make sure the principal has access to list resources.
@@ -48,7 +48,7 @@ async fn handle_list_action_log_entries_request(
   let mut postgres_client = state.database_pool.get().await.map_err(map_postgres_error_to_http_error)?;
   let list_action_log_entries_action = get_action_from_name("slashstep.actionLogEntries.list", &http_transaction, &mut postgres_client).await?;
   let resource_hierarchy: ResourceHierarchy = vec![(AccessPolicyResourceType::Instance, None)];
-  let authenticated_principal = get_authenticated_principal(&user, &app)?;
+  let authenticated_principal = get_authenticated_principal(&authenticated_user, &authenticated_app)?;
   verify_principal_permissions(&authenticated_principal, &list_action_log_entries_action, &resource_hierarchy, &http_transaction, &AccessPolicyPermissionLevel::User, &mut postgres_client).await?;
 
   // Get the list of resources.
@@ -96,8 +96,8 @@ async fn handle_list_action_log_entries_request(
     action_id: list_action_log_entries_action.id,
     http_transaction_id: Some(http_transaction.id),
     actor_type: if let AuthenticatedPrincipal::User(_) = &authenticated_principal { ActionLogEntryActorType::User } else { ActionLogEntryActorType::App },
-    actor_user_id: if let AuthenticatedPrincipal::User(user) = &authenticated_principal { Some(user.id.clone()) } else { None },
-    actor_app_id: if let AuthenticatedPrincipal::App(app) = &authenticated_principal { Some(app.id.clone()) } else { None },
+    actor_user_id: if let AuthenticatedPrincipal::User(authenticated_user) = &authenticated_principal { Some(authenticated_user.id.clone()) } else { None },
+    actor_app_id: if let AuthenticatedPrincipal::App(authenticated_app) = &authenticated_principal { Some(authenticated_app.id.clone()) } else { None },
     target_resource_type: ActionLogEntryTargetResourceType::Instance,
     ..Default::default()
   }, &mut postgres_client).await.ok();

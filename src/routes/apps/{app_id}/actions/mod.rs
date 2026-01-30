@@ -16,8 +16,8 @@ async fn handle_list_actions_request(
 
   let http_transaction = http_transaction.clone();
   let mut postgres_client = state.database_pool.get().await.map_err(map_postgres_error_to_http_error)?;
-  let app = get_app_from_id(&app_id, &http_transaction, &mut postgres_client).await?;
-  let resource_hierarchy = get_resource_hierarchy(&app, &AccessPolicyResourceType::App, &app.id, &http_transaction, &mut postgres_client).await?;
+  let authenticated_app = get_app_from_id(&app_id, &http_transaction, &mut postgres_client).await?;
+  let resource_hierarchy = get_resource_hierarchy(&authenticated_app, &AccessPolicyResourceType::App, &authenticated_app.id, &http_transaction, &mut postgres_client).await?;
 
   let query = format!(
     "parent_app_id = {}{}", 
@@ -29,7 +29,7 @@ async fn handle_list_actions_request(
     query: Some(query)
   };
 
-  return list_actions(Query(query_parameters), State(state), Extension(http_transaction), Extension(user), resource_hierarchy, ActionLogEntryTargetResourceType::App, Some(app.id)).await;
+  return list_actions(Query(query_parameters), State(state), Extension(http_transaction), Extension(user), resource_hierarchy, ActionLogEntryTargetResourceType::App, Some(authenticated_app.id)).await;
 
 }
 
@@ -81,7 +81,7 @@ async fn handle_create_action_request(
   verify_principal_permissions(&authenticated_principal, &create_actions_action, &resource_hierarchy, &http_transaction, &AccessPolicyPermissionLevel::User, &mut postgres_client).await?;
 
   // Create the action.
-  ServerLogEntry::trace(&format!("Creating action for app {}...", target_app.id), Some(&http_transaction.id), &mut postgres_client).await.ok();
+  ServerLogEntry::trace(&format!("Creating action for authenticated_app {}...", target_app.id), Some(&http_transaction.id), &mut postgres_client).await.ok();
   let created_action = match Action::create(&InitialActionProperties {
     name: action_properties_json.name.clone(),
     display_name: action_properties_json.display_name.clone(),
@@ -107,7 +107,7 @@ async fn handle_create_action_request(
     http_transaction_id: Some(http_transaction.id),
     actor_type: if let AuthenticatedPrincipal::User(_) = &authenticated_principal { ActionLogEntryActorType::User } else { ActionLogEntryActorType::App },
     actor_user_id: if let AuthenticatedPrincipal::User(user) = &authenticated_principal { Some(user.id.clone()) } else { None },
-    actor_app_id: if let AuthenticatedPrincipal::App(app) = &authenticated_principal { Some(app.id.clone()) } else { None },
+    actor_app_id: if let AuthenticatedPrincipal::App(authenticated_app) = &authenticated_principal { Some(authenticated_app.id.clone()) } else { None },
     target_resource_type: ActionLogEntryTargetResourceType::Action,
     target_action_id: Some(created_action.id),
     ..Default::default()
@@ -124,6 +124,7 @@ pub fn get_router(state: AppState) -> Router<AppState> {
     .route("/apps/{app_id}/actions", axum::routing::get(handle_list_actions_request))
     .route("/apps/{app_id}/actions", axum::routing::post(handle_create_action_request))
     .layer(axum::middleware::from_fn_with_state(state.clone(), authentication_middleware::authenticate_user))
+    .layer(axum::middleware::from_fn_with_state(state.clone(), authentication_middleware::authenticate_app))
     .layer(axum::middleware::from_fn_with_state(state.clone(), http_request_middleware::create_http_request));
   return router;
 

@@ -7,7 +7,7 @@ use crate::{
   middleware::{authentication_middleware, http_request_middleware}, 
   resources::{
     DeletableResource,
-    access_policy::{AccessPolicyPermissionLevel, AccessPolicyResourceType}, action_log_entry::{ActionLogEntry, ActionLogEntryActorType, ActionLogEntryTargetResourceType, InitialActionLogEntryProperties}, app::{App, EditableAppProperties}, http_transaction::HTTPTransaction, server_log_entry::ServerLogEntry, user::User
+    access_policy::{AccessPolicyPermissionLevel, AccessPolicyResourceType}, action_log_entry::{ActionLogEntry, ActionLogEntryActorType, ActionLogEntryTargetResourceType, InitialActionLogEntryProperties}, authenticated_app::{App, EditableAppProperties}, http_transaction::HTTPTransaction, server_log_entry::ServerLogEntry, user::User
   }, 
   utilities::route_handler_utilities::{get_action_from_name, get_app_from_id, get_resource_hierarchy, map_postgres_error_to_http_error}
 };
@@ -25,7 +25,7 @@ async fn handle_get_app_request(
   Path(app_id): Path<String>,
   State(state): State<AppState>, 
   Extension(http_transaction): Extension<Arc<HTTPTransaction>>,
-  Extension(user): Extension<Option<Arc<User>>>
+  Extension(authenticated_user): Extension<Option<Arc<User>>>
 ) -> Result<Json<App>, HTTPError> {
 
   let http_transaction = http_transaction.clone();
@@ -39,13 +39,13 @@ async fn handle_get_app_request(
     action_id: get_apps_action.id,
     http_transaction_id: Some(http_transaction.id),
     actor_type: if let AuthenticatedPrincipal::User(_) = &authenticated_principal { ActionLogEntryActorType::User } else { ActionLogEntryActorType::App },
-    actor_user_id: if let AuthenticatedPrincipal::User(user) = &authenticated_principal { Some(user.id.clone()) } else { None },
-    actor_app_id: if let AuthenticatedPrincipal::App(app) = &authenticated_principal { Some(app.id.clone()) } else { None },
+    actor_user_id: if let AuthenticatedPrincipal::User(authenticated_user) = &authenticated_principal { Some(authenticated_user.id.clone()) } else { None },
+    actor_app_id: if let AuthenticatedPrincipal::App(authenticated_app) = &authenticated_principal { Some(authenticated_app.id.clone()) } else { None },
     target_resource_type: ActionLogEntryTargetResourceType::App,
     target_app_id: Some(target_app.id),
     ..Default::default()
   }, &mut postgres_client).await.ok();
-  ServerLogEntry::success(&format!("Successfully returned app {}.", target_app.id), Some(&http_transaction.id), &mut postgres_client).await.ok();
+  ServerLogEntry::success(&format!("Successfully returned authenticated_app {}.", target_app.id), Some(&http_transaction.id), &mut postgres_client).await.ok();
 
   return Ok(Json(target_app));
 
@@ -56,7 +56,7 @@ async fn handle_delete_app_request(
   Path(app_id): Path<String>,
   State(state): State<AppState>, 
   Extension(http_transaction): Extension<Arc<HTTPTransaction>>,
-  Extension(user): Extension<Option<Arc<User>>>
+  Extension(authenticated_user): Extension<Option<Arc<User>>>
 ) -> Result<StatusCode, HTTPError> {
 
   let http_transaction = http_transaction.clone();
@@ -72,7 +72,7 @@ async fn handle_delete_app_request(
 
     Err(error) => {
 
-      let http_error = HTTPError::InternalServerError(Some(format!("Failed to delete app: {:?}", error)));
+      let http_error = HTTPError::InternalServerError(Some(format!("Failed to delete authenticated_app: {:?}", error)));
       http_error.print_and_save(Some(&http_transaction.id), &mut postgres_client).await.ok();
       return Err(http_error);
 
@@ -84,13 +84,13 @@ async fn handle_delete_app_request(
     action_id: delete_actions_action.id,
     http_transaction_id: Some(http_transaction.id),
     actor_type: if let AuthenticatedPrincipal::User(_) = &authenticated_principal { ActionLogEntryActorType::User } else { ActionLogEntryActorType::App },
-    actor_user_id: if let AuthenticatedPrincipal::User(user) = &authenticated_principal { Some(user.id.clone()) } else { None },
-    actor_app_id: if let AuthenticatedPrincipal::App(app) = &authenticated_principal { Some(app.id.clone()) } else { None },
+    actor_user_id: if let AuthenticatedPrincipal::User(authenticated_user) = &authenticated_principal { Some(authenticated_user.id.clone()) } else { None },
+    actor_app_id: if let AuthenticatedPrincipal::App(authenticated_app) = &authenticated_principal { Some(authenticated_app.id.clone()) } else { None },
     target_resource_type: ActionLogEntryTargetResourceType::App,
     target_app_id: Some(target_app.id),
     ..Default::default()
   }, &mut postgres_client).await.ok();
-  ServerLogEntry::success(&format!("Successfully deleted app {}.", target_app.id), Some(&http_transaction.id), &mut postgres_client).await.ok();
+  ServerLogEntry::success(&format!("Successfully deleted authenticated_app {}.", target_app.id), Some(&http_transaction.id), &mut postgres_client).await.ok();
 
   return Ok(StatusCode::NO_CONTENT);
 
@@ -101,7 +101,7 @@ async fn handle_patch_app_request(
   Path(app_id): Path<String>,
   State(state): State<AppState>, 
   Extension(http_transaction): Extension<Arc<HTTPTransaction>>,
-  Extension(user): Extension<Option<Arc<User>>>,
+  Extension(authenticated_user): Extension<Option<Arc<User>>>,
   body: Result<Json<EditableAppProperties>, JsonRejection>
 ) -> Result<Json<App>, HTTPError> {
 
@@ -141,14 +141,14 @@ async fn handle_patch_app_request(
   let update_access_policy_action = get_action_from_name("slashstep.apps.update", &http_transaction, &mut postgres_client).await?;
   verify_principal_permissions(&authenticated_principal, &update_access_policy_action, &resource_hierarchy, &http_transaction, &AccessPolicyPermissionLevel::User, &mut postgres_client).await?;
 
-  ServerLogEntry::trace(&format!("Updating app {}...", original_target_app.id), Some(&http_transaction.id), &mut postgres_client).await.ok();
+  ServerLogEntry::trace(&format!("Updating authenticated_app {}...", original_target_app.id), Some(&http_transaction.id), &mut postgres_client).await.ok();
   let updated_target_action = match original_target_app.update(&updated_app_properties, &mut postgres_client).await {
 
     Ok(updated_target_action) => updated_target_action,
 
     Err(error) => {
 
-      let http_error = HTTPError::InternalServerError(Some(format!("Failed to update app: {:?}", error)));
+      let http_error = HTTPError::InternalServerError(Some(format!("Failed to update authenticated_app: {:?}", error)));
       http_error.print_and_save(Some(&http_transaction.id), &mut postgres_client).await.ok();
       return Err(http_error);
 
@@ -160,8 +160,8 @@ async fn handle_patch_app_request(
     action_id: update_access_policy_action.id,
     http_transaction_id: Some(http_transaction.id),
     actor_type: if let AuthenticatedPrincipal::User(_) = &authenticated_principal { ActionLogEntryActorType::User } else { ActionLogEntryActorType::App },
-    actor_user_id: if let AuthenticatedPrincipal::User(user) = &authenticated_principal { Some(user.id.clone()) } else { None },
-    actor_app_id: if let AuthenticatedPrincipal::App(app) = &authenticated_principal { Some(app.id.clone()) } else { None },
+    actor_user_id: if let AuthenticatedPrincipal::User(authenticated_user) = &authenticated_principal { Some(authenticated_user.id.clone()) } else { None },
+    actor_app_id: if let AuthenticatedPrincipal::App(authenticated_app) = &authenticated_principal { Some(authenticated_app.id.clone()) } else { None },
     target_resource_type: ActionLogEntryTargetResourceType::Action,
     target_action_id: Some(updated_target_action.id),
     ..Default::default()
@@ -179,6 +179,7 @@ pub fn get_router(state: AppState) -> Router<AppState> {
     .route("/apps/{action_id}", axum::routing::delete(handle_delete_app_request))
     .route("/apps/{action_id}", axum::routing::patch(handle_patch_app_request))
     .layer(axum::middleware::from_fn_with_state(state.clone(), authentication_middleware::authenticate_user))
+    .layer(axum::middleware::from_fn_with_state(state.clone(), authentication_middleware::authenticate_app))
     .layer(axum::middleware::from_fn_with_state(state.clone(), http_request_middleware::create_http_request))
     .merge(actions::get_router(state.clone()))
     .merge(access_policies::get_router(state.clone()))

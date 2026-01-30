@@ -39,7 +39,7 @@ pub async fn handle_list_app_credentials_request(
   Query(query_parameters): Query<ListAppCredentialsQueryParameters>,
   State(state): State<AppState>, 
   Extension(http_transaction): Extension<Arc<HTTPTransaction>>,
-  Extension(user): Extension<Option<Arc<User>>>
+  Extension(authenticated_user): Extension<Option<Arc<User>>>
 ) -> Result<ErasedJson, HTTPError> {
 
   let http_transaction = http_transaction.clone();
@@ -49,7 +49,7 @@ pub async fn handle_list_app_credentials_request(
   let resource_hierarchy = get_resource_hierarchy(&target_app, &AccessPolicyResourceType::App, &target_app.id, &http_transaction, &mut postgres_client).await?;
   verify_principal_permissions(&authenticated_principal, &list_app_credentials_action, &resource_hierarchy, &http_transaction, &AccessPolicyPermissionLevel::User, &mut postgres_client).await?;
   let query = query_parameters.query.unwrap_or("".to_string());
-  let app_credentials = match AppCredential::list(&query, &mut postgres_client, Some(&IndividualPrincipal::User(user.id))).await {
+  let app_credentials = match AppCredential::list(&query, &mut postgres_client, Some(&IndividualPrincipal::User(authenticated_user.id))).await {
 
     Ok(app_credentials) => app_credentials,
 
@@ -57,11 +57,11 @@ pub async fn handle_list_app_credentials_request(
 
       let http_error = match error {
 
-        ResourceError::SlashstepQLError(error) => match_slashstepql_error(&error, &DEFAULT_MAXIMUM_APP_CREDENTIAL_LIST_LIMIT, "app credentials"),
+        ResourceError::SlashstepQLError(error) => match_slashstepql_error(&error, &DEFAULT_MAXIMUM_APP_CREDENTIAL_LIST_LIMIT, "authenticated_app credentials"),
 
-        ResourceError::PostgresError(error) => match_db_error(&error, "app credentials"),
+        ResourceError::PostgresError(error) => match_db_error(&error, "authenticated_app credentials"),
 
-        _ => HTTPError::InternalServerError(Some(format!("Failed to list app credentials: {:?}", error)))
+        _ => HTTPError::InternalServerError(Some(format!("Failed to list authenticated_app credentials: {:?}", error)))
 
       };
 
@@ -72,14 +72,14 @@ pub async fn handle_list_app_credentials_request(
 
   };
 
-  ServerLogEntry::trace(&format!("Counting app credentials..."), Some(&http_transaction.id), &mut postgres_client).await.ok();
-  let app_credential_count = match AppCredential::count(&query, &mut postgres_client, Some(&IndividualPrincipal::User(user.id))).await {
+  ServerLogEntry::trace(&format!("Counting authenticated_app credentials..."), Some(&http_transaction.id), &mut postgres_client).await.ok();
+  let app_credential_count = match AppCredential::count(&query, &mut postgres_client, Some(&IndividualPrincipal::User(authenticated_user.id))).await {
 
     Ok(app_credential_count) => app_credential_count,
 
     Err(error) => {
 
-      let http_error = HTTPError::InternalServerError(Some(format!("Failed to count app credentials: {:?}", error)));
+      let http_error = HTTPError::InternalServerError(Some(format!("Failed to count authenticated_app credentials: {:?}", error)));
       http_error.print_and_save(Some(&http_transaction.id), &mut postgres_client).await.ok();
       return Err(http_error);
 
@@ -94,14 +94,14 @@ pub async fn handle_list_app_credentials_request(
     http_transaction_id: Some(http_transaction.id),
     reason: None, // TODO: Support reasons.
     actor_type: if let AuthenticatedPrincipal::User(_) = &authenticated_principal { ActionLogEntryActorType::User } else { ActionLogEntryActorType::App },
-    actor_user_id: if let AuthenticatedPrincipal::User(user) = &authenticated_principal { Some(user.id.clone()) } else { None },
-    actor_app_id: if let AuthenticatedPrincipal::App(app) = &authenticated_principal { Some(app.id.clone()) } else { None },
+    actor_user_id: if let AuthenticatedPrincipal::User(authenticated_user) = &authenticated_principal { Some(authenticated_user.id.clone()) } else { None },
+    actor_app_id: if let AuthenticatedPrincipal::App(authenticated_app) = &authenticated_principal { Some(authenticated_app.id.clone()) } else { None },
     actor_app_id: None,
     target_resource_type: ActionLogEntryTargetResourceType::App,
     target_app_id: Some(target_app.id),
     ..Default::default()
   }, &mut postgres_client).await.ok();
-  ServerLogEntry::success(&format!("Successfully {} returned app credentials.", app_credentials.len()), Some(&http_transaction.id), &mut postgres_client).await.ok();
+  ServerLogEntry::success(&format!("Successfully {} returned authenticated_app credentials.", app_credentials.len()), Some(&http_transaction.id), &mut postgres_client).await.ok();
   let response_body = ListAppCredentialsResponseBody {
     app_credentials,
     total_count: app_credential_count
@@ -116,7 +116,7 @@ async fn handle_create_app_credential_request(
   Path(app_id): Path<String>,
   State(state): State<AppState>, 
   Extension(http_transaction): Extension<Arc<HTTPTransaction>>,
-  Extension(user): Extension<Option<Arc<User>>>,
+  Extension(authenticated_user): Extension<Option<Arc<User>>>,
   body: Result<Json<InitialAppCredentialPropertiesForPredefinedScope>, JsonRejection>
 ) -> Result<(StatusCode, Json<CreateAppCredentialResponseBody>), HTTPError> {
 
@@ -152,7 +152,7 @@ async fn handle_create_app_credential_request(
 
   };
 
-  // Make sure the user can create access policies for the target action.
+  // Make sure the authenticated_user can create access policies for the target action.
   let target_app = get_app_from_id(&app_id, &http_transaction, &mut postgres_client).await?;
   let resource_hierarchy = get_resource_hierarchy(&target_app, &AccessPolicyResourceType::App, &target_app.id, &http_transaction, &mut postgres_client).await?;
   let create_app_credentials_action = get_action_from_name("slashstep.appCredentials.create", &http_transaction, &mut postgres_client).await?;
@@ -167,7 +167,7 @@ async fn handle_create_app_credential_request(
 
     Err(error) => {
 
-      let http_error = HTTPError::InternalServerError(Some(format!("Failed to create app credential: {:?}", error)));
+      let http_error = HTTPError::InternalServerError(Some(format!("Failed to create authenticated_app credential: {:?}", error)));
       http_error.print_and_save(Some(&http_transaction.id), &mut postgres_client).await.ok();
       return Err(http_error);
 
@@ -182,7 +182,7 @@ async fn handle_create_app_credential_request(
 
     Err(error) => {
 
-      let http_error = HTTPError::InternalServerError(Some(format!("Failed to create app credential: {:?}", error)));
+      let http_error = HTTPError::InternalServerError(Some(format!("Failed to create authenticated_app credential: {:?}", error)));
       http_error.print_and_save(Some(&http_transaction.id), &mut postgres_client).await.ok();
       return Err(http_error);
 
@@ -190,8 +190,8 @@ async fn handle_create_app_credential_request(
 
   };
 
-  // Create the app credential.
-  ServerLogEntry::trace(&format!("Creating app credential for app {}...", target_app.id), Some(&http_transaction.id), &mut postgres_client).await.ok();
+  // Create the authenticated_app credential.
+  ServerLogEntry::trace(&format!("Creating authenticated_app credential for authenticated_app {}...", target_app.id), Some(&http_transaction.id), &mut postgres_client).await.ok();
 
   let created_app_credential = match AppCredential::create(&InitialAppCredentialProperties {
     app_id: target_app.id,
@@ -205,7 +205,7 @@ async fn handle_create_app_credential_request(
 
     Err(error) => {
 
-      let http_error = HTTPError::InternalServerError(Some(format!("Failed to create app credential: {:?}", error)));
+      let http_error = HTTPError::InternalServerError(Some(format!("Failed to create authenticated_app credential: {:?}", error)));
       http_error.print_and_save(Some(&http_transaction.id), &mut postgres_client).await.ok();
       return Err(http_error)
 
@@ -226,13 +226,13 @@ async fn handle_create_app_credential_request(
     action_id: create_app_credentials_action.id,
     http_transaction_id: Some(http_transaction.id),
     actor_type: if let AuthenticatedPrincipal::User(_) = &authenticated_principal { ActionLogEntryActorType::User } else { ActionLogEntryActorType::App },
-    actor_user_id: if let AuthenticatedPrincipal::User(user) = &authenticated_principal { Some(user.id.clone()) } else { None },
-    actor_app_id: if let AuthenticatedPrincipal::App(app) = &authenticated_principal { Some(app.id.clone()) } else { None },
+    actor_user_id: if let AuthenticatedPrincipal::User(authenticated_user) = &authenticated_principal { Some(authenticated_user.id.clone()) } else { None },
+    actor_app_id: if let AuthenticatedPrincipal::App(authenticated_app) = &authenticated_principal { Some(authenticated_app.id.clone()) } else { None },
     target_resource_type: ActionLogEntryTargetResourceType::AppCredential,
     target_app_credential_id: Some(created_app_credential.id),
     ..Default::default()
   }, &mut postgres_client).await.ok();
-  ServerLogEntry::success(&format!("Successfully created app credential {}.", created_app_credential.id), Some(&http_transaction.id), &mut postgres_client).await.ok();
+  ServerLogEntry::success(&format!("Successfully created authenticated_app credential {}.", created_app_credential.id), Some(&http_transaction.id), &mut postgres_client).await.ok();
 
   return Ok((StatusCode::CREATED, Json(create_app_credential_response_body)));
 
@@ -241,9 +241,10 @@ async fn handle_create_app_credential_request(
 pub fn get_router(state: AppState) -> Router<AppState> {
 
   let router = Router::<AppState>::new()
-    .route("/apps/{app_id}/app-credentials", axum::routing::get(handle_list_app_credentials_request))
-    .route("/apps/{app_id}/app-credentials", axum::routing::post(handle_create_app_credential_request))
+    .route("/apps/{app_id}/authenticated_app-credentials", axum::routing::get(handle_list_app_credentials_request))
+    .route("/apps/{app_id}/authenticated_app-credentials", axum::routing::post(handle_create_app_credential_request))
     .layer(axum::middleware::from_fn_with_state(state.clone(), authentication_middleware::authenticate_user))
+    .layer(axum::middleware::from_fn_with_state(state.clone(), authentication_middleware::authenticate_app))
     .layer(axum::middleware::from_fn_with_state(state.clone(), http_request_middleware::create_http_request));
   return router;
 

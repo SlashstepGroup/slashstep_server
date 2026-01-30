@@ -81,8 +81,8 @@ async fn handle_get_action_log_entry_request(
   Path(action_log_entry_id): Path<String>,
   State(state): State<AppState>, 
   Extension(http_transaction): Extension<Arc<HTTPTransaction>>,
-  Extension(user): Extension<Option<Arc<User>>>,
-  Extension(app): Extension<Option<Arc<App>>>
+  Extension(authenticated_user): Extension<Option<Arc<User>>>,
+  Extension(authenticated_app): Extension<Option<Arc<App>>>
 ) -> Result<Json<ActionLogEntry>, HTTPError> {
 
   let http_transaction = http_transaction.clone();
@@ -90,15 +90,15 @@ async fn handle_get_action_log_entry_request(
   let action_log_entry = get_action_log_entry_from_id(&action_log_entry_id, &http_transaction, &mut postgres_client).await?;
   let resource_hierarchy = get_resource_hierarchy(&action_log_entry, &AccessPolicyResourceType::ActionLogEntry, &action_log_entry.id, &http_transaction, &mut postgres_client).await?;
   let get_action_log_entries_action = get_action_from_name("slashstep.actionLogEntries.get", &http_transaction, &mut postgres_client).await?;
-  let authenticated_principal = get_authenticated_principal(&user, &app)?;
+  let authenticated_principal = get_authenticated_principal(&authenticated_user, &authenticated_app)?;
   verify_principal_permissions(&authenticated_principal, &get_action_log_entries_action, &resource_hierarchy, &http_transaction, &AccessPolicyPermissionLevel::User, &mut postgres_client).await?;
   
   ActionLogEntry::create(&InitialActionLogEntryProperties {
     action_id: get_action_log_entries_action.id,
     http_transaction_id: Some(http_transaction.id),
     actor_type: if let AuthenticatedPrincipal::User(_) = &authenticated_principal { ActionLogEntryActorType::User } else { ActionLogEntryActorType::App },
-    actor_user_id: if let AuthenticatedPrincipal::User(user) = &authenticated_principal { Some(user.id.clone()) } else { None },
-    actor_app_id: if let AuthenticatedPrincipal::App(app) = &authenticated_principal { Some(app.id.clone()) } else { None },
+    actor_user_id: if let AuthenticatedPrincipal::User(authenticated_user) = &authenticated_principal { Some(authenticated_user.id.clone()) } else { None },
+    actor_app_id: if let AuthenticatedPrincipal::App(authenticated_app) = &authenticated_principal { Some(authenticated_app.id.clone()) } else { None },
     target_resource_type: ActionLogEntryTargetResourceType::ActionLogEntry,
     target_action_log_entry_id: Some(action_log_entry.id),
     ..Default::default()
@@ -117,8 +117,8 @@ async fn handle_delete_action_log_entry_request(
   Path(action_log_entry_id): Path<String>,
   State(state): State<AppState>, 
   Extension(http_transaction): Extension<Arc<HTTPTransaction>>,
-  Extension(user): Extension<Option<Arc<User>>>,
-  Extension(app): Extension<Option<Arc<App>>>
+  Extension(authenticated_user): Extension<Option<Arc<User>>>,
+  Extension(authenticated_app): Extension<Option<Arc<App>>>
 ) -> Result<StatusCode, HTTPError> {
 
   let http_transaction = http_transaction.clone();
@@ -126,7 +126,7 @@ async fn handle_delete_action_log_entry_request(
   let target_action_log_entry = get_action_log_entry_from_id(&action_log_entry_id, &http_transaction, &mut postgres_client).await?;
   let resource_hierarchy = get_resource_hierarchy(&target_action_log_entry, &AccessPolicyResourceType::ActionLogEntry, &target_action_log_entry.id, &http_transaction, &mut postgres_client).await?;
   let delete_action_log_entries_action = get_action_from_name("slashstep.actionLogEntries.delete", &http_transaction, &mut postgres_client).await?;
-  let authenticated_principal = get_authenticated_principal(&user, &app)?;
+  let authenticated_principal = get_authenticated_principal(&authenticated_user, &authenticated_app)?;
   verify_principal_permissions(&authenticated_principal, &delete_action_log_entries_action, &resource_hierarchy, &http_transaction, &AccessPolicyPermissionLevel::User, &mut postgres_client).await?;
 
   match target_action_log_entry.delete(&mut postgres_client).await {
@@ -147,8 +147,8 @@ async fn handle_delete_action_log_entry_request(
     action_id: delete_action_log_entries_action.id,
     http_transaction_id: Some(http_transaction.id),
     actor_type: if let AuthenticatedPrincipal::User(_) = &authenticated_principal { ActionLogEntryActorType::User } else { ActionLogEntryActorType::App },
-    actor_user_id: if let AuthenticatedPrincipal::User(user) = &authenticated_principal { Some(user.id.clone()) } else { None },
-    actor_app_id: if let AuthenticatedPrincipal::App(app) = &authenticated_principal { Some(app.id.clone()) } else { None },
+    actor_user_id: if let AuthenticatedPrincipal::User(authenticated_user) = &authenticated_principal { Some(authenticated_user.id.clone()) } else { None },
+    actor_app_id: if let AuthenticatedPrincipal::App(authenticated_app) = &authenticated_principal { Some(authenticated_app.id.clone()) } else { None },
     target_resource_type: ActionLogEntryTargetResourceType::ActionLogEntry,
     target_action_log_entry_id: Some(target_action_log_entry.id),
     ..Default::default()
