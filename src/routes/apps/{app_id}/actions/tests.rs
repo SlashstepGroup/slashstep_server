@@ -34,23 +34,6 @@ async fn create_instance_access_policy(postgres_client: &mut deadpool_postgres::
 
 }
 
-async fn create_action_access_policy(postgres_client: &mut deadpool_postgres::Client, scoped_action_id: &Uuid, user_id: &Uuid, action_id: &Uuid, permission_level: &AccessPolicyPermissionLevel) -> Result<AccessPolicy, TestSlashstepServerError> {
-
-  let access_policy = AccessPolicy::create(&InitialAccessPolicyProperties {
-    action_id: action_id.clone(),
-    permission_level: permission_level.clone(),
-    is_inheritance_enabled: true,
-    principal_type: crate::resources::access_policy::AccessPolicyPrincipalType::User,
-    principal_user_id: Some(user_id.clone()),
-    scoped_resource_type: crate::resources::access_policy::AccessPolicyResourceType::Action,
-    scoped_action_id: Some(scoped_action_id.clone()),
-    ..Default::default()
-  }, postgres_client).await?;
-
-  return Ok(access_policy);
-
-}
-
 /// Verifies that the router can return a 201 status code and the created resource.
 #[tokio::test]
 async fn verify_successful_creation() -> Result<(), TestSlashstepServerError> {

@@ -1,7 +1,7 @@
 use std::{sync::Arc};
 use chrono::{Duration, Utc};
 use deadpool_postgres::tokio_postgres;
-use ed25519_dalek::{SigningKey, ed25519::signature::rand_core::OsRng, pkcs8::{EncodePrivateKey, EncodePublicKey, spki::der::pem::LineEnding}};
+use ed25519_dalek::{SigningKey, ed25519::signature::rand_core::OsRng, pkcs8::{EncodePublicKey, spki::der::pem::LineEnding}};
 use local_ip_address::local_ip;
 use postgres::NoTls;
 use testcontainers_modules::{testcontainers::runners::AsyncRunner};

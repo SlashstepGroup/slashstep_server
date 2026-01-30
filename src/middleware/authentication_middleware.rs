@@ -1,10 +1,10 @@
 use std::sync::Arc;
 
-use axum::{Extension, body::Body, extract::{Request, State}, http::HeaderMap, middleware::Next, response::{IntoResponse, Response}};
+use axum::{Extension, body::Body, extract::{Request, State}, http::HeaderMap, middleware::Next, response::{Response}};
 use axum_extra::extract::CookieJar;
 use reqwest::header;
 use uuid::Uuid;
-use crate::{AppState, HTTPError, handle_pool_error, resources::{app::App, http_transaction::HTTPTransaction, role::Role, role_memberships::{InitialRoleMembershipProperties, RoleMembership}, server_log_entry::ServerLogEntry, session::{Session, SessionError, SessionTokenClaims}, user::{InitialUserProperties, User, UserError}}, utilities::route_handler_utilities::{get_app_credential_from_id, get_app_from_id, map_postgres_error_to_http_error}};
+use crate::{AppState, HTTPError, resources::{app::App, http_transaction::HTTPTransaction, role::Role, role_memberships::{InitialRoleMembershipProperties, RoleMembership}, server_log_entry::ServerLogEntry, session::{Session, SessionError, SessionTokenClaims}, user::{InitialUserProperties, User, UserError}}, utilities::route_handler_utilities::{get_app_credential_from_id, get_app_from_id, map_postgres_error_to_http_error}};
 
 async fn get_jwt_public_key(http_transaction_id: &Uuid, postgres_client: &mut deadpool_postgres::Client) -> Result<String, HTTPError> {
 
@@ -365,19 +365,6 @@ pub async fn authenticate_app(
     Err(_) => {
 
       let http_error = HTTPError::InternalServerError(Some("App credential ID is not a valid UUID.".to_string()));
-      http_error.print_and_save(Some(&http_transaction.id), &mut postgres_client).await.ok();
-      return Err(http_error);
-
-    }
-    
-  };
-
-  let app_id = match Uuid::parse_str(&decoded_claims.claims.sub) {
-    
-    Ok(app_id) => app_id,
-    Err(_) => {
-
-      let http_error = HTTPError::InternalServerError(Some("App ID is not a valid UUID.".to_string()));
       http_error.print_and_save(Some(&http_transaction.id), &mut postgres_client).await.ok();
       return Err(http_error);
 
