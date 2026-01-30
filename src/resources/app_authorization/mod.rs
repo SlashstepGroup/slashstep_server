@@ -61,7 +61,7 @@ impl AppAuthorization {
   pub async fn get_by_id(id: &Uuid, database_pool: &deadpool_postgres::Pool) -> Result<Self, ResourceError> {
 
     let database_client = database_pool.get().await?;
-    let query = include_str!("../../queries/app_authorizations/get-app-authorization-row-by-id.sql");
+    let query = include_str!("../../queries/app_authorizations/get_app_authorization_row_by_id.sql");
     let row = match database_client.query_opt(query, &[&id]).await {
 
       Ok(row) => match row {
@@ -99,7 +99,7 @@ impl AppAuthorization {
   pub async fn initialize_app_authorizations_table(database_pool: &deadpool_postgres::Pool) -> Result<(), ResourceError> {
 
     let database_client = database_pool.get().await?;
-    let query = include_str!("../../queries/app_authorizations/initialize-app-authorizations-table.sql");
+    let query = include_str!("../../queries/app_authorizations/initialize_app_authorizations_table.sql");
     database_client.execute(query, &[]).await?;
     return Ok(());
 

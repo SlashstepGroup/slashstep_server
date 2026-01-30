@@ -165,7 +165,7 @@ impl Action {
   pub async fn create(initial_properties: &InitialActionProperties, database_pool: &deadpool_postgres::Pool) -> Result<Self, ResourceError> {
 
     // Insert the access policy into the database.
-    let query = include_str!("../../queries/actions/insert-action-row.sql");
+    let query = include_str!("../../queries/actions/insert_action_row.sql");
     let parameters: &[&(dyn ToSql + Sync)] = &[
       &initial_properties.name,
       &initial_properties.display_name,
@@ -202,7 +202,7 @@ impl Action {
   pub async fn get_by_name(name: &str, database_pool: &deadpool_postgres::Pool) -> Result<Action, ResourceError> {
 
     let database_client = database_pool.get().await?;
-    let query = include_str!("../../queries/actions/get-action-row-by-name.sql");
+    let query = include_str!("../../queries/actions/get_action_row_by_name.sql");
     let row = match database_client.query_opt(query, &[&name]).await {
 
       Ok(row) => match row {
@@ -225,7 +225,7 @@ impl Action {
 
   pub async fn get_by_id(id: &Uuid, database_pool: &deadpool_postgres::Pool) -> Result<Self, ResourceError> {
 
-    let query = include_str!("../../queries/actions/get-action-row-by-id.sql");
+    let query = include_str!("../../queries/actions/get_action_row_by_id.sql");
     let database_client = database_pool.get().await?;
     let row = match database_client.query_opt(query, &[&id]).await {
 
@@ -251,10 +251,10 @@ impl Action {
   pub async fn initialize_actions_table(database_pool: &deadpool_postgres::Pool) -> Result<(), ResourceError> {
 
     let database_client = database_pool.get().await?;
-    let table_initialization_query = include_str!("../../queries/actions/initialize-actions-table.sql");
+    let table_initialization_query = include_str!("../../queries/actions/initialize_actions_table.sql");
     database_client.execute(table_initialization_query, &[]).await?;
 
-    let view_initialization_query = include_str!("../../queries/actions/initialize-hydrated-actions-view.sql");
+    let view_initialization_query = include_str!("../../queries/actions/initialize_hydrated_actions_view.sql");
     database_client.execute(view_initialization_query, &[]).await?;
 
     return Ok(());
@@ -334,7 +334,7 @@ impl DeletableResource for Action {
   async fn delete(&self, database_pool: &deadpool_postgres::Pool) -> Result<(), ResourceError> {
 
     let database_client = database_pool.get().await?;
-    let query = include_str!("../../queries/actions/delete-action-row.sql");
+    let query = include_str!("../../queries/actions/delete_action_row_by_id.sql");
     database_client.execute(query, &[&self.id]).await?;
     return Ok(());
 

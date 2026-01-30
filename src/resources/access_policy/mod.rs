@@ -469,7 +469,7 @@ impl AccessPolicy {
   pub async fn create(initial_properties: &InitialAccessPolicyProperties, database_pool: &deadpool_postgres::Pool) -> Result<Self, ResourceError> {
 
     // Insert the access policy into the database.
-    let query = include_str!("../../queries/access_policies/insert-access-policy-row.sql");
+    let query = include_str!("../../queries/access_policies/insert_access_policy_row.sql");
     let parameters: &[&(dyn ToSql + Sync)] = &[
       &initial_properties.action_id,
       &initial_properties.permission_level,
@@ -526,7 +526,7 @@ impl AccessPolicy {
   /// Gets an access policy by its ID.
   pub async fn get_by_id(id: &Uuid, database_pool: &deadpool_postgres::Pool) -> Result<Self, ResourceError> {
 
-    let query = include_str!("../../queries/access_policies/get-access-policy-row-by-id.sql");
+    let query = include_str!("../../queries/access_policies/get_access_policy_row_by_id.sql");
     let parameters: &[&(dyn ToSql + Sync)] = &[&id];
     let database_client = database_pool.get().await?;
     let row = match database_client.query_opt(query, parameters).await {
@@ -885,7 +885,7 @@ impl DeletableResource for AccessPolicy {
   async fn delete(&self, database_pool: &deadpool_postgres::Pool) -> Result<(), ResourceError> {
 
     let database_client = database_pool.get().await?;
-    let query = include_str!("../../queries/access_policies/delete-access-policy-row.sql");
+    let query = include_str!("../../queries/access_policies/delete_access_policy_row_by_id.sql");
     database_client.execute(query, &[&self.id]).await?;
     return Ok(());
 
