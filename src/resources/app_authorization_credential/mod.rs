@@ -9,7 +9,7 @@ pub const DEFAULT_MAXIMUM_APP_AUTHORIZATION_CREDENTIAL_LIST_LIMIT: i64 = 1000;
 pub const ALLOWED_QUERY_KEYS: &[&str] = &[];
 pub const UUID_QUERY_KEYS: &[&str] = &[];
 pub const RESOURCE_NAME: &str = "AppAuthorizationCredential";
-pub const DATABASE_TABLE_NAME: &str = "app_authorizations_credentials";
+pub const DATABASE_TABLE_NAME: &str = "app_authorization_credentials";
 pub const GET_RESOURCE_ACTION_NAME: &str = "slashstep.appAuthorizationCredentials.get";
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
