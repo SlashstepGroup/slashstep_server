@@ -1,6 +1,8 @@
+use serde::{Deserialize, Serialize};
 use uuid::Uuid;
-use crate::resources::ResourceError;
+use crate::resources::{DeletableResource, ResourceError};
 
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct AppAuthorizationCredential {
 
   /// The ID of the app authorization credential.
@@ -16,7 +18,7 @@ impl AppAuthorizationCredential {
   pub async fn get_by_id(id: &Uuid, database_pool: &deadpool_postgres::Pool) -> Result<Self, ResourceError> {
 
     let database_client = database_pool.get().await?;
-    let query = include_str!("../../queries/app-authorization-credentials/get-app-authorization-credential-row-by-id.sql");
+    let query = include_str!("../../queries/app_authorization_credentials/get_app_authorization_credential_row_by_id.sql");
     let row = match database_client.query_opt(query, &[&id]).await {
 
       Ok(row) => match row {
@@ -50,8 +52,21 @@ impl AppAuthorizationCredential {
   pub async fn initialize_app_authorization_credentials_table(database_pool: &deadpool_postgres::Pool) -> Result<(), ResourceError> {
 
     let database_client = database_pool.get().await?;
-    let query = include_str!("../../queries/app-authorization-credentials/initialize-app-authorization-credentials-table.sql");
+    let query = include_str!("../../queries/app_authorization_credentials/initialize_app_authorization_credentials_table.sql");
     database_client.execute(query, &[]).await?;
+    return Ok(());
+
+  }
+
+}
+
+impl DeletableResource for AppAuthorizationCredential {
+
+  async fn delete(&self, database_pool: &deadpool_postgres::Pool) -> Result<(), ResourceError> {
+
+    let database_client = database_pool.get().await?;
+    let query = include_str!("../../queries/app_authorization_credentials/delete_app_authorization_credential_row_by_id.sql");
+    database_client.execute(query, &[&self.id]).await?;
     return Ok(());
 
   }
