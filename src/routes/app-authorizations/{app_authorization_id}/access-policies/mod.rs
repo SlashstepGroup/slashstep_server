@@ -36,7 +36,7 @@ async fn handle_list_access_policies_request(
   let resource_hierarchy = get_resource_hierarchy(&target_app_authorization, &AccessPolicyResourceType::AppAuthorization, &target_app_authorization.id, &http_transaction, &state.database_pool).await?;
 
   let query = format!(
-    "scoped_resource_type = 'AppAuthorization' AND scoped_app_authorization = {}{}", 
+    "scoped_resource_type = 'AppAuthorization' AND scoped_app_authorization_id = {}{}", 
     quote_literal(&target_app_authorization.id.to_string()), 
     query_parameters.query.and_then(|query| Some(format!(" AND {}", query))).unwrap_or("".to_string())
   );
