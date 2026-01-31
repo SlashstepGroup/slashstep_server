@@ -22,7 +22,7 @@ use crate::{
       AccessPolicyPermissionLevel,
       IndividualPrincipal
     }, action::Action, app_authorization::{AppAuthorization, DEFAULT_APP_AUTHORIZATION_LIST_LIMIT}, session::Session
-  }, tests::{TestEnvironment, TestSlashstepServerError}, utilities::reusable_route_handlers::ListAppAuthorizationsResponseBody
+  }, tests::{TestEnvironment, TestSlashstepServerError}, utilities::reusable_route_handlers::ListResourcesResponseBody
 };
 
 /// Verifies that the router can return a 200 status code and the requested resource list.
@@ -64,19 +64,19 @@ async fn verify_returned_resource_list_without_query() -> Result<(), TestSlashst
   // Verify the response.
   assert_eq!(response.status_code(), StatusCode::OK);
 
-  let response_json: ListAppAuthorizationsResponseBody = response.json();
+  let response_json: ListResourcesResponseBody::<AppAuthorization> = response.json();
   assert!(response_json.total_count > 0);
-  assert!(response_json.app_authorizations.len() > 0);
+  assert!(response_json.resources.len() > 0);
 
   let actual_app_authorization_count = AppAuthorization::count("", &test_environment.database_pool, Some(&IndividualPrincipal::User(user.id))).await?;
   assert_eq!(response_json.total_count, actual_app_authorization_count);
 
   let actual_app_authorizations = AppAuthorization::list("", &test_environment.database_pool, Some(&IndividualPrincipal::User(user.id))).await?;
-  assert_eq!(response_json.app_authorizations.len(), actual_app_authorizations.len());
+  assert_eq!(response_json.resources.len(), actual_app_authorizations.len());
 
   for actual_app_authorization in actual_app_authorizations {
 
-    let found_access_policy = response_json.app_authorizations.iter().find(|app_authorization| app_authorization.id == actual_app_authorization.id);
+    let found_access_policy = response_json.resources.iter().find(|app_authorization| app_authorization.id == actual_app_authorization.id);
     assert!(found_access_policy.is_some());
 
   }
@@ -126,16 +126,16 @@ async fn verify_returned_resource_list_with_query() -> Result<(), TestSlashstepS
   
   assert_eq!(response.status_code(), StatusCode::OK);
 
-  let response_json: ListAppAuthorizationsResponseBody = response.json();
+  let response_json: ListResourcesResponseBody::<AppAuthorization> = response.json();
   let actual_app_authorization_count = AppAuthorization::count(&query, &test_environment.database_pool, Some(&IndividualPrincipal::User(user.id))).await?;
   assert_eq!(response_json.total_count, actual_app_authorization_count);
 
   let actual_app_authorizations = AppAuthorization::list(&query, &test_environment.database_pool, Some(&IndividualPrincipal::User(user.id))).await?;
-  assert_eq!(response_json.app_authorizations.len(), actual_app_authorizations.len());
+  assert_eq!(response_json.resources.len(), actual_app_authorizations.len());
 
   for actual_action in actual_app_authorizations {
 
-    let found_action = response_json.app_authorizations.iter().find(|action| action.id == actual_action.id);
+    let found_action = response_json.resources.iter().find(|action| action.id == actual_action.id);
     assert!(found_action.is_some());
 
   }
@@ -188,8 +188,8 @@ async fn verify_default_resource_list_limit() -> Result<(), TestSlashstepServerE
   // Verify the response.
   assert_eq!(response.status_code(), StatusCode::OK);
 
-  let response_body: ListAppAuthorizationsResponseBody = response.json();
-  assert_eq!(response_body.app_authorizations.len(), DEFAULT_APP_AUTHORIZATION_LIST_LIMIT as usize);
+  let response_body: ListResourcesResponseBody::<AppAuthorization> = response.json();
+  assert_eq!(response_body.resources.len(), DEFAULT_APP_AUTHORIZATION_LIST_LIMIT as usize);
 
   return Ok(());
 

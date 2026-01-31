@@ -26,7 +26,7 @@ use crate::{
       IndividualPrincipal, 
       InitialAccessPolicyProperties
     }, action::Action, app::{App, DEFAULT_APP_LIST_LIMIT, DEFAULT_MAXIMUM_APP_LIST_LIMIT}, session::Session
-  }, routes::apps::ListAppsResponseBody, tests::{TestEnvironment, TestSlashstepServerError}
+  }, routes::apps::ListAppsResponseBody, tests::{TestEnvironment, TestSlashstepServerError}, utilities::reusable_route_handlers::ListResourcesResponseBody
 };
 
 /// Verifies that the router can return a 200 status code and the requested list.
@@ -244,8 +244,8 @@ async fn verify_default_list_limit() -> Result<(), TestSlashstepServerError> {
   // Verify the response.
   assert_eq!(response.status_code(), StatusCode::OK);
 
-  let response_body: ListAppsResponseBody = response.json();
-  assert_eq!(response_body.apps.len(), DEFAULT_APP_LIST_LIMIT as usize);
+  let response_body: ListResourcesResponseBody::<App> = response.json();
+  assert_eq!(response_body.resources.len(), DEFAULT_APP_LIST_LIMIT as usize);
 
   return Ok(());
 
