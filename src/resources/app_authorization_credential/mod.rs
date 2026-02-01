@@ -1,3 +1,6 @@
+#[cfg(test)]
+mod tests;
+
 use chrono::{DateTime, Utc};
 use postgres_types::ToSql;
 use serde::{Deserialize, Serialize};
@@ -42,7 +45,7 @@ pub struct AppAuthorizationCredential {
 
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize, Default)]
 pub struct InitialAppAuthorizationCredentialProperties {
 
   /// The ID of the app authorization.
@@ -103,8 +106,8 @@ impl AppAuthorizationCredential {
     let query = include_str!("../../queries/app_authorization_credentials/insert_app_authorization_credential_row.sql");
     let parameters: &[&(dyn ToSql + Sync)] = &[
       &initial_properties.app_authorization_id,
-      &initial_properties.access_token_expiration_date,
-      &initial_properties.refresh_token_expiration_date,
+      &DateTime::from_timestamp_millis(initial_properties.access_token_expiration_date.timestamp_millis()),
+      &DateTime::from_timestamp_millis(initial_properties.refresh_token_expiration_date.timestamp_millis()),
       &initial_properties.refreshed_app_authorization_credential_id
     ];
     let database_client = database_pool.get().await?;
