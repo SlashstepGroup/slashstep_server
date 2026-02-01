@@ -161,32 +161,32 @@ async fn verify_permission_when_getting_resource_by_id() -> Result<(), TestSlash
 
 }
 
-// /// Verifies that the router can return a 404 status code if the requested resource doesn't exist.
-// #[tokio::test]
-// #[timeout(20000)]
-// async fn verify_not_found_when_getting_resource_by_id() -> Result<(), TestSlashstepServerError> {
+/// Verifies that the router can return a 404 status code if the requested resource doesn't exist.
+#[tokio::test]
+#[timeout(20000)]
+async fn verify_not_found_when_getting_resource_by_id() -> Result<(), TestSlashstepServerError> {
 
-//   let test_environment = TestEnvironment::new().await?;
-//   initialize_required_tables(&test_environment.database_pool).await?;
-//   initialize_predefined_actions(&test_environment.database_pool).await?;
-//   initialize_predefined_roles(&test_environment.database_pool).await?;
+  let test_environment = TestEnvironment::new().await?;
+  initialize_required_tables(&test_environment.database_pool).await?;
+  initialize_predefined_actions(&test_environment.database_pool).await?;
+  initialize_predefined_roles(&test_environment.database_pool).await?;
 
-//   // Set up the server and send the request.
-//   let state = AppState {
-//     database_pool: test_environment.database_pool.clone(),
-//   };
-//   let router = super::get_router(state.clone())
-//     .with_state(state)
-//     .into_make_service_with_connect_info::<SocketAddr>();
-//   let test_server = TestServer::new(router)?;
-//   let response = test_server.get(&format!("/app-credentials/{}", uuid::Uuid::now_v7()))
-//     .await;
+  // Set up the server and send the request.
+  let state = AppState {
+    database_pool: test_environment.database_pool.clone(),
+  };
+  let router = super::get_router(state.clone())
+    .with_state(state)
+    .into_make_service_with_connect_info::<SocketAddr>();
+  let test_server = TestServer::new(router)?;
+  let response = test_server.get(&format!("/app-credentials/{}", uuid::Uuid::now_v7()))
+    .await;
   
-//   // Verify the response.
-//   assert_eq!(response.status_code(), 404);
-//   return Ok(());
+  // Verify the response.
+  assert_eq!(response.status_code(), 404);
+  return Ok(());
 
-// }
+}
 
 // /// Verifies that the router can return a 204 status code if the resource is successfully deleted.
 // #[tokio::test]
