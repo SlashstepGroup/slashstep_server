@@ -3,7 +3,7 @@ use chrono::{DateTime, Utc};
 use postgres_types::ToSql;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
-use crate::{resources::{ResourceError, access_policy::IndividualPrincipal}, utilities::slashstepql::{self, SlashstepQLError, SlashstepQLFilterSanitizer, SlashstepQLParsedParameter, SlashstepQLSanitizeFunctionOptions}};
+use crate::{resources::{DeletableResource, ResourceError, access_policy::IndividualPrincipal}, utilities::slashstepql::{self, SlashstepQLError, SlashstepQLFilterSanitizer, SlashstepQLParsedParameter, SlashstepQLSanitizeFunctionOptions}};
 
 pub const DEFAULT_APP_CREDENTIAL_LIST_LIMIT: i64 = 1000;
 pub const DEFAULT_MAXIMUM_APP_CREDENTIAL_LIST_LIMIT: i64 = 1000;
@@ -84,7 +84,7 @@ impl AppCredential {
   pub async fn initialize_app_credentials_table(database_pool: &deadpool_postgres::Pool) -> Result<(), ResourceError> {
 
     let database_client = database_pool.get().await?;
-    let query = include_str!("../../queries/app-credentials/initialize-app-credentials-table.sql");
+    let query = include_str!("../../queries/app_credentials/initialize_app_credentials_table.sql");
     database_client.execute(query, &[]).await?;
     return Ok(());
 
@@ -130,7 +130,7 @@ impl AppCredential {
 
   pub async fn create(initial_properties: &InitialAppCredentialProperties, database_pool: &deadpool_postgres::Pool) -> Result<Self, ResourceError> {
 
-    let query = include_str!("../../queries/app-credentials/insert-app-credential-row.sql");
+    let query = include_str!("../../queries/app_credentials/insert_app_credential_row.sql");
     let parameters: &[&(dyn ToSql + Sync)] = &[
       &initial_properties.app_id,
       &initial_properties.description,
@@ -155,7 +155,7 @@ impl AppCredential {
   pub async fn get_by_id(id: &Uuid, database_pool: &deadpool_postgres::Pool) -> Result<Self, ResourceError> {
 
     let database_client = database_pool.get().await?;
-    let query = include_str!("../../queries/app-credentials/get-app-credential-row-by-id.sql");
+    let query = include_str!("../../queries/app_credentials/get_app_credential_row_by_id.sql");
     let row = match database_client.query_opt(query, &[&id]).await {
 
       Ok(row) => match row {
@@ -215,6 +215,19 @@ impl AppCredential {
     }
 
     return Ok(Box::new(value));
+
+  }
+
+}
+
+impl DeletableResource for AppCredential {
+
+  async fn delete(&self, database_pool: &deadpool_postgres::Pool) -> Result<(), ResourceError> {
+
+    let database_client = database_pool.get().await?;
+    let query = include_str!("../../queries/app_credentials/delete_app_credential_row_by_id.sql");
+    database_client.execute(query, &[&self.id]).await?;
+    return Ok(());
 
   }
 
