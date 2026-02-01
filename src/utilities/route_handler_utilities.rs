@@ -1,4 +1,4 @@
-use std::sync::Arc;
+use std::{pin::Pin, sync::Arc};
 
 use crate::{HTTPError, resources::{DeletableResource, ResourceError, access_policy::{AccessPolicyPermissionLevel, AccessPolicyResourceType, IndividualPrincipal, Principal, ResourceHierarchy}, action::Action, app::App, app_authorization::AppAuthorization, app_authorization_credential::AppAuthorizationCredential, app_credential::AppCredential, http_transaction::HTTPTransaction, server_log_entry::ServerLogEntry, user::User}, utilities::{principal_permission_verifier::{PrincipalPermissionVerifier, PrincipalPermissionVerifierError}, resource_hierarchy::{self, ResourceHierarchyError}, slashstepql::SlashstepQLError}};
 use colored::Colorize;
@@ -282,6 +282,62 @@ pub async fn get_app_authorization_credential_from_id(app_authorization_credenti
   };
 
   return Ok(app_authorization_credential);
+
+}
+
+pub async fn get_uuid_from_string(string: &str, resource_type_name_singular: &str, http_transaction: &HTTPTransaction, database_pool: &deadpool_postgres::Pool) -> Result<Uuid, HTTPError> {
+
+  let uuid = match Uuid::parse_str(string) {
+
+    Ok(uuid) => uuid,
+
+    Err(_) => {
+
+      let http_error = HTTPError::BadRequestError(Some(format!("You must provide a valid UUID for the {} ID.", resource_type_name_singular)));
+      ServerLogEntry::from_http_error(&http_error, Some(&http_transaction.id), &database_pool).await.ok();
+      return Err(http_error);
+
+    }
+
+  };
+
+  return Ok(uuid);
+
+}
+
+pub async fn get_resource_by_id<ResourceStruct, GetResourceByIDFunction>(
+  resource_type_name_singular: &str, 
+  resource_id: &Uuid, 
+  http_transaction: &HTTPTransaction, 
+  database_pool: &deadpool_postgres::Pool, 
+  get_resource_by_id_function: GetResourceByIDFunction
+) -> Result<ResourceStruct, HTTPError> where 
+  ResourceStruct: DeletableResource,
+  GetResourceByIDFunction: for<'a> Fn(&'a Uuid, &'a deadpool_postgres::Pool) -> Box<dyn Future<Output = Result<ResourceStruct, ResourceError>> + 'a + Send>
+{
+
+  ServerLogEntry::trace(&format!("Getting {} {}...", resource_type_name_singular, resource_id), Some(&http_transaction.id), database_pool).await.ok();
+  let resource = match Pin::from(get_resource_by_id_function(&resource_id, database_pool)).await {
+
+    Ok(resource) => resource,
+
+    Err(error) => {
+
+      let http_error = match error {
+        
+        ResourceError::NotFoundError(message) => HTTPError::NotFoundError(Some(message)),
+
+        error => HTTPError::InternalServerError(Some(format!("Failed to get {} {}: {:?}", resource_type_name_singular, resource_id, error)))
+
+      };
+      http_error.print_and_save(Some(&http_transaction.id), &database_pool).await.ok();
+      return Err(http_error);
+
+    }
+
+  };
+
+  return Ok(resource);
 
 }
 

@@ -18,15 +18,11 @@ use std::sync::Arc;
 use axum::{Extension, Json, Router, extract::{Path, State}};
 use reqwest::StatusCode;
 use crate::{
-  AppState, 
-  HTTPError, 
-  middleware::{authentication_middleware, http_request_middleware}, 
-  resources::{
+  AppState, HTTPError, middleware::{authentication_middleware, http_request_middleware}, resources::{
     DeletableResource, access_policy::{AccessPolicyPermissionLevel, AccessPolicyResourceType}, action_log_entry::{ActionLogEntry, ActionLogEntryActorType, ActionLogEntryTargetResourceType, InitialActionLogEntryProperties}, app::App, app_authorization::AppAuthorization, http_transaction::HTTPTransaction, server_log_entry::ServerLogEntry, user::User
-  }, 
-  utilities::route_handler_utilities::{
-    AuthenticatedPrincipal, get_action_from_name, get_app_authorization_from_id, get_authenticated_principal, get_resource_hierarchy, verify_principal_permissions
-  }
+  }, routes::app_authorizations::app_authorization_id, utilities::{reusable_route_handlers::delete_resource, route_handler_utilities::{
+    AuthenticatedPrincipal, get_action_from_name, get_app_authorization_from_id, get_authenticated_principal, get_resource_hierarchy, get_uuid_from_string, verify_principal_permissions
+  }}
 };
 
 /// GET /app-authorizations/{app_authorization_id}
@@ -72,44 +68,25 @@ async fn handle_delete_app_authorization_request(
   Path(app_authorization_id): Path<String>,
   State(state): State<AppState>, 
   Extension(http_transaction): Extension<Arc<HTTPTransaction>>,
-  Extension(authenticating_user): Extension<Option<Arc<User>>>,
-  Extension(authenticating_app): Extension<Option<Arc<App>>>
+  Extension(authenticated_user): Extension<Option<Arc<User>>>,
+  Extension(authenticated_app): Extension<Option<Arc<App>>>
 ) -> Result<StatusCode, HTTPError> {
 
-  let http_transaction = http_transaction.clone();
-  let target_app_authorization = get_app_authorization_from_id(&app_authorization_id, &http_transaction, &state.database_pool).await?;
-  let resource_hierarchy = get_resource_hierarchy(&target_app_authorization, &AccessPolicyResourceType::AppAuthorization, &target_app_authorization.id, &http_transaction, &state.database_pool).await?;
-  let delete_app_authorizations_action = get_action_from_name("slashstep.appAuthorizations.delete", &http_transaction, &state.database_pool).await?;
-  let authenticated_principal = get_authenticated_principal(&authenticating_user, &authenticating_app)?;
-  verify_principal_permissions(&authenticated_principal, &delete_app_authorizations_action, &resource_hierarchy, &http_transaction, &AccessPolicyPermissionLevel::User, &state.database_pool).await?;
+  let app_authorization_id = get_uuid_from_string(&app_authorization_id, "app authorization", &http_transaction, &state.database_pool).await?;
+  let response = delete_resource(
+    State(state), 
+    Extension(http_transaction), 
+    Extension(authenticated_user), 
+    Extension(authenticated_app), 
+    Some(&AccessPolicyResourceType::AppAuthorization),
+    &app_authorization_id, 
+    "slashstep.appAuthorizations.delete",
+    "app authorization",
+    &ActionLogEntryTargetResourceType::AppAuthorization,
+    |app_authorization_id, database_pool| Box::new(AppAuthorization::get_by_id(app_authorization_id, database_pool))
+  ).await;
 
-  match target_app_authorization.delete(&state.database_pool).await {
-
-    Ok(_) => {},
-
-    Err(error) => {
-
-      let http_error = HTTPError::InternalServerError(Some(format!("Failed to delete app authorization: {:?}", error)));
-      http_error.print_and_save(Some(&http_transaction.id), &state.database_pool).await.ok();
-      return Err(http_error);
-
-    }
-
-  }
-
-  ActionLogEntry::create(&InitialActionLogEntryProperties {
-    action_id: delete_app_authorizations_action.id,
-    http_transaction_id: Some(http_transaction.id),
-    actor_type: if let AuthenticatedPrincipal::User(_) = &authenticated_principal { ActionLogEntryActorType::User } else { ActionLogEntryActorType::App },
-    actor_user_id: if let AuthenticatedPrincipal::User(user) = &authenticated_principal { Some(user.id.clone()) } else { None },
-    actor_app_id: if let AuthenticatedPrincipal::App(app) = &authenticated_principal { Some(app.id.clone()) } else { None },
-    target_resource_type: ActionLogEntryTargetResourceType::AppAuthorization,
-    target_app_authorization_id: Some(target_app_authorization.id),
-    ..Default::default()
-  }, &state.database_pool).await.ok();
-  ServerLogEntry::success(&format!("Successfully deleted app authorization {}.", &app_authorization_id), Some(&http_transaction.id), &state.database_pool).await.ok();
-
-  return Ok(StatusCode::NO_CONTENT);
+  return response;
 
 }
 

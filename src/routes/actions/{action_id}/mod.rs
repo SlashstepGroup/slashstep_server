@@ -22,9 +22,9 @@ use crate::{
       EditableActionProperties
     }, action_log_entry::{ActionLogEntry, ActionLogEntryActorType, ActionLogEntryTargetResourceType, InitialActionLogEntryProperties}, app::App, http_transaction::HTTPTransaction, server_log_entry::ServerLogEntry, user::User
   }, 
-  utilities::route_handler_utilities::{
-      AuthenticatedPrincipal, get_action_from_id, get_action_from_name, get_authenticated_principal, get_resource_hierarchy, verify_principal_permissions
-    }
+  utilities::{reusable_route_handlers::delete_resource, route_handler_utilities::{
+      AuthenticatedPrincipal, get_action_from_id, get_action_from_name, get_authenticated_principal, get_resource_hierarchy, get_uuid_from_string, verify_principal_permissions
+    }}
 };
 
 #[path = "./access-policies/mod.rs"]
@@ -153,44 +153,25 @@ async fn handle_delete_action_request(
   Path(action_id): Path<String>,
   State(state): State<AppState>, 
   Extension(http_transaction): Extension<Arc<HTTPTransaction>>,
-  Extension(user): Extension<Option<Arc<User>>>,
-  Extension(app): Extension<Option<Arc<App>>>
+  Extension(authenticated_user): Extension<Option<Arc<User>>>,
+  Extension(authenticated_app): Extension<Option<Arc<App>>>
 ) -> Result<StatusCode, HTTPError> {
 
-  let http_transaction = http_transaction.clone();
-  let target_action = get_action_from_id(&action_id, &http_transaction, &state.database_pool).await?;
-  let resource_hierarchy = get_resource_hierarchy(&target_action, &AccessPolicyResourceType::Action, &target_action.id, &http_transaction, &state.database_pool).await?;
-  let delete_actions_action = get_action_from_name("slashstep.actions.delete", &http_transaction, &state.database_pool).await?;
-  let authenticated_principal = get_authenticated_principal(&user, &app)?;
-  verify_principal_permissions(&authenticated_principal, &delete_actions_action, &resource_hierarchy, &http_transaction, &AccessPolicyPermissionLevel::User, &state.database_pool).await?;
+  let action_log_entry_id = get_uuid_from_string(&action_id, "action", &http_transaction, &state.database_pool).await?;
+  let response = delete_resource(
+    State(state), 
+    Extension(http_transaction), 
+    Extension(authenticated_user), 
+    Extension(authenticated_app), 
+    Some(&AccessPolicyResourceType::Action),
+    &action_log_entry_id, 
+    "slashstep.actions.delete",
+    "action",
+    &ActionLogEntryTargetResourceType::Action,
+    |action_id, database_pool| Box::new(Action::get_by_id(action_id, database_pool))
+  ).await;
 
-  match target_action.delete(&state.database_pool).await {
-
-    Ok(_) => {},
-
-    Err(error) => {
-
-      let http_error = HTTPError::InternalServerError(Some(format!("Failed to delete action: {:?}", error)));
-      http_error.print_and_save(Some(&http_transaction.id), &state.database_pool).await.ok();
-      return Err(http_error);
-
-    }
-
-  }
-
-  ActionLogEntry::create(&InitialActionLogEntryProperties {
-    action_id: delete_actions_action.id,
-    http_transaction_id: Some(http_transaction.id),
-    actor_type: if let AuthenticatedPrincipal::User(_) = &authenticated_principal { ActionLogEntryActorType::User } else { ActionLogEntryActorType::App },
-    actor_user_id: if let AuthenticatedPrincipal::User(user) = &authenticated_principal { Some(user.id.clone()) } else { None },
-    actor_app_id: if let AuthenticatedPrincipal::App(app) = &authenticated_principal { Some(app.id.clone()) } else { None },
-    target_resource_type: ActionLogEntryTargetResourceType::Action,
-    target_action_id: Some(target_action.id),
-    ..Default::default()
-  }, &state.database_pool).await.ok();
-  ServerLogEntry::success(&format!("Successfully deleted action {}.", action_id), Some(&http_transaction.id), &state.database_pool).await.ok();
-
-  return Ok(StatusCode::NO_CONTENT);
+  return response;
 
 }
 
