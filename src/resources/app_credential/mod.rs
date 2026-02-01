@@ -134,7 +134,7 @@ impl AppCredential {
     let parameters: &[&(dyn ToSql + Sync)] = &[
       &initial_properties.app_id,
       &initial_properties.description,
-      &initial_properties.expiration_date,
+      &initial_properties.expiration_date.and_then(|expiration_date| DateTime::from_timestamp_millis(expiration_date.timestamp_millis())),
       &initial_properties.creation_ip_address,
       &initial_properties.public_key
     ];

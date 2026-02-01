@@ -171,7 +171,7 @@ async fn handle_create_app_credential_request(
   let created_app_credential = match AppCredential::create(&InitialAppCredentialProperties {
     app_id: target_app.id,
     description: app_credential_properties_json.description.clone(),
-    expiration_date: app_credential_properties_json.expiration_date.and_then(|expiration_date| DateTime::from_timestamp_millis(expiration_date.timestamp_millis())),
+    expiration_date: app_credential_properties_json.expiration_date,
     creation_ip_address: http_transaction.ip_address.clone(),
     public_key: public_key.clone()
   }, &state.database_pool).await {

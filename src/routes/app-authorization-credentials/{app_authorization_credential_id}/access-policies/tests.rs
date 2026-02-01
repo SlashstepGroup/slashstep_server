@@ -17,7 +17,7 @@ use reqwest::StatusCode;
 use uuid::Uuid;
 use crate::{AppState, initialize_required_tables, predefinitions::{initialize_predefined_actions, initialize_predefined_roles}, resources::{access_policy::{AccessPolicy, AccessPolicyPermissionLevel, AccessPolicyPrincipalType, DEFAULT_ACCESS_POLICY_LIST_LIMIT, IndividualPrincipal, InitialAccessPolicyProperties, InitialAccessPolicyPropertiesForPredefinedScope}, action::Action, session::Session}, tests::{TestEnvironment, TestSlashstepServerError}, utilities::reusable_route_handlers::ListResourcesResponseBody};
 
-async fn create_action_access_policy(database_pool: &deadpool_postgres::Pool, scoped_action_id: &Uuid, user_id: &Uuid, action_id: &Uuid, permission_level: &AccessPolicyPermissionLevel) -> Result<AccessPolicy, TestSlashstepServerError> {
+async fn create_app_authorization_credential_access_policy(database_pool: &deadpool_postgres::Pool, scoped_app_authorization_credential_id: &Uuid, user_id: &Uuid, action_id: &Uuid, permission_level: &AccessPolicyPermissionLevel) -> Result<AccessPolicy, TestSlashstepServerError> {
 
   let access_policy = AccessPolicy::create(&InitialAccessPolicyProperties {
     action_id: action_id.clone(),
@@ -25,8 +25,8 @@ async fn create_action_access_policy(database_pool: &deadpool_postgres::Pool, sc
     is_inheritance_enabled: true,
     principal_type: crate::resources::access_policy::AccessPolicyPrincipalType::User,
     principal_user_id: Some(user_id.clone()),
-    scoped_resource_type: crate::resources::access_policy::AccessPolicyResourceType::Action,
-    scoped_action_id: Some(scoped_action_id.clone()),
+    scoped_resource_type: crate::resources::access_policy::AccessPolicyResourceType::AppAuthorizationCredential,
+    scoped_app_authorization_credential_id: Some(scoped_app_authorization_credential_id.clone()),
     ..Default::default()
   }, database_pool).await?;
 
@@ -88,340 +88,370 @@ async fn verify_successful_access_policy_creation() -> Result<(), TestSlashstepS
   
 }
 
-// /// Verifies that the router can return a 200 status code and the requested access policy list.
-// #[tokio::test]
-// async fn verify_returned_access_policy_list_without_query() -> Result<(), TestSlashstepServerError> {
+/// Verifies that the router can return a 200 status code and the requested access policy list.
+#[tokio::test]
+async fn verify_returned_access_policy_list_without_query() -> Result<(), TestSlashstepServerError> {
 
-//   let test_environment = TestEnvironment::new().await?;
-//   initialize_required_tables(&test_environment.database_pool).await?;
-//   initialize_predefined_actions(&test_environment.database_pool).await?;
+  let test_environment = TestEnvironment::new().await?;
+  initialize_required_tables(&test_environment.database_pool).await?;
+  initialize_predefined_actions(&test_environment.database_pool).await?;
   
-//   // Give the user access to the "slashstep.accessPolicies.get" action.
-//   let user = test_environment.create_random_user().await?;
-//   let session = test_environment.create_session(&user.id).await?;
-//   let json_web_token_private_key = Session::get_json_web_token_private_key().await?;
-//   let session_token = session.generate_json_web_token(&json_web_token_private_key).await?;
-//   let get_access_policies_action = Action::get_by_name("slashstep.accessPolicies.get", &test_environment.database_pool).await?;
-//   test_environment.create_instance_access_policy(&user.id, &get_access_policies_action.id, &AccessPolicyPermissionLevel::User).await?;
+  // Give the user access to the "slashstep.accessPolicies.get" action.
+  let user = test_environment.create_random_user().await?;
+  let session = test_environment.create_session(&user.id).await?;
+  let json_web_token_private_key = Session::get_json_web_token_private_key().await?;
+  let session_token = session.generate_json_web_token(&json_web_token_private_key).await?;
+  let get_access_policies_action = Action::get_by_name("slashstep.accessPolicies.get", &test_environment.database_pool).await?;
+  test_environment.create_instance_access_policy(&user.id, &get_access_policies_action.id, &AccessPolicyPermissionLevel::User).await?;
 
-//   // Give the user access to the "slashstep.accessPolicies.list" action.
-//   let list_access_policies_action = Action::get_by_name("slashstep.accessPolicies.list", &test_environment.database_pool).await?;
-//   test_environment.create_instance_access_policy(&user.id, &list_access_policies_action.id, &AccessPolicyPermissionLevel::User).await?;
+  // Give the user access to the "slashstep.accessPolicies.list" action.
+  let list_access_policies_action = Action::get_by_name("slashstep.accessPolicies.list", &test_environment.database_pool).await?;
+  test_environment.create_instance_access_policy(&user.id, &list_access_policies_action.id, &AccessPolicyPermissionLevel::User).await?;
 
-//   // Create a dummy action.
-//   let dummy_app_authorization_credential = test_environment.create_random_app_authorization_credential(&None).await?;
-//   let shown_access_policy = create_action_access_policy(&test_environment.database_pool, &dummy_action.id, &user.id, &list_access_policies_action.id, &AccessPolicyPermissionLevel::User).await?;
+  // Create a dummy action.
+  let dummy_app_authorization_credential = test_environment.create_random_app_authorization_credential(&None).await?;
+  let shown_access_policy = create_app_authorization_credential_access_policy(&test_environment.database_pool, &dummy_app_authorization_credential.id, &user.id, &list_access_policies_action.id, &AccessPolicyPermissionLevel::User).await?;
 
-//   // Set up the server and send the request.
-//   let state = AppState {
-//     database_pool: test_environment.database_pool.clone(),
-//   };
-//   let router = super::get_router(state.clone())
-//     .with_state(state)
-//     .into_make_service_with_connect_info::<SocketAddr>();
-//   let test_server = TestServer::new(router)?;
-//   let response = test_server.get(&format!("/app-authorization-credentials/{}/access-policies", &dummy_action.id))
-//     .add_cookie(Cookie::new("sessionToken", format!("Bearer {}", &session_token)))
-//     .await;
+  // Set up the server and send the request.
+  let state = AppState {
+    database_pool: test_environment.database_pool.clone(),
+  };
+  let router = super::get_router(state.clone())
+    .with_state(state)
+    .into_make_service_with_connect_info::<SocketAddr>();
+  let test_server = TestServer::new(router)?;
+  let response = test_server.get(&format!("/app-authorization-credentials/{}/access-policies", &dummy_app_authorization_credential.id))
+    .add_cookie(Cookie::new("sessionToken", format!("Bearer {}", &session_token)))
+    .await;
   
-//   // Verify the response.
-//   assert_eq!(response.status_code(), 200);
+  // Verify the response.
+  assert_eq!(response.status_code(), 200);
 
-//   let response_access_policies: ListResourcesResponseBody::<AccessPolicy> = response.json();
-//   assert_eq!(response_access_policies.total_count, 1);
-//   assert_eq!(response_access_policies.resources.len(), 1);
+  let response_access_policies: ListResourcesResponseBody::<AccessPolicy> = response.json();
+  assert_eq!(response_access_policies.total_count, 1);
+  assert_eq!(response_access_policies.resources.len(), 1);
 
-//   let query = format!("scoped_resource_type = 'Action' AND scoped_action_id = {}", quote_literal(&dummy_action.id.to_string()));
-//   let actual_access_policy_count = AccessPolicy::count(&query, &test_environment.database_pool, Some(&IndividualPrincipal::User(user.id))).await?;
-//   assert_eq!(response_access_policies.total_count, actual_access_policy_count);
+  let query = format!("scoped_resource_type = 'AppAuthorizationCredential' AND scoped_app_authorization_credential_id = {}", quote_literal(&dummy_app_authorization_credential.id.to_string()));
+  let actual_access_policy_count = AccessPolicy::count(&query, &test_environment.database_pool, Some(&IndividualPrincipal::User(user.id))).await?;
+  assert_eq!(response_access_policies.total_count, actual_access_policy_count);
 
-//   let actual_access_policies = AccessPolicy::list(&query, &test_environment.database_pool, Some(&IndividualPrincipal::User(user.id))).await?;
-//   assert_eq!(response_access_policies.resources.len(), actual_access_policies.len());
-//   assert_eq!(response_access_policies.resources[0].id, actual_access_policies[0].id);
-//   assert_eq!(response_access_policies.resources[0].id, shown_access_policy.id);
+  let actual_access_policies = AccessPolicy::list(&query, &test_environment.database_pool, Some(&IndividualPrincipal::User(user.id))).await?;
+  assert_eq!(response_access_policies.resources.len(), actual_access_policies.len());
+  assert_eq!(response_access_policies.resources[0].id, actual_access_policies[0].id);
+  assert_eq!(response_access_policies.resources[0].id, shown_access_policy.id);
 
-//   return Ok(());
+  return Ok(());
 
-// }
+}
 
-// /// Verifies that the router can return a 200 status code and the requested access policy list.
-// #[tokio::test]
-// async fn verify_returned_access_policy_list_with_query() -> Result<(), TestSlashstepServerError> {
+/// Verifies that the router can return a 200 status code and the requested access policy list.
+#[tokio::test]
+async fn verify_returned_access_policy_list_with_query() -> Result<(), TestSlashstepServerError> {
 
-//   let test_environment = TestEnvironment::new().await?;
-//   initialize_required_tables(&test_environment.database_pool).await?;
-//   initialize_predefined_actions(&test_environment.database_pool).await?;
+  let test_environment = TestEnvironment::new().await?;
+  initialize_required_tables(&test_environment.database_pool).await?;
+  initialize_predefined_actions(&test_environment.database_pool).await?;
   
-//   // Give the user access to the "slashstep.accessPolicies.get" action.
-//   let user = test_environment.create_random_user().await?;
-//   let session = test_environment.create_session(&user.id).await?;
-//   let json_web_token_private_key = Session::get_json_web_token_private_key().await?;
-//   let session_token = session.generate_json_web_token(&json_web_token_private_key).await?;
-//   let get_access_policies_action = Action::get_by_name("slashstep.accessPolicies.get", &test_environment.database_pool).await?;
-//   test_environment.create_instance_access_policy(&user.id, &get_access_policies_action.id, &AccessPolicyPermissionLevel::User).await?;
+  // Give the user access to the "slashstep.accessPolicies.get" action.
+  let user = test_environment.create_random_user().await?;
+  let session = test_environment.create_session(&user.id).await?;
+  let json_web_token_private_key = Session::get_json_web_token_private_key().await?;
+  let session_token = session.generate_json_web_token(&json_web_token_private_key).await?;
+  let get_access_policies_action = Action::get_by_name("slashstep.accessPolicies.get", &test_environment.database_pool).await?;
+  test_environment.create_instance_access_policy(&user.id, &get_access_policies_action.id, &AccessPolicyPermissionLevel::User).await?;
 
-//   // Give the user access to the "slashstep.accessPolicies.list" action.
-//   let list_access_policies_action = Action::get_by_name("slashstep.accessPolicies.list", &test_environment.database_pool).await?;
-//   test_environment.create_instance_access_policy(&user.id, &list_access_policies_action.id, &AccessPolicyPermissionLevel::User).await?;
+  // Give the user access to the "slashstep.accessPolicies.list" action.
+  let list_access_policies_action = Action::get_by_name("slashstep.accessPolicies.list", &test_environment.database_pool).await?;
+  test_environment.create_instance_access_policy(&user.id, &list_access_policies_action.id, &AccessPolicyPermissionLevel::User).await?;
 
-//   // Create a few dummy access policies.
-//   let dummy_app_authorization_credential = test_environment.create_random_app_authorization_credential(&None).await?;
-//   create_action_access_policy(&test_environment.database_pool, &dummy_action.id, &user.id, &list_access_policies_action.id, &AccessPolicyPermissionLevel::User).await?;
+  // Create a few dummy access policies.
+  let dummy_app_authorization_credential = test_environment.create_random_app_authorization_credential(&None).await?;
+  create_app_authorization_credential_access_policy(&test_environment.database_pool, &dummy_app_authorization_credential.id, &user.id, &list_access_policies_action.id, &AccessPolicyPermissionLevel::User).await?;
 
-//   let shown_access_policy = create_action_access_policy(&test_environment.database_pool, &dummy_action.id, &user.id, &get_access_policies_action.id, &AccessPolicyPermissionLevel::Editor).await?;
+  let shown_access_policy = create_app_authorization_credential_access_policy(&test_environment.database_pool, &dummy_app_authorization_credential.id, &user.id, &get_access_policies_action.id, &AccessPolicyPermissionLevel::Editor).await?;
 
-//   // Set up the server and send the request.
-//   let additional_query = format!("permission_level = 'Editor'");
-//   let state = AppState {
-//     database_pool: test_environment.database_pool.clone(),
-//   };
-//   let router = super::get_router(state.clone())
-//     .with_state(state)
-//     .into_make_service_with_connect_info::<SocketAddr>();
-//   let test_server = TestServer::new(router)?;
-//   let response = test_server.get(&format!("/app-authorization-credentials/{}/access-policies", &dummy_action.id))
-//     .add_cookie(Cookie::new("sessionToken", format!("Bearer {}", &session_token)))
-//     .add_query_param("query", &additional_query)
-//     .await;
+  // Set up the server and send the request.
+  let additional_query = format!("permission_level = 'Editor'");
+  let state = AppState {
+    database_pool: test_environment.database_pool.clone(),
+  };
+  let router = super::get_router(state.clone())
+    .with_state(state)
+    .into_make_service_with_connect_info::<SocketAddr>();
+  let test_server = TestServer::new(router)?;
+  let response = test_server.get(&format!("/app-authorization-credentials/{}/access-policies", &dummy_app_authorization_credential.id))
+    .add_cookie(Cookie::new("sessionToken", format!("Bearer {}", &session_token)))
+    .add_query_param("query", &additional_query)
+    .await;
   
-//   // Verify the response.
-//   assert_eq!(response.status_code(), 200);
+  // Verify the response.
+  assert_eq!(response.status_code(), 200);
 
-//   let response_access_policies: ListResourcesResponseBody::<AccessPolicy> = response.json();
-//   assert_eq!(response_access_policies.total_count, 1);
-//   assert_eq!(response_access_policies.resources.len(), 1);
+  let response_access_policies: ListResourcesResponseBody::<AccessPolicy> = response.json();
+  assert_eq!(response_access_policies.total_count, 1);
+  assert_eq!(response_access_policies.resources.len(), 1);
 
-//   let query = format!("scoped_resource_type = 'Action' AND scoped_action_id = {} and permission_level = 'Editor'", quote_literal(&dummy_action.id.to_string()));
-//   let actual_access_policy_count = AccessPolicy::count(&query, &test_environment.database_pool, Some(&IndividualPrincipal::User(user.id))).await?;
-//   assert_eq!(response_access_policies.total_count, actual_access_policy_count);
+  let query = format!("scoped_resource_type = 'AppAuthorizationCredential' AND scoped_app_authorization_credential_id = {} and permission_level = 'Editor'", quote_literal(&dummy_app_authorization_credential.id.to_string()));
+  let actual_access_policy_count = AccessPolicy::count(&query, &test_environment.database_pool, Some(&IndividualPrincipal::User(user.id))).await?;
+  assert_eq!(response_access_policies.total_count, actual_access_policy_count);
 
-//   let actual_access_policies = AccessPolicy::list(&query, &test_environment.database_pool, Some(&IndividualPrincipal::User(user.id))).await?;
-//   assert_eq!(response_access_policies.resources.len(), actual_access_policies.len());
-//   assert_eq!(response_access_policies.resources[0].id, actual_access_policies[0].id);
-//   assert_eq!(response_access_policies.resources[0].id, shown_access_policy.id);
+  let actual_access_policies = AccessPolicy::list(&query, &test_environment.database_pool, Some(&IndividualPrincipal::User(user.id))).await?;
+  assert_eq!(response_access_policies.resources.len(), actual_access_policies.len());
+  assert_eq!(response_access_policies.resources[0].id, actual_access_policies[0].id);
+  assert_eq!(response_access_policies.resources[0].id, shown_access_policy.id);
 
-//   return Ok(());
+  return Ok(());
 
-// }
+}
 
-// /// Verifies that the default access policy list limit is enforced.
-// #[tokio::test]
-// async fn verify_default_access_policy_list_limit() -> Result<(), TestSlashstepServerError> {
+/// Verifies that the default access policy list limit is enforced.
+#[tokio::test]
+async fn verify_default_access_policy_list_limit() -> Result<(), TestSlashstepServerError> {
 
-//   let test_environment = TestEnvironment::new().await?;
-//   initialize_required_tables(&test_environment.database_pool).await?;
-//   initialize_predefined_actions(&test_environment.database_pool).await?;
+  let test_environment = TestEnvironment::new().await?;
+  initialize_required_tables(&test_environment.database_pool).await?;
+  initialize_predefined_actions(&test_environment.database_pool).await?;
   
-//   // Give the user access to the "slashstep.accessPolicies.get" action.
-//   let user = test_environment.create_random_user().await?;
-//   let session = test_environment.create_session(&user.id).await?;
-//   let json_web_token_private_key = Session::get_json_web_token_private_key().await?;
-//   let session_token = session.generate_json_web_token(&json_web_token_private_key).await?;
-//   let get_access_policies_action = Action::get_by_name("slashstep.accessPolicies.get", &test_environment.database_pool).await?;
-//   test_environment.create_instance_access_policy(&user.id, &get_access_policies_action.id, &AccessPolicyPermissionLevel::User).await?;
+  // Give the user access to the "slashstep.accessPolicies.get" action.
+  let user = test_environment.create_random_user().await?;
+  let session = test_environment.create_session(&user.id).await?;
+  let json_web_token_private_key = Session::get_json_web_token_private_key().await?;
+  let session_token = session.generate_json_web_token(&json_web_token_private_key).await?;
+  let get_access_policies_action = Action::get_by_name("slashstep.accessPolicies.get", &test_environment.database_pool).await?;
+  test_environment.create_instance_access_policy(&user.id, &get_access_policies_action.id, &AccessPolicyPermissionLevel::User).await?;
 
-//   // Give the user access to the "slashstep.accessPolicies.list" action.
-//   let list_access_policies_action = Action::get_by_name("slashstep.accessPolicies.list", &test_environment.database_pool).await?;
-//   test_environment.create_instance_access_policy(&user.id, &list_access_policies_action.id, &AccessPolicyPermissionLevel::User).await?;
+  // Give the user access to the "slashstep.accessPolicies.list" action.
+  let list_access_policies_action = Action::get_by_name("slashstep.accessPolicies.list", &test_environment.database_pool).await?;
+  test_environment.create_instance_access_policy(&user.id, &list_access_policies_action.id, &AccessPolicyPermissionLevel::User).await?;
 
-//   // Create dummy access policies.
-//   let dummy_app_authorization_credential = test_environment.create_random_app_authorization_credential(&None).await?;
-//   for _ in 0..(DEFAULT_ACCESS_POLICY_LIST_LIMIT + 1) {
+  // Create dummy access policies.
+  let dummy_app_authorization_credential = test_environment.create_random_app_authorization_credential(&None).await?;
+  for _ in 0..(DEFAULT_ACCESS_POLICY_LIST_LIMIT + 1) {
 
-//     let random_action = test_environment.create_random_action(&None).await?;
-//     let random_user = test_environment.create_random_user().await?;
-//     create_action_access_policy(&test_environment.database_pool, &dummy_action.id, &random_user.id, &random_action.id, &AccessPolicyPermissionLevel::User).await?;
+    let random_action = test_environment.create_random_action(&None).await?;
+    let random_user = test_environment.create_random_user().await?;
+    create_app_authorization_credential_access_policy(&test_environment.database_pool, &dummy_app_authorization_credential.id, &random_user.id, &random_action.id, &AccessPolicyPermissionLevel::User).await?;
 
-//   }
+  }
 
-//   let state = AppState {
-//     database_pool: test_environment.database_pool.clone(),
-//   };
-//   let router = super::get_router(state.clone())
-//     .with_state(state)
-//     .into_make_service_with_connect_info::<SocketAddr>();
-//   let test_server = TestServer::new(router)?;
-//   let response = test_server.get(&format!("/app-authorization-credentials/{}/access-policies", &dummy_action.id))
-//     .add_cookie(Cookie::new("sessionToken", format!("Bearer {}", session_token)))
-//     .await;
+  let state = AppState {
+    database_pool: test_environment.database_pool.clone(),
+  };
+  let router = super::get_router(state.clone())
+    .with_state(state)
+    .into_make_service_with_connect_info::<SocketAddr>();
+  let test_server = TestServer::new(router)?;
+  let response = test_server.get(&format!("/app-authorization-credentials/{}/access-policies", &dummy_app_authorization_credential.id))
+    .add_cookie(Cookie::new("sessionToken", format!("Bearer {}", session_token)))
+    .await;
   
-//   assert_eq!(response.status_code(), StatusCode::OK);
+  assert_eq!(response.status_code(), StatusCode::OK);
 
-//   let response_body: ListResourcesResponseBody::<AccessPolicy> = response.json();
-//   assert_eq!(response_body.resources.len(), DEFAULT_ACCESS_POLICY_LIST_LIMIT as usize);
+  let response_body: ListResourcesResponseBody::<AccessPolicy> = response.json();
+  assert_eq!(response_body.resources.len(), DEFAULT_ACCESS_POLICY_LIST_LIMIT as usize);
 
-//   return Ok(());
+  return Ok(());
 
-// }
+}
 
-// /// Verifies that the server returns a 422 status code when the provided limit is over the maximum limit.
-// #[tokio::test]
-// async fn verify_maximum_access_policy_list_limit() -> Result<(), TestSlashstepServerError> {
+/// Verifies that the server returns a 422 status code when the provided limit is over the maximum limit.
+#[tokio::test]
+async fn verify_maximum_access_policy_list_limit() -> Result<(), TestSlashstepServerError> {
 
-//   let test_environment = TestEnvironment::new().await?;
-//   initialize_required_tables(&test_environment.database_pool).await?;
-//   initialize_predefined_actions(&test_environment.database_pool).await?;
+  let test_environment = TestEnvironment::new().await?;
+  initialize_required_tables(&test_environment.database_pool).await?;
+  initialize_predefined_actions(&test_environment.database_pool).await?;
   
-//   // Create the user and the session.
-//   let user = test_environment.create_random_user().await?;
-//   let session = test_environment.create_session(&user.id).await?;
-//   let json_web_token_private_key = Session::get_json_web_token_private_key().await?;
-//   let session_token = session.generate_json_web_token(&json_web_token_private_key).await?;
-//   let get_access_policies_action = Action::get_by_name("slashstep.accessPolicies.get", &test_environment.database_pool).await?;
-//   test_environment.create_instance_access_policy(&user.id, &get_access_policies_action.id, &AccessPolicyPermissionLevel::User).await?;
-//   let list_access_policies_action = Action::get_by_name("slashstep.accessPolicies.list", &test_environment.database_pool).await?;
-//   test_environment.create_instance_access_policy(&user.id, &list_access_policies_action.id, &AccessPolicyPermissionLevel::User).await?;
+  // Create the user and the session.
+  let user = test_environment.create_random_user().await?;
+  let session = test_environment.create_session(&user.id).await?;
+  let json_web_token_private_key = Session::get_json_web_token_private_key().await?;
+  let session_token = session.generate_json_web_token(&json_web_token_private_key).await?;
+  let get_access_policies_action = Action::get_by_name("slashstep.accessPolicies.get", &test_environment.database_pool).await?;
+  test_environment.create_instance_access_policy(&user.id, &get_access_policies_action.id, &AccessPolicyPermissionLevel::User).await?;
+  let list_access_policies_action = Action::get_by_name("slashstep.accessPolicies.list", &test_environment.database_pool).await?;
+  test_environment.create_instance_access_policy(&user.id, &list_access_policies_action.id, &AccessPolicyPermissionLevel::User).await?;
+  let dummy_app_authorization_credential = test_environment.create_random_app_authorization_credential(&None).await?;
 
-//   // Set up the server and send the request.
-//   let state = AppState {
-//     database_pool: test_environment.database_pool.clone(),
-//   };
-//   let router = super::get_router(state.clone())
-//     .with_state(state)
-//     .into_make_service_with_connect_info::<SocketAddr>();
-//   let test_server = TestServer::new(router)?;
-//   let response = test_server.get(&format!("/app-authorization-credentials/{}/access-policies", &get_access_policies_action.id))
-//     .add_query_param("query", format!("LIMIT {}", DEFAULT_ACCESS_POLICY_LIST_LIMIT + 1))
-//     .add_cookie(Cookie::new("sessionToken", format!("Bearer {}", session_token)))
-//     .await;
+  // Set up the server and send the request.
+  let state = AppState {
+    database_pool: test_environment.database_pool.clone(),
+  };
+  let router = super::get_router(state.clone())
+    .with_state(state)
+    .into_make_service_with_connect_info::<SocketAddr>();
+  let test_server = TestServer::new(router)?;
+  let response = test_server.get(&format!("/app-authorization-credentials/{}/access-policies", &dummy_app_authorization_credential.id))
+    .add_query_param("query", format!("LIMIT {}", DEFAULT_ACCESS_POLICY_LIST_LIMIT + 1))
+    .add_cookie(Cookie::new("sessionToken", format!("Bearer {}", session_token)))
+    .await;
   
-//   // Verify the response.
-//   assert_eq!(response.status_code(), StatusCode::UNPROCESSABLE_ENTITY);
+  // Verify the response.
+  assert_eq!(response.status_code(), StatusCode::UNPROCESSABLE_ENTITY);
 
-//   return Ok(());
+  return Ok(());
 
-// }
+}
 
-// /// Verifies that the server returns a 400 status code when the query is invalid.
-// #[tokio::test]
-// async fn verify_query_when_listing_access_policies() -> Result<(), TestSlashstepServerError> {
+/// Verifies that the server returns a 400 status code when the query is invalid.
+#[tokio::test]
+async fn verify_query_when_listing_access_policies() -> Result<(), TestSlashstepServerError> {
 
-//   let test_environment = TestEnvironment::new().await?;
-//   initialize_required_tables(&test_environment.database_pool).await?;
-//   initialize_predefined_actions(&test_environment.database_pool).await?;
+  let test_environment = TestEnvironment::new().await?;
+  initialize_required_tables(&test_environment.database_pool).await?;
+  initialize_predefined_actions(&test_environment.database_pool).await?;
   
-//   // Create the user and the session.
-//   let user = test_environment.create_random_user().await?;
-//   let session = test_environment.create_session(&user.id).await?;
-//   let json_web_token_private_key = Session::get_json_web_token_private_key().await?;
-//   let session_token = session.generate_json_web_token(&json_web_token_private_key).await?;
-//   let get_access_policies_action = Action::get_by_name("slashstep.accessPolicies.get", &test_environment.database_pool).await?;
-//   test_environment.create_instance_access_policy(&user.id, &get_access_policies_action.id, &AccessPolicyPermissionLevel::User).await?;
+  // Create the user and the session.
+  let user = test_environment.create_random_user().await?;
+  let session = test_environment.create_session(&user.id).await?;
+  let json_web_token_private_key = Session::get_json_web_token_private_key().await?;
+  let session_token = session.generate_json_web_token(&json_web_token_private_key).await?;
+  let get_access_policies_action = Action::get_by_name("slashstep.accessPolicies.get", &test_environment.database_pool).await?;
+  test_environment.create_instance_access_policy(&user.id, &get_access_policies_action.id, &AccessPolicyPermissionLevel::User).await?;
 
-//   let list_access_policies_action = Action::get_by_name("slashstep.accessPolicies.list", &test_environment.database_pool).await?;
-//   test_environment.create_instance_access_policy(&user.id, &list_access_policies_action.id, &AccessPolicyPermissionLevel::User).await?;
-
-//   // Set up the server and send the request.
-//   let state = AppState {
-//     database_pool: test_environment.database_pool.clone(),
-//   };
-//   let router = super::get_router(state.clone())
-//     .with_state(state)
-//     .into_make_service_with_connect_info::<SocketAddr>();
-//   let test_server = TestServer::new(router)?;
-
-//   let bad_requests = vec![
-//     test_server.get(&format!("/app-authorization-credentials/{}/access-policies", get_access_policies_action.id))
-//       .add_query_param("query", format!("SELECT * FROM access_policies")),
-//     test_server.get(&format!("/app-authorization-credentials/{}/access-policies", get_access_policies_action.id))
-//       .add_query_param("query", format!("SELECT PG_SLEEP(10)")),
-//     test_server.get(&format!("/app-authorization-credentials/{}/access-policies", get_access_policies_action.id))
-//       .add_query_param("query", format!("SELECT * FROM access_policies WHERE action_id = {}", get_access_policies_action.id))
-//   ];
+  let list_access_policies_action = Action::get_by_name("slashstep.accessPolicies.list", &test_environment.database_pool).await?;
+  test_environment.create_instance_access_policy(&user.id, &list_access_policies_action.id, &AccessPolicyPermissionLevel::User).await?;
   
-//   for request in bad_requests {
+  let dummy_app_authorization_credential = test_environment.create_random_app_authorization_credential(&None).await?;
 
-//     let response = request
-//       .add_cookie(Cookie::new("sessionToken", format!("Bearer {}", session_token)))
-//       .await;
+  // Set up the server and send the request.
+  let state = AppState {
+    database_pool: test_environment.database_pool.clone(),
+  };
+  let router = super::get_router(state.clone())
+    .with_state(state)
+    .into_make_service_with_connect_info::<SocketAddr>();
+  let test_server = TestServer::new(router)?;
 
-//     assert_eq!(response.status_code(), StatusCode::BAD_REQUEST);
-
-//   }
-
-//   let unprocessable_entity_requests = vec![
-//     test_server.get(&format!("/app-authorization-credentials/{}/access-policies", get_access_policies_action.id))
-//       .add_query_param("query", format!("action_ied = {}", get_access_policies_action.id)),
-//     test_server.get(&format!("/app-authorization-credentials/{}/access-policies", get_access_policies_action.id))
-//       .add_query_param("query", format!("1 = 1")),
-//   ];
-
-//   for request in unprocessable_entity_requests {
-
-//     let response = request
-//       .add_cookie(Cookie::new("sessionToken", format!("Bearer {}", session_token)))
-//       .await;
-
-//     assert_eq!(response.status_code(), StatusCode::UNPROCESSABLE_ENTITY);
-
-//   }
-
-//   return Ok(());
-
-// }
-
-// /// Verifies that the server returns a 401 status code when the user lacks permissions and is unauthenticated.
-// #[tokio::test]
-// async fn verify_authentication_when_listing_access_policies() -> Result<(), TestSlashstepServerError> {
-
-//   let test_environment = TestEnvironment::new().await?;
-//   initialize_required_tables(&test_environment.database_pool).await?;
-//   initialize_predefined_actions(&test_environment.database_pool).await?;
-//   initialize_predefined_roles(&test_environment.database_pool).await?;
-
-//   // Create a dummy action.
-//   let dummy_app_authorization_credential = test_environment.create_random_app_authorization_credential(&None).await?;
-
-//   // Set up the server and send the request.
-//   let state = AppState {
-//     database_pool: test_environment.database_pool.clone(),
-//   };
-//   let router = super::get_router(state.clone())
-//     .with_state(state)
-//     .into_make_service_with_connect_info::<SocketAddr>();
-//   let test_server = TestServer::new(router)?;
-//   let response = test_server.get(&format!("/app-authorization-credentials/{}/access-policies", &dummy_action.id))
-//     .await;
+  let bad_requests = vec![
+    test_server.get(&format!("/app-authorization-credentials/{}/access-policies", dummy_app_authorization_credential.id))
+      .add_query_param("query", format!("SELECT * FROM access_policies")),
+    test_server.get(&format!("/app-authorization-credentials/{}/access-policies", dummy_app_authorization_credential.id))
+      .add_query_param("query", format!("SELECT PG_SLEEP(10)")),
+    test_server.get(&format!("/app-authorization-credentials/{}/access-policies", dummy_app_authorization_credential.id))
+      .add_query_param("query", format!("SELECT * FROM access_policies WHERE action_id = {}", get_access_policies_action.id))
+  ];
   
-//   // Verify the response.
-//   assert_eq!(response.status_code(), StatusCode::UNAUTHORIZED);
+  for request in bad_requests {
 
-//   return Ok(());
+    let response = request
+      .add_cookie(Cookie::new("sessionToken", format!("Bearer {}", session_token)))
+      .await;
 
-// }
+    assert_eq!(response.status_code(), StatusCode::BAD_REQUEST);
 
-// /// Verifies that the server returns a 403 status code when the user lacks permissions and is authenticated.
-// #[tokio::test]
-// async fn verify_permission_when_listing_access_policies() -> Result<(), TestSlashstepServerError> {
+  }
 
-//   let test_environment = TestEnvironment::new().await?;
-//   initialize_required_tables(&test_environment.database_pool).await?;
-//   initialize_predefined_actions(&test_environment.database_pool).await?;
-//   initialize_predefined_roles(&test_environment.database_pool).await?;
+  let unprocessable_entity_requests = vec![
+    test_server.get(&format!("/app-authorization-credentials/{}/access-policies", dummy_app_authorization_credential.id))
+      .add_query_param("query", format!("action_ied = {}", get_access_policies_action.id)),
+    test_server.get(&format!("/app-authorization-credentials/{}/access-policies", dummy_app_authorization_credential.id))
+      .add_query_param("query", format!("1 = 1")),
+  ];
 
-//   // Create the user and the session.
-//   let user = test_environment.create_random_user().await?;
-//   let session = test_environment.create_session(&user.id).await?;
-//   let json_web_token_private_key = Session::get_json_web_token_private_key().await?;
-//   let session_token = session.generate_json_web_token(&json_web_token_private_key).await?;
+  for request in unprocessable_entity_requests {
 
-//   // Create a dummy action.
-//   let dummy_app_authorization_credential = test_environment.create_random_app_authorization_credential(&None).await?;
+    let response = request
+      .add_cookie(Cookie::new("sessionToken", format!("Bearer {}", session_token)))
+      .await;
 
-//   // Set up the server and send the request.
-//   let state = AppState {
-//     database_pool: test_environment.database_pool.clone(),
-//   };
-//   let router = super::get_router(state.clone())
-//     .with_state(state)
-//     .into_make_service_with_connect_info::<SocketAddr>();
-//   let test_server = TestServer::new(router)?;
-//   let response = test_server.get(&format!("/app-authorization-credentials/{}/access-policies", &dummy_action.id))
-//     .add_cookie(Cookie::new("sessionToken", format!("Bearer {}", session_token)))
-//     .await;
+    assert_eq!(response.status_code(), StatusCode::UNPROCESSABLE_ENTITY);
+
+  }
+
+  return Ok(());
+
+}
+
+/// Verifies that the server returns a 401 status code when the user lacks permissions and is unauthenticated.
+#[tokio::test]
+async fn verify_authentication_when_listing_access_policies() -> Result<(), TestSlashstepServerError> {
+
+  let test_environment = TestEnvironment::new().await?;
+  initialize_required_tables(&test_environment.database_pool).await?;
+  initialize_predefined_actions(&test_environment.database_pool).await?;
+  initialize_predefined_roles(&test_environment.database_pool).await?;
+
+  // Create dummy resources.
+  let dummy_app_authorization_credential = test_environment.create_random_app_authorization_credential(&None).await?;
+
+  // Set up the server and send the request.
+  let state = AppState {
+    database_pool: test_environment.database_pool.clone(),
+  };
+  let router = super::get_router(state.clone())
+    .with_state(state)
+    .into_make_service_with_connect_info::<SocketAddr>();
+  let test_server = TestServer::new(router)?;
+  let response = test_server.get(&format!("/app-authorization-credentials/{}/access-policies", &dummy_app_authorization_credential.id))
+    .await;
   
-//   assert_eq!(response.status_code(), StatusCode::FORBIDDEN);
+  // Verify the response.
+  assert_eq!(response.status_code(), StatusCode::UNAUTHORIZED);
 
-//   return Ok(());
+  return Ok(());
 
-// }
+}
+
+/// Verifies that the server returns a 403 status code when the user lacks permissions and is authenticated.
+#[tokio::test]
+async fn verify_permission_when_listing_access_policies() -> Result<(), TestSlashstepServerError> {
+
+  let test_environment = TestEnvironment::new().await?;
+  initialize_required_tables(&test_environment.database_pool).await?;
+  initialize_predefined_actions(&test_environment.database_pool).await?;
+  initialize_predefined_roles(&test_environment.database_pool).await?;
+
+  // Create the user and the session.
+  let user = test_environment.create_random_user().await?;
+  let session = test_environment.create_session(&user.id).await?;
+  let json_web_token_private_key = Session::get_json_web_token_private_key().await?;
+  let session_token = session.generate_json_web_token(&json_web_token_private_key).await?;
+
+  // Create a dummy action.
+  let dummy_app_authorization_credential = test_environment.create_random_app_authorization_credential(&None).await?;
+
+  // Set up the server and send the request.
+  let state = AppState {
+    database_pool: test_environment.database_pool.clone(),
+  };
+  let router = super::get_router(state.clone())
+    .with_state(state)
+    .into_make_service_with_connect_info::<SocketAddr>();
+  let test_server = TestServer::new(router)?;
+  let response = test_server.get(&format!("/app-authorization-credentials/{}/access-policies", &dummy_app_authorization_credential.id))
+    .add_cookie(Cookie::new("sessionToken", format!("Bearer {}", session_token)))
+    .await;
+  
+  assert_eq!(response.status_code(), StatusCode::FORBIDDEN);
+
+  return Ok(());
+
+}
+
+/// Verifies that the server returns a 404 status code when the parent resource is not found.
+#[tokio::test]
+async fn verify_parent_resource_not_found_when_listing_resources() -> Result<(), TestSlashstepServerError> {
+
+  let test_environment = TestEnvironment::new().await?;
+  initialize_required_tables(&test_environment.database_pool).await?;
+  initialize_predefined_actions(&test_environment.database_pool).await?;
+  initialize_predefined_roles(&test_environment.database_pool).await?;
+
+  // Set up the server and send the request.
+  let state = AppState {
+    database_pool: test_environment.database_pool.clone(),
+  };
+  let router = super::get_router(state.clone())
+    .with_state(state)
+    .into_make_service_with_connect_info::<SocketAddr>();
+  let test_server = TestServer::new(router)?;
+  let response = test_server.get(&format!("/app-authorization-credentials/{}/access-policies", &Uuid::now_v7()))
+    .await;
+  
+  // Verify the response.
+  assert_eq!(response.status_code(), StatusCode::NOT_FOUND);
+
+  return Ok(());
+
+}
