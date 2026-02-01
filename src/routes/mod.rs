@@ -8,6 +8,8 @@ mod apps;
 mod app_authorizations;
 #[path = "./app-authorization-credentials/mod.rs"]
 mod app_authorization_credentials;
+#[path = "./app-credentials/mod.rs"]
+mod app_credentials;
 
 use axum::{Router, response::IntoResponse};
 use crate::{AppState, HTTPError, middleware::http_request_middleware};
@@ -28,6 +30,7 @@ pub fn get_router(state: AppState) -> Router<AppState> {
     .merge(apps::get_router(state.clone()))
     .merge(app_authorizations::get_router(state.clone()))
     .merge(app_authorization_credentials::get_router(state.clone()))
+    .merge(app_credentials::get_router(state.clone()))
     .fallback(fallback);
   return router;
 
