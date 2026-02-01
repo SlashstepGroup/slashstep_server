@@ -6,8 +6,18 @@ use crate::{resources::{DeletableResource, ResourceError, access_policy::Individ
 
 pub const DEFAULT_APP_AUTHORIZATION_CREDENTIAL_LIST_LIMIT: i64 = 1000;
 pub const DEFAULT_MAXIMUM_APP_AUTHORIZATION_CREDENTIAL_LIST_LIMIT: i64 = 1000;
-pub const ALLOWED_QUERY_KEYS: &[&str] = &[];
-pub const UUID_QUERY_KEYS: &[&str] = &[];
+pub const ALLOWED_QUERY_KEYS: &[&str] = &[
+  "id",
+  "app_authorization_id",
+  "access_token_expiration_date",
+  "refresh_token_expiration_date",
+  "refreshed_app_authorization_credential_id"
+];
+pub const UUID_QUERY_KEYS: &[&str] = &[
+  "id",
+  "app_authorization_id",
+  "refreshed_app_authorization_credential_id"
+];
 pub const RESOURCE_NAME: &str = "AppAuthorizationCredential";
 pub const DATABASE_TABLE_NAME: &str = "app_authorization_credentials";
 pub const GET_RESOURCE_ACTION_NAME: &str = "slashstep.appAuthorizationCredentials.get";
