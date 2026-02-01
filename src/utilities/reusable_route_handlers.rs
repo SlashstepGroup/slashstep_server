@@ -1,9 +1,10 @@
 use std::{pin::Pin, sync::Arc};
 use axum::{Extension, extract::{Query, State}};
 use axum_extra::response::ErasedJson;
+use reqwest::StatusCode;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
-use crate::{AppState, HTTPError, resources::{ResourceError, access_policy::{AccessPolicyPermissionLevel, IndividualPrincipal}, action_log_entry::{ActionLogEntry, ActionLogEntryActorType, ActionLogEntryTargetResourceType, InitialActionLogEntryProperties}, app::App, http_transaction::HTTPTransaction, server_log_entry::ServerLogEntry, user::User}, utilities::{resource_hierarchy::ResourceHierarchy, route_handler_utilities::{AuthenticatedPrincipal, get_action_from_name, get_authenticated_principal, get_individual_principal_from_authenticated_principal, match_db_error, match_slashstepql_error, verify_principal_permissions}}};
+use crate::{AppState, HTTPError, resources::{DeletableResource, ResourceError, access_policy::{AccessPolicyPermissionLevel, AccessPolicyResourceType, IndividualPrincipal}, action_log_entry::{ActionLogEntry, ActionLogEntryActorType, ActionLogEntryTargetResourceType, InitialActionLogEntryProperties}, app::App, http_transaction::HTTPTransaction, server_log_entry::ServerLogEntry, user::User}, utilities::{resource_hierarchy::ResourceHierarchy, route_handler_utilities::{AuthenticatedPrincipal, get_action_from_name, get_authenticated_principal, get_individual_principal_from_authenticated_principal, get_resource_by_id, get_resource_hierarchy, match_db_error, match_slashstepql_error, verify_principal_permissions}}};
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct ListResourcesResponseBody<ResourceStruct> {
@@ -116,5 +117,83 @@ pub async fn list_resources<ResourceType: Serialize, CountResourcesFunction, Lis
   };
 
   return Ok(ErasedJson::pretty(&response_body));
+
+}
+
+pub async fn delete_resource<ResourceStruct, GetResourceByIDFunction>(
+  State(state): State<AppState>, 
+  Extension(http_transaction): Extension<Arc<HTTPTransaction>>,
+  Extension(authenticated_user): Extension<Option<Arc<User>>>,
+  Extension(authenticated_app): Extension<Option<Arc<App>>>,
+  resource_type: Option<&AccessPolicyResourceType>,
+  resource_id: &Uuid,
+  delete_resources_action_name: &str,
+  resource_type_name_singular: &str,
+  action_log_entry_target_resource_type: &ActionLogEntryTargetResourceType,
+  get_resource_by_id_function: GetResourceByIDFunction
+) -> Result<StatusCode, HTTPError> where
+  ResourceStruct: DeletableResource,
+  GetResourceByIDFunction: for<'a> Fn(&'a Uuid, &'a deadpool_postgres::Pool) -> Box<dyn Future<Output = Result<ResourceStruct, ResourceError>> + 'a + Send>
+{
+
+  let http_transaction = http_transaction.clone();
+  let target_resource = get_resource_by_id::<ResourceStruct, GetResourceByIDFunction>(&resource_type_name_singular, &resource_id, &http_transaction, &state.database_pool, get_resource_by_id_function).await?;
+  let resource_hierarchy = match resource_type {
+    
+    Some(resource_type) => get_resource_hierarchy(&target_resource, &resource_type, &resource_id, &http_transaction, &state.database_pool).await?,
+
+    // Access policies currently lack a resource hierarchy, so we'll just return the instance.
+    None => vec![(AccessPolicyResourceType::Instance, None)]
+
+  };
+  let delete_resources_action = get_action_from_name(&delete_resources_action_name, &http_transaction, &state.database_pool).await?;
+  let authenticated_principal = get_authenticated_principal(&authenticated_user, &authenticated_app)?;
+  verify_principal_permissions(&authenticated_principal, &delete_resources_action, &resource_hierarchy, &http_transaction, &AccessPolicyPermissionLevel::User, &state.database_pool).await?;
+
+  match target_resource.delete(&state.database_pool).await {
+
+    Ok(_) => {},
+
+    Err(error) => {
+
+      let http_error = HTTPError::InternalServerError(Some(format!("Failed to delete {}: {:?}", resource_type_name_singular, error)));
+      http_error.print_and_save(Some(&http_transaction.id), &state.database_pool).await.ok();
+      return Err(http_error);
+
+    }
+
+  }
+
+  ActionLogEntry::create(&InitialActionLogEntryProperties {
+    action_id: delete_resources_action.id,
+    http_transaction_id: Some(http_transaction.id),
+    reason: None, // TODO: Support reasons.
+    actor_type: if let AuthenticatedPrincipal::User(_) = &authenticated_principal { ActionLogEntryActorType::User } else { ActionLogEntryActorType::App },
+    actor_user_id: if let AuthenticatedPrincipal::User(user) = &authenticated_principal { Some(user.id.clone()) } else { None },
+    actor_app_id: if let AuthenticatedPrincipal::App(app) = &authenticated_principal { Some(app.id.clone()) } else { None },
+    target_resource_type: action_log_entry_target_resource_type.clone(),
+    target_access_policy_id: if *action_log_entry_target_resource_type == ActionLogEntryTargetResourceType::AccessPolicy { Some(resource_id.clone()) } else { None },
+    target_action_id: if *action_log_entry_target_resource_type == ActionLogEntryTargetResourceType::Action { Some(resource_id.clone()) } else { None },
+    target_action_log_entry_id: if *action_log_entry_target_resource_type == ActionLogEntryTargetResourceType::ActionLogEntry { Some(resource_id.clone()) } else { None },
+    target_app_id: if *action_log_entry_target_resource_type == ActionLogEntryTargetResourceType::App { Some(resource_id.clone()) } else { None },
+    target_app_authorization_id: if *action_log_entry_target_resource_type == ActionLogEntryTargetResourceType::AppAuthorization { Some(resource_id.clone()) } else { None },
+    target_app_authorization_credential_id: if *action_log_entry_target_resource_type == ActionLogEntryTargetResourceType::AppAuthorizationCredential { Some(resource_id.clone()) } else { None },
+    target_app_credential_id: if *action_log_entry_target_resource_type == ActionLogEntryTargetResourceType::AppCredential { Some(resource_id.clone()) } else { None },
+    target_group_id: if *action_log_entry_target_resource_type == ActionLogEntryTargetResourceType::Group { Some(resource_id.clone()) } else { None },
+    target_group_membership_id: if *action_log_entry_target_resource_type == ActionLogEntryTargetResourceType::GroupMembership { Some(resource_id.clone()) } else { None },
+    target_http_transaction_id: if *action_log_entry_target_resource_type == ActionLogEntryTargetResourceType::HTTPTransaction { Some(resource_id.clone()) } else { None },
+    target_item_id: if *action_log_entry_target_resource_type == ActionLogEntryTargetResourceType::Item { Some(resource_id.clone()) } else { None },
+    target_milestone_id: if *action_log_entry_target_resource_type == ActionLogEntryTargetResourceType::Milestone { Some(resource_id.clone()) } else { None }, 
+    target_project_id: if *action_log_entry_target_resource_type == ActionLogEntryTargetResourceType::Project { Some(resource_id.clone()) } else { None },
+    target_role_id: if *action_log_entry_target_resource_type == ActionLogEntryTargetResourceType::Role { Some(resource_id.clone()) } else { None },
+    target_role_membership_id: if *action_log_entry_target_resource_type == ActionLogEntryTargetResourceType::RoleMembership { Some(resource_id.clone()) } else { None },
+    target_server_log_entry_id: if *action_log_entry_target_resource_type == ActionLogEntryTargetResourceType::ServerLogEntry { Some(resource_id.clone()) } else { None },
+    target_session_id: if *action_log_entry_target_resource_type == ActionLogEntryTargetResourceType::Session { Some(resource_id.clone()) } else { None },
+    target_user_id: if *action_log_entry_target_resource_type == ActionLogEntryTargetResourceType::User { Some(resource_id.clone()) } else { None },
+    target_workspace_id: if *action_log_entry_target_resource_type == ActionLogEntryTargetResourceType::Workspace { Some(resource_id.clone()) } else { None }
+  }, &state.database_pool).await.ok();
+  ServerLogEntry::success(&format!("Successfully deleted {} {}.", resource_type_name_singular, resource_id), Some(&http_transaction.id), &state.database_pool).await.ok();
+
+  return Ok(StatusCode::NO_CONTENT);
 
 }
