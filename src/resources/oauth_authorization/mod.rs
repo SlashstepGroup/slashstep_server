@@ -40,7 +40,16 @@ pub struct InitialOAuthAuthorizationProperties {
   pub authorizing_user_id: Uuid,
 
   /// The OAuth authorization's code challenge, if applicable.
-  pub code_challenge: Option<String>
+  pub code_challenge: Option<String>,
+
+  /// The OAuth authorization's scope.
+  /// 
+  /// Delegation policies are initially defined by this scope string.
+  /// 
+  /// The string should be a space-separated list of action IDs and permission levels.
+  /// 
+  /// For example: `00000000-0000-0000-0000-000000000001:Editor 00000000-0000-0000-0000-000000000002:Admin`
+  pub scope: String
 
 }
 
@@ -51,7 +60,17 @@ pub struct InitialOAuthAuthorizationPropertiesForPredefinedAuthorizer {
   pub app_id: Uuid,
 
   /// The OAuth authorization's code challenge, if applicable.
-  pub code_challenge: Option<String>
+  pub code_challenge: Option<String>,
+
+  /// The OAuth authorization's scope.
+  /// 
+  /// Delegation policies are initially defined by this scope string.
+  /// 
+  /// The string should be a space-separated list of action IDs and permission levels.
+  /// 
+  /// For example: `00000000-0000-0000-0000-000000000001:Editor 00000000-0000-0000-0000-000000000002:Admin`
+  pub scope: String
+  
 }
 
 impl OAuthAuthorization {

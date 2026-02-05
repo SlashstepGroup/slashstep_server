@@ -13,7 +13,6 @@ use std::net::SocketAddr;
 use axum_extra::extract::cookie::Cookie;
 use axum_test::TestServer;
 use ntest::timeout;
-use pg_escape::quote_literal;
 use reqwest::StatusCode;
 use uuid::Uuid;
 use crate::{AppState, initialize_required_tables,  predefinitions::{initialize_predefined_actions, initialize_predefined_roles}, resources::{access_policy::{AccessPolicy, AccessPolicyPrincipalType, AccessPolicyResourceType, ActionPermissionLevel, IndividualPrincipal, InitialAccessPolicyProperties}, action::{Action, ActionParentResourceType, DEFAULT_ACTION_LIST_LIMIT, InitialActionPropertiesForPredefinedScope}, oauth_authorization::{InitialOAuthAuthorizationPropertiesForPredefinedAuthorizer, OAuthAuthorization}, session::Session}, tests::{TestEnvironment, TestSlashstepServerError}, utilities::reusable_route_handlers::ListResourcesResponseBody};
@@ -25,6 +24,7 @@ async fn verify_successful_creation() -> Result<(), TestSlashstepServerError> {
   let test_environment = TestEnvironment::new().await?;
   initialize_required_tables(&test_environment.database_pool).await?;
   initialize_predefined_actions(&test_environment.database_pool).await?;
+  initialize_predefined_roles(&test_environment.database_pool).await?;
 
   // Give the user access to the "slashstep.apps.create" action.
   let user = test_environment.create_random_user().await?;
@@ -39,11 +39,13 @@ async fn verify_successful_creation() -> Result<(), TestSlashstepServerError> {
   // Create a dummy app.
   let dummy_app = test_environment.create_random_app().await?;
   let dummy_user = test_environment.create_random_user().await?;
+  let dummy_action = test_environment.create_random_action(None).await?;
 
   // Set up the server and send the request.
   let initial_oauth_authorization_properties = InitialOAuthAuthorizationPropertiesForPredefinedAuthorizer {
     app_id: dummy_app.id,
-    code_challenge: None
+    code_challenge: None,
+    scope: format!("{}:Editor", dummy_action.id)
   };
   let state = AppState {
     database_pool: test_environment.database_pool.clone(),
