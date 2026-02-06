@@ -61,7 +61,7 @@ pub async fn list_resources<ResourceType: Serialize, CountResourcesFunction, Lis
 
       };
 
-      http_error.print_and_save(Some(&http_transaction.id), &state.database_pool).await.ok();
+      ServerLogEntry::from_http_error(&http_error, Some(&http_transaction.id), &state.database_pool).await.ok();
       return Err(http_error);
 
     }
@@ -76,7 +76,7 @@ pub async fn list_resources<ResourceType: Serialize, CountResourcesFunction, Lis
     Err(error) => {
 
       let http_error = HTTPError::InternalServerError(Some(format!("Failed to count {}: {:?}", resource_type_name_plural, error)));
-      http_error.print_and_save(Some(&http_transaction.id), &state.database_pool).await.ok();
+      ServerLogEntry::from_http_error(&http_error, Some(&http_transaction.id), &state.database_pool).await.ok();
       return Err(http_error);
 
     }
@@ -162,7 +162,7 @@ pub async fn delete_resource<ResourceStruct, GetResourceByIDFunction>(
     Err(error) => {
 
       let http_error = HTTPError::InternalServerError(Some(format!("Failed to delete {}: {:?}", resource_type_name_singular, error)));
-      http_error.print_and_save(Some(&http_transaction.id), &state.database_pool).await.ok();
+      ServerLogEntry::from_http_error(&http_error, Some(&http_transaction.id), &state.database_pool).await.ok();
       return Err(http_error);
 
     }

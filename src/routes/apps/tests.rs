@@ -14,18 +14,13 @@ use axum_extra::extract::cookie::Cookie;
 use axum_test::TestServer;
 use reqwest::StatusCode;
 use crate::{
-  AppState, initialize_required_tables, predefinitions::{
+  AppState, get_json_web_token_private_key, initialize_required_tables, predefinitions::{
     initialize_predefined_actions, 
     initialize_predefined_roles
   }, resources::{
     access_policy::{
-      AccessPolicy, 
-      ActionPermissionLevel, 
-      AccessPolicyPrincipalType, 
-      AccessPolicyResourceType, 
-      IndividualPrincipal, 
-      InitialAccessPolicyProperties
-    }, action::Action, app::{App, DEFAULT_APP_LIST_LIMIT, DEFAULT_MAXIMUM_APP_LIST_LIMIT}, session::Session
+      AccessPolicy, AccessPolicyPrincipalType, AccessPolicyResourceType, ActionPermissionLevel, IndividualPrincipal, InitialAccessPolicyProperties
+    }, action::Action, app::{App, DEFAULT_APP_LIST_LIMIT, DEFAULT_MAXIMUM_APP_LIST_LIMIT},
   }, tests::{TestEnvironment, TestSlashstepServerError}, utilities::reusable_route_handlers::ListResourcesResponseBody
 };
 
@@ -41,7 +36,7 @@ async fn verify_returned_list_without_query() -> Result<(), TestSlashstepServerE
   // Grant access to the "slashstep.apps.get" action to the user.
   let user = test_environment.create_random_user().await?;
   let session = test_environment.create_session(&user.id).await?;
-  let json_web_token_private_key = Session::get_json_web_token_private_key().await?;
+  let json_web_token_private_key = get_json_web_token_private_key().await?;
   let session_token = session.generate_json_web_token(&json_web_token_private_key).await?;
   let get_actions_action = Action::get_by_name("slashstep.apps.get", &test_environment.database_pool).await?;
   AccessPolicy::create(&InitialAccessPolicyProperties {
@@ -117,7 +112,7 @@ async fn verify_returned_list_with_query() -> Result<(), TestSlashstepServerErro
   // Grant access to the "slashstep.apps.get" action to the user.
   let user = test_environment.create_random_user().await?;
   let session = test_environment.create_session(&user.id).await?;
-  let json_web_token_private_key = Session::get_json_web_token_private_key().await?;
+  let json_web_token_private_key = get_json_web_token_private_key().await?;
   let session_token = session.generate_json_web_token(&json_web_token_private_key).await?;
   let get_actions_action = Action::get_by_name("slashstep.apps.get", &test_environment.database_pool).await?;
   AccessPolicy::create(&InitialAccessPolicyProperties {
@@ -196,7 +191,7 @@ async fn verify_default_list_limit() -> Result<(), TestSlashstepServerError> {
   // Grant access to the "slashstep.apps.get" action to the user.
   let user = test_environment.create_random_user().await?;
   let session = test_environment.create_session(&user.id).await?;
-  let json_web_token_private_key = Session::get_json_web_token_private_key().await?;
+  let json_web_token_private_key = get_json_web_token_private_key().await?;
   let session_token = session.generate_json_web_token(&json_web_token_private_key).await?;
   let get_actions_action = Action::get_by_name("slashstep.apps.get", &test_environment.database_pool).await?;
   AccessPolicy::create(&InitialAccessPolicyProperties {
@@ -263,7 +258,7 @@ async fn verify_maximum_list_limit() -> Result<(), TestSlashstepServerError> {
   // Grant access to the "slashstep.apps.get" action to the user.
   let user = test_environment.create_random_user().await?;
   let session = test_environment.create_session(&user.id).await?;
-  let json_web_token_private_key = Session::get_json_web_token_private_key().await?;
+  let json_web_token_private_key = get_json_web_token_private_key().await?;
   let session_token = session.generate_json_web_token(&json_web_token_private_key).await?;
   let get_actions_action = Action::get_by_name("slashstep.apps.get", &test_environment.database_pool).await?;
   AccessPolicy::create(&InitialAccessPolicyProperties {
@@ -319,7 +314,7 @@ async fn verify_query_validity() -> Result<(), TestSlashstepServerError> {
   // Grant access to the "slashstep.apps.get" action to the user.
   let user = test_environment.create_random_user().await?;
   let session = test_environment.create_session(&user.id).await?;
-  let json_web_token_private_key = Session::get_json_web_token_private_key().await?;
+  let json_web_token_private_key = get_json_web_token_private_key().await?;
   let session_token = session.generate_json_web_token(&json_web_token_private_key).await?;
   let get_actions_action = Action::get_by_name("slashstep.apps.get", &test_environment.database_pool).await?;
   AccessPolicy::create(&InitialAccessPolicyProperties {
@@ -433,7 +428,7 @@ async fn verify_permission() -> Result<(), TestSlashstepServerError> {
   // Create a user and a session.
   let user = test_environment.create_random_user().await?;
   let session = test_environment.create_session(&user.id).await?;
-  let json_web_token_private_key = Session::get_json_web_token_private_key().await?;
+  let json_web_token_private_key = get_json_web_token_private_key().await?;
   let session_token = session.generate_json_web_token(&json_web_token_private_key).await?;
 
   // Set up the server and send the request.

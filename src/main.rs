@@ -166,7 +166,7 @@ pub struct HTTPErrorBody {
 
 impl fmt::Display for HTTPError {
 
-  fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+  fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
     match self {
       HTTPError::NotFoundError(message) => write!(f, "{}", message.to_owned().unwrap_or("Not found.".to_string())),
       HTTPError::ConflictError(message) => write!(f, "{}", message.to_owned().unwrap_or("Conflict.".to_string())),
@@ -213,20 +213,27 @@ impl IntoResponse for HTTPError {
   }
 }
 
-impl HTTPError {
-
-  pub async fn print_and_save(&self, http_request_id: Option<&Uuid>, database_pool: &deadpool_postgres::Pool) -> Result<Result<ServerLogEntry, ResourceError>, ()> {
-
-    let server_log_entry = ServerLogEntry::from_http_error(self, http_request_id, database_pool).await;
-    return Ok(server_log_entry);
-
-  }
-
-}
-
 #[derive(Debug, Clone)]
 pub struct AppState {
   pub database_pool: deadpool_postgres::Pool,
+}
+
+pub async fn get_json_web_token_public_key() -> Result<String, ResourceError> {
+
+  let jwt_public_key_path = std::env::var("JWT_PUBLIC_KEY_PATH")?;
+  let jwt_public_key = std::fs::read_to_string(&jwt_public_key_path)?;
+
+  return Ok(jwt_public_key);
+
+}
+
+pub async fn get_json_web_token_private_key() -> Result<String, ResourceError> {
+
+  let jwt_private_key_path = std::env::var("JWT_PRIVATE_KEY_PATH")?;
+  let jwt_private_key = std::fs::read_to_string(&jwt_private_key_path)?;
+
+  return Ok(jwt_private_key);
+
 }
 
 pub fn handle_pool_error(error: deadpool_postgres::PoolError) -> Response<Body> {

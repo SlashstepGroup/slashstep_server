@@ -10,6 +10,8 @@ mod app_authorizations;
 mod app_authorization_credentials;
 #[path = "./app-credentials/mod.rs"]
 mod app_credentials;
+#[path = "./oauth-access-tokens/mod.rs"]
+mod oauth_access_tokens;
 mod users;
 
 use axum::{Router, response::IntoResponse};

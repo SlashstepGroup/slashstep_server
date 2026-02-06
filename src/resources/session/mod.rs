@@ -44,24 +44,6 @@ pub struct InitialSessionProperties<'a> {
 
 impl Session {
 
-  pub async fn get_json_web_token_public_key() -> Result<String, ResourceError> {
-
-    let jwt_public_key_path = std::env::var("JWT_PUBLIC_KEY_PATH")?;
-    let jwt_public_key = std::fs::read_to_string(&jwt_public_key_path)?;
-
-    return Ok(jwt_public_key);
-
-  }
-
-  pub async fn get_json_web_token_private_key() -> Result<String, ResourceError> {
-
-    let jwt_private_key_path = std::env::var("JWT_PRIVATE_KEY_PATH")?;
-    let jwt_private_key = std::fs::read_to_string(&jwt_private_key_path)?;
-
-    return Ok(jwt_private_key);
-
-  }
-
   /// Initializes the sessions table.
   pub async fn initialize_resource_table(database_pool: &deadpool_postgres::Pool) -> Result<(), ResourceError> {
 
@@ -141,7 +123,7 @@ impl Session {
       exp: (Utc::now() + Duration::days(30)).timestamp() as usize
     };
     let encoding_key = jsonwebtoken::EncodingKey::from_rsa_pem(private_key.as_ref())?;
-    let token = jsonwebtoken::encode(&Header::new(jsonwebtoken::Algorithm::RS256), &claims, &encoding_key)?;
+    let token = jsonwebtoken::encode(&Header::new(jsonwebtoken::Algorithm::EdDSA), &claims, &encoding_key)?;
 
     return Ok(token);
 

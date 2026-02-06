@@ -1,3 +1,5 @@
+use chrono::{DateTime, Duration, Utc};
+use jsonwebtoken::Header;
 use postgres_types::ToSql;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
@@ -27,7 +29,19 @@ pub struct OAuthAuthorization {
   pub authorizing_user_id: Uuid,
 
   /// The OAuth authorization's code challenge, if applicable.
-  pub code_challenge: Option<String>
+  pub code_challenge: Option<String>,
+
+  /// The OAuth authorization's code challenge method, if applicable.
+  pub code_challenge_method: Option<String>,
+
+  /// The OAuth authorization's redirect URI, if applicable.
+  pub redirect_uri: Option<String>,
+
+  /// The OAuth authorization's scope.
+  pub scope: String,
+
+  /// The OAuth authorization's usage date, if applicable.
+  pub usage_date: Option<DateTime<Utc>>
 
 }
 
@@ -42,6 +56,9 @@ pub struct InitialOAuthAuthorizationProperties {
   /// The OAuth authorization's code challenge, if applicable.
   pub code_challenge: Option<String>,
 
+  /// The OAuth authorization's code challenge method, if applicable.
+  pub code_challenge_method: Option<String>,
+
   /// The OAuth authorization's scope.
   /// 
   /// Delegation policies are initially defined by this scope string.
@@ -49,7 +66,13 @@ pub struct InitialOAuthAuthorizationProperties {
   /// The string should be a space-separated list of action IDs and permission levels.
   /// 
   /// For example: `00000000-0000-0000-0000-000000000001:Editor 00000000-0000-0000-0000-000000000002:Admin`
-  pub scope: String
+  pub scope: String,
+
+  /// The OAuth authorization's redirect URI, if applicable.
+  pub redirect_uri: Option<String>,
+
+  /// The OAuth authorization's usage date, if applicable.
+  pub usage_date: Option<DateTime<Utc>>
 
 }
 
@@ -62,6 +85,9 @@ pub struct InitialOAuthAuthorizationPropertiesForPredefinedAuthorizer {
   /// The OAuth authorization's code challenge, if applicable.
   pub code_challenge: Option<String>,
 
+  /// The OAuth authorization's code challenge method, if applicable.
+  pub code_challenge_method: Option<String>,
+
   /// The OAuth authorization's scope.
   /// 
   /// Delegation policies are initially defined by this scope string.
@@ -69,8 +95,23 @@ pub struct InitialOAuthAuthorizationPropertiesForPredefinedAuthorizer {
   /// The string should be a space-separated list of action IDs and permission levels.
   /// 
   /// For example: `00000000-0000-0000-0000-000000000001:Editor 00000000-0000-0000-0000-000000000002:Admin`
-  pub scope: String
+  pub scope: String,
+
+  /// The OAuth authorization's redirect URI, if applicable.
+  pub redirect_uri: Option<String>
   
+}
+
+pub struct EditableOAuthAuthorizationProperties {
+
+  pub usage_date: Option<DateTime<Utc>>
+
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct OAuthAuthorizationClaims {
+  pub jti: String,
+  pub exp: usize
 }
 
 impl OAuthAuthorization {
@@ -145,6 +186,20 @@ impl OAuthAuthorization {
 
   }
 
+  pub fn generate_authorization_code(&self, private_key: &str) -> Result<String, ResourceError> {
+
+    let header = Header::new(jsonwebtoken::Algorithm::EdDSA);
+    let expiration_date = Utc::now() + Duration::seconds(60); // TODO: Make this configurable.
+    let claims = OAuthAuthorizationClaims {
+      jti: self.id.to_string(),
+      exp: (expiration_date.timestamp_millis() as usize)
+    };
+    let encoding_key = jsonwebtoken::EncodingKey::from_ed_pem(private_key.as_ref())?;
+    let token = jsonwebtoken::encode(&header, &claims, &encoding_key)?;
+    return Ok(token);
+
+  }
+
   /// Returns a oauth authorization by its ID.
   pub async fn get_by_id(id: &Uuid, database_pool: &deadpool_postgres::Pool) -> Result<Self, ResourceError> {
 
@@ -209,6 +264,26 @@ impl OAuthAuthorization {
     }
 
     return Ok(Box::new(value));
+
+  }
+
+  pub async fn update(&self, properties: &EditableOAuthAuthorizationProperties, database_pool: &deadpool_postgres::Pool) -> Result<Self, ResourceError> {
+
+    let query = String::from("UPDATE oauth_authorizations SET ");
+    let parameter_boxes: Vec<Box<dyn ToSql + Sync + Send>> = Vec::new();
+    let database_client = database_pool.get().await?;
+
+    database_client.query("BEGIN;", &[]).await?;
+    let (parameter_boxes, query) = Self::add_parameter(parameter_boxes, query, "usage_date", Some(&properties.usage_date));
+
+    query.push_str(format!(" WHERE id = ${} RETURNING *;", parameter_boxes.len() + 1).as_str());
+    parameter_boxes.push(Box::new(&self.id));
+    let parameters: Vec<&(dyn ToSql + Sync)> = parameter_boxes.iter().map(|parameter| parameter.as_ref() as &(dyn ToSql + Sync)).collect();
+    let row = database_client.query_one(&query, &parameters).await?;
+    database_client.query("COMMIT;", &[]).await?;
+
+    let oauth_authorization = OAuthAuthorization::convert_from_row(&row);
+    return Ok(oauth_authorization);
 
   }
 

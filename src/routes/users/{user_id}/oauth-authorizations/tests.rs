@@ -15,7 +15,7 @@ use axum_test::TestServer;
 use ntest::timeout;
 use reqwest::StatusCode;
 use uuid::Uuid;
-use crate::{AppState, initialize_required_tables,  predefinitions::{initialize_predefined_actions, initialize_predefined_roles}, resources::{access_policy::{AccessPolicy, AccessPolicyPrincipalType, AccessPolicyResourceType, ActionPermissionLevel, IndividualPrincipal, InitialAccessPolicyProperties}, action::{Action, ActionParentResourceType, DEFAULT_ACTION_LIST_LIMIT, InitialActionPropertiesForPredefinedScope}, oauth_authorization::{InitialOAuthAuthorizationPropertiesForPredefinedAuthorizer, OAuthAuthorization}, session::Session}, tests::{TestEnvironment, TestSlashstepServerError}, utilities::reusable_route_handlers::ListResourcesResponseBody};
+use crate::{AppState, initialize_required_tables,  predefinitions::{initialize_predefined_actions, initialize_predefined_roles}, resources::{access_policy::{AccessPolicy, AccessPolicyPrincipalType, AccessPolicyResourceType, ActionPermissionLevel, IndividualPrincipal, InitialAccessPolicyProperties}, action::{Action, ActionParentResourceType, DEFAULT_ACTION_LIST_LIMIT, InitialActionPropertiesForPredefinedScope}, oauth_authorization::{InitialOAuthAuthorizationPropertiesForPredefinedAuthorizer, OAuthAuthorization},}, tests::{TestEnvironment, TestSlashstepServerError}, utilities::reusable_route_handlers::ListResourcesResponseBody};
 
 /// Verifies that the router can return a 201 status code and the created resource.
 #[tokio::test]
@@ -29,7 +29,7 @@ async fn verify_successful_creation() -> Result<(), TestSlashstepServerError> {
   // Give the user access to the "slashstep.apps.create" action.
   let user = test_environment.create_random_user().await?;
   let session = test_environment.create_session(&user.id).await?;
-  let json_web_token_private_key = Session::get_json_web_token_private_key().await?;
+  let json_web_token_private_key = get_json_web_token_private_key().await?;
   let session_token = session.generate_json_web_token(&json_web_token_private_key).await?;
   let create_oauth_authorizations_action = Action::get_by_name("slashstep.oauthAuthorizations.create", &test_environment.database_pool).await?;
   test_environment.create_instance_access_policy(&user.id, &create_oauth_authorizations_action.id, &ActionPermissionLevel::User).await?;

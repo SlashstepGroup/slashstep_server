@@ -15,17 +15,12 @@ use axum_test::TestServer;
 use ntest::timeout;
 use reqwest::StatusCode;
 use crate::{
-  Action, 
-  AppState,
-  initialize_required_tables,
-  predefinitions::{
+  Action, AppState, get_json_web_token_private_key, initialize_required_tables, predefinitions::{
     initialize_predefined_actions, 
     initialize_predefined_roles
-  }, 
-  resources::{
-    ResourceError, access_policy::ActionPermissionLevel, app_credential::{AppCredential}, session::Session
-  }, 
-  tests::{TestEnvironment, TestSlashstepServerError}
+  }, resources::{
+    ResourceError, access_policy::ActionPermissionLevel, app_credential::AppCredential,
+  }, tests::{TestEnvironment, TestSlashstepServerError}
 };
 
 /// Verifies that the router can return a 200 status code and the requested resource.
@@ -48,7 +43,7 @@ async fn verify_returned_resource_by_id() -> Result<(), TestSlashstepServerError
   
   let user = test_environment.create_random_user().await?;
   let session = test_environment.create_session(&user.id).await?;
-  let json_web_token_private_key = Session::get_json_web_token_private_key().await?;
+  let json_web_token_private_key = get_json_web_token_private_key().await?;
   let session_token = session.generate_json_web_token(&json_web_token_private_key).await?;
   let get_app_credentials_action = Action::get_by_name("slashstep.appCredentials.get", &test_environment.database_pool).await?;
   test_environment.create_instance_access_policy(&user.id, &get_app_credentials_action.id, &ActionPermissionLevel::User).await?;
@@ -139,7 +134,7 @@ async fn verify_permission_when_getting_resource_by_id() -> Result<(), TestSlash
   // Create the user, the session, and the resource.
   let user = test_environment.create_random_user().await?;
   let session = test_environment.create_session(&user.id).await?;
-  let json_web_token_private_key = Session::get_json_web_token_private_key().await?;
+  let json_web_token_private_key = get_json_web_token_private_key().await?;
   let session_token = session.generate_json_web_token(&json_web_token_private_key).await?;
   let app_credential = test_environment.create_random_app_credential(None).await?;
 
@@ -200,7 +195,7 @@ async fn verify_successful_deletion_when_deleting_resource_by_id() -> Result<(),
   // Create the user and the session.
   let user = test_environment.create_random_user().await?;
   let session = test_environment.create_session(&user.id).await?;
-  let json_web_token_private_key = Session::get_json_web_token_private_key().await?;
+  let json_web_token_private_key = get_json_web_token_private_key().await?;
   let session_token = session.generate_json_web_token(&json_web_token_private_key).await?;
 
   // Grant access to the "slashstep.appCredentials.delete" action to the user.
@@ -300,7 +295,7 @@ async fn verify_permission_when_deleting_resource_by_id() -> Result<(), TestSlas
   // Create the user and the session.
   let user = test_environment.create_random_user().await?;
   let session = test_environment.create_session(&user.id).await?;
-  let json_web_token_private_key = Session::get_json_web_token_private_key().await?;
+  let json_web_token_private_key = get_json_web_token_private_key().await?;
   let session_token = session.generate_json_web_token(&json_web_token_private_key).await?;
   
   // Create dummy resources.
@@ -334,7 +329,7 @@ async fn verify_resource_exists_when_deleting_resource_by_id() -> Result<(), Tes
   // Create the user and the session.
   let user = test_environment.create_random_user().await?;
   let session = test_environment.create_session(&user.id).await?;
-  let json_web_token_private_key = Session::get_json_web_token_private_key().await?;
+  let json_web_token_private_key = get_json_web_token_private_key().await?;
   let session_token = session.generate_json_web_token(&json_web_token_private_key).await?;
 
   // Set up the server and send the request.

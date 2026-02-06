@@ -104,7 +104,7 @@ async fn handle_patch_action_request(
 
       };
       
-      http_error.print_and_save(Some(&http_transaction.id), &state.database_pool).await.ok();
+      ServerLogEntry::from_http_error(&http_error, Some(&http_transaction.id), &state.database_pool).await.ok();
       return Err(http_error);
 
     }
@@ -126,7 +126,7 @@ async fn handle_patch_action_request(
     Err(error) => {
 
       let http_error = HTTPError::InternalServerError(Some(format!("Failed to update action: {:?}", error)));
-      http_error.print_and_save(Some(&http_transaction.id), &state.database_pool).await.ok();
+      ServerLogEntry::from_http_error(&http_error, Some(&http_transaction.id), &state.database_pool).await.ok();
       return Err(http_error);
 
     }

@@ -50,7 +50,7 @@ pub struct App {
   pub display_name: String,
   pub description: Option<String>,
   pub client_type: AppClientType,
-  pub client_secret_hash: String,
+  pub client_secret_hash: Option<String>,
   pub parent_resource_type: AppParentResourceType,
   pub parent_workspace_id: Option<Uuid>,
   pub parent_user_id: Option<Uuid>

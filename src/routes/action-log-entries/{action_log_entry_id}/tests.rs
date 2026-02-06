@@ -14,22 +14,13 @@ use axum_extra::extract::cookie::Cookie;
 use axum_test::TestServer;
 use ntest::timeout;
 use crate::{
-  Action, 
-  AppState,
-  initialize_required_tables,
-  predefinitions::{
+  Action, AppState, get_json_web_token_private_key, initialize_required_tables, predefinitions::{
     initialize_predefined_actions, initialize_predefined_roles
-  }, 
-  resources::{
+  }, resources::{
     ResourceError, access_policy::{
-      AccessPolicy, 
-      ActionPermissionLevel, 
-      AccessPolicyPrincipalType, 
-      AccessPolicyResourceType, 
-      InitialAccessPolicyProperties
-    }, action_log_entry::ActionLogEntry, session::Session
-  }, 
-  tests::{TestEnvironment, TestSlashstepServerError}
+      AccessPolicy, AccessPolicyPrincipalType, AccessPolicyResourceType, ActionPermissionLevel, InitialAccessPolicyProperties
+    }, action_log_entry::ActionLogEntry,
+  }, tests::{TestEnvironment, TestSlashstepServerError}
 };
 
 /// Verifies that the router can return a 200 status code and the requested action.
@@ -52,7 +43,7 @@ async fn verify_returned_action_log_entry_by_id() -> Result<(), TestSlashstepSer
   
   let user = test_environment.create_random_user().await?;
   let session = test_environment.create_session(&user.id).await?;
-  let json_web_token_private_key = Session::get_json_web_token_private_key().await?;
+  let json_web_token_private_key = get_json_web_token_private_key().await?;
   let session_token = session.generate_json_web_token(&json_web_token_private_key).await?;
   let get_action_log_entries_action = Action::get_by_name("slashstep.actionLogEntries.get", &test_environment.database_pool).await?;
   AccessPolicy::create(&InitialAccessPolicyProperties {
@@ -171,7 +162,7 @@ async fn verify_permission_when_getting_action_log_entry_by_id() -> Result<(), T
   // Create the user, the session, and the action.
   let user = test_environment.create_random_user().await?;
   let session = test_environment.create_session(&user.id).await?;
-  let json_web_token_private_key = Session::get_json_web_token_private_key().await?;
+  let json_web_token_private_key = get_json_web_token_private_key().await?;
   let session_token = session.generate_json_web_token(&json_web_token_private_key).await?;
   let action_log_entry = test_environment.create_random_action_log_entry().await?;
 
@@ -232,7 +223,7 @@ async fn verify_successful_deletion_when_deleting_action_log_entry_by_id() -> Re
   // Create the user and the session.
   let user = test_environment.create_random_user().await?;
   let session = test_environment.create_session(&user.id).await?;
-  let json_web_token_private_key = Session::get_json_web_token_private_key().await?;
+  let json_web_token_private_key = get_json_web_token_private_key().await?;
   let session_token = session.generate_json_web_token(&json_web_token_private_key).await?;
 
   // Grant access to the "slashstep.actions.delete" action to the user.
@@ -340,7 +331,7 @@ async fn verify_permission_when_deleting_action_log_entry_by_id() -> Result<(), 
   // Create the user and the session.
   let user = test_environment.create_random_user().await?;
   let session = test_environment.create_session(&user.id).await?;
-  let json_web_token_private_key = Session::get_json_web_token_private_key().await?;
+  let json_web_token_private_key = get_json_web_token_private_key().await?;
   let session_token = session.generate_json_web_token(&json_web_token_private_key).await?;
   
   // Create a dummy action log entry.

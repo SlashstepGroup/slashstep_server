@@ -4,18 +4,18 @@ use axum::{Extension, body::Body, extract::{Request, State}, http::HeaderMap, mi
 use axum_extra::extract::CookieJar;
 use reqwest::header;
 use uuid::Uuid;
-use crate::{AppState, HTTPError, resources::{ResourceError, app::App, app_authorization::AppAuthorization, http_transaction::HTTPTransaction, role::Role, role_memberships::{InitialRoleMembershipProperties, RoleMembership}, server_log_entry::ServerLogEntry, session::{Session, SessionTokenClaims}, user::{InitialUserProperties, User}}, utilities::route_handler_utilities::{get_app_by_id, get_app_credential_by_id}};
+use crate::{AppState, HTTPError, get_json_web_token_public_key, resources::{ResourceError, app::App, app_authorization::AppAuthorization, http_transaction::HTTPTransaction, role::Role, role_memberships::{InitialRoleMembershipProperties, RoleMembership}, server_log_entry::ServerLogEntry, session::{Session, SessionTokenClaims}, user::{InitialUserProperties, User}}, utilities::route_handler_utilities::{get_app_by_id, get_app_credential_by_id}};
 
 async fn get_jwt_public_key(http_transaction_id: &Uuid, database_pool: &deadpool_postgres::Pool) -> Result<String, HTTPError> {
 
-  let jwt_public_key = match Session::get_json_web_token_public_key().await {
+  let jwt_public_key = match get_json_web_token_public_key().await {
 
     Ok(jwt_public_key) => jwt_public_key,
 
     Err(error) => {
 
       let http_error = HTTPError::InternalServerError(Some(format!("{:?}", error)));
-      http_error.print_and_save(Some(http_transaction_id), database_pool).await.ok();
+      ServerLogEntry::from_http_error(&http_error, Some(&http_transaction_id), &database_pool).await.ok();
       return Err(http_error);
 
     }
@@ -26,14 +26,14 @@ async fn get_jwt_public_key(http_transaction_id: &Uuid, database_pool: &deadpool
 
 }
 
-async fn get_decoding_key(http_transaction_id: &Uuid, database_pool: &deadpool_postgres::Pool, jwt_public_key: &str) -> Result<jsonwebtoken::DecodingKey, HTTPError> {
+pub async fn get_decoding_key(http_transaction_id: &Uuid, database_pool: &deadpool_postgres::Pool, jwt_public_key: &str) -> Result<jsonwebtoken::DecodingKey, HTTPError> {
 
-  let decoding_key = match jsonwebtoken::DecodingKey::from_rsa_pem(&jwt_public_key.as_bytes()) {
+  let decoding_key = match jsonwebtoken::DecodingKey::from_ed_pem(&jwt_public_key.as_bytes()) {
     Ok(decoding_key) => decoding_key,
     Err(error) => {
       
       let http_error = HTTPError::InternalServerError(Some(format!("Failed to decode JWT public key: {:?}", error)));
-      http_error.print_and_save(Some(&http_transaction_id), database_pool).await.ok();
+      ServerLogEntry::from_http_error(&http_error, Some(&http_transaction_id), &database_pool).await.ok();
       return Err(http_error);
 
     }
@@ -64,7 +64,7 @@ async fn get_decoded_claims(http_transaction_id: &Uuid, database_pool: &deadpool
 
       };
 
-      http_error.print_and_save(Some(&http_transaction_id), database_pool).await.ok();
+      ServerLogEntry::from_http_error(&http_error, Some(&http_transaction_id), &database_pool).await.ok();
       return Err(http_error);
 
     }
@@ -88,7 +88,7 @@ async fn get_user_by_id(http_transaction_id: &Uuid, database_pool: &deadpool_pos
         
       };
 
-      http_error.print_and_save(Some(&http_transaction_id), database_pool).await.ok();
+      ServerLogEntry::from_http_error(&http_error, Some(&http_transaction_id), &database_pool).await.ok();
 
       return Err(http_error);
 
@@ -167,7 +167,7 @@ pub async fn authenticate_user(
               Err(error) => {
 
                 let http_error = HTTPError::InternalServerError(Some(format!("Failed to create anonymous user: {:?}", error)));
-                http_error.print_and_save(Some(&http_transaction.id), &state.database_pool).await.ok();
+                ServerLogEntry::from_http_error(&http_error, Some(&http_transaction.id), &state.database_pool).await.ok();
                 return Err(http_error);
 
               }
@@ -181,7 +181,7 @@ pub async fn authenticate_user(
           _ => {
     
             let http_error = HTTPError::InternalServerError(Some(format!("Failed to get anonymous user: {:?}", error)));
-            http_error.print_and_save(Some(&http_transaction.id), &state.database_pool).await.ok();
+            ServerLogEntry::from_http_error(&http_error, Some(&http_transaction.id), &state.database_pool).await.ok();
             return Err(http_error);
     
           }
@@ -200,7 +200,7 @@ pub async fn authenticate_user(
       Err(error) => {
 
         let http_error = HTTPError::InternalServerError(Some(format!("Failed to get anonymous-users role: {:?}", error)));
-        http_error.print_and_save(Some(&http_transaction.id), &state.database_pool).await.ok();
+        ServerLogEntry::from_http_error(&http_error, Some(&http_transaction.id), &state.database_pool).await.ok();
         return Err(http_error);
 
       }
@@ -214,7 +214,7 @@ pub async fn authenticate_user(
       Err(error) => {
 
         let http_error = HTTPError::InternalServerError(Some(format!("Failed to get role memberships: {:?}", error)));
-        http_error.print_and_save(Some(&http_transaction.id), &state.database_pool).await.ok();
+        ServerLogEntry::from_http_error(&http_error, Some(&http_transaction.id), &state.database_pool).await.ok();
         return Err(http_error);
 
       }
@@ -247,7 +247,7 @@ pub async fn authenticate_user(
   if !session_token.value().starts_with("Bearer ") {
 
     let http_error = HTTPError::UnauthorizedError(Some("Please provide a valid session token.".to_string()));
-    http_error.print_and_save(Some(&http_transaction.id), &state.database_pool).await.ok();
+    ServerLogEntry::from_http_error(&http_error, Some(&http_transaction.id), &state.database_pool).await.ok();
     return Err(http_error);
 
   }
@@ -258,7 +258,7 @@ pub async fn authenticate_user(
   ServerLogEntry::trace("Decoding session token...", Some(&http_transaction.id), &state.database_pool).await.ok();
 
   let jwt_public_key = get_jwt_public_key(&http_transaction.id, &state.database_pool).await?;
-  let validation = jsonwebtoken::Validation::new(jsonwebtoken::Algorithm::RS256);
+  let validation = jsonwebtoken::Validation::new(jsonwebtoken::Algorithm::EdDSA);
   let decoding_key = get_decoding_key(&http_transaction.id, &state.database_pool, &jwt_public_key).await?;
   let decoded_claims = get_decoded_claims(&http_transaction.id, &state.database_pool, &session_token, &decoding_key, &validation).await?;
 
@@ -269,7 +269,7 @@ pub async fn authenticate_user(
     Err(_) => {
 
       let http_error = HTTPError::BadRequestError(Some("You must provide a valid UUID for the user ID.".to_string()));
-      http_error.print_and_save(Some(&http_transaction.id), &state.database_pool).await.ok();
+      ServerLogEntry::from_http_error(&http_error, Some(&http_transaction.id), &state.database_pool).await.ok();
       return Err(http_error);
 
     }
@@ -281,7 +281,7 @@ pub async fn authenticate_user(
     Err(_) => {
 
       let http_error = HTTPError::BadRequestError(Some("You must provide a valid UUID for the user ID.".to_string()));
-      http_error.print_and_save(Some(&http_transaction.id), &state.database_pool).await.ok();
+      ServerLogEntry::from_http_error(&http_error, Some(&http_transaction.id), &state.database_pool).await.ok();
       return Err(http_error);
 
     }
@@ -330,7 +330,7 @@ pub async fn authenticate_app(
     Err(_) => {
 
       let http_error = HTTPError::BadRequestError(Some("Please provide a valid app token.".to_string()));
-      http_error.print_and_save(Some(&http_transaction.id), &state.database_pool).await.ok();
+      ServerLogEntry::from_http_error(&http_error, Some(&http_transaction.id), &state.database_pool).await.ok();
       return Err(http_error);
 
     }
@@ -340,7 +340,7 @@ pub async fn authenticate_app(
   if !authorization_token.starts_with("App ") {
 
     let http_error = HTTPError::UnauthorizedError(Some("Please provide a valid app token.".to_string()));
-    http_error.print_and_save(Some(&http_transaction.id), &state.database_pool).await.ok();
+    ServerLogEntry::from_http_error(&http_error, Some(&http_transaction.id), &state.database_pool).await.ok();
     return Err(http_error);
 
   }
@@ -363,7 +363,7 @@ pub async fn authenticate_app(
     Err(_) => {
 
       let http_error = HTTPError::InternalServerError(Some("App credential ID is not a valid UUID.".to_string()));
-      http_error.print_and_save(Some(&http_transaction.id), &state.database_pool).await.ok();
+      ServerLogEntry::from_http_error(&http_error, Some(&http_transaction.id), &state.database_pool).await.ok();
       return Err(http_error);
 
     }
@@ -379,7 +379,7 @@ pub async fn authenticate_app(
       HTTPError::BadRequestError(_) | HTTPError::NotFoundError(_) => {
 
         let http_error = HTTPError::UnauthorizedError(Some("Please provide a valid app token.".to_string()));
-        http_error.print_and_save(Some(&http_transaction.id), &state.database_pool).await.ok();
+        ServerLogEntry::from_http_error(&http_error, Some(&http_transaction.id), &state.database_pool).await.ok();
         return Err(http_error);
 
       },
@@ -399,7 +399,7 @@ pub async fn authenticate_app(
       HTTPError::BadRequestError(_) | HTTPError::NotFoundError(_) => {
 
         let http_error = HTTPError::UnauthorizedError(Some("Please provide a valid app token.".to_string()));
-        http_error.print_and_save(Some(&http_transaction.id), &state.database_pool).await.ok();
+        ServerLogEntry::from_http_error(&http_error, Some(&http_transaction.id), &state.database_pool).await.ok();
         return Err(http_error);
 
       },
