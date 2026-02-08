@@ -6,7 +6,7 @@ use postgres::NoTls;
 use testcontainers_modules::{testcontainers::runners::AsyncRunner};
 use testcontainers::{ImageExt};
 use uuid::Uuid;
-use crate::{DEFAULT_MAXIMUM_POSTGRES_CONNECTION_COUNT, SlashstepServerError, import_env_file, resources::{ResourceError, access_policy::{AccessPolicy, ActionPermissionLevel, InitialAccessPolicyProperties}, action::{Action, ActionParentResourceType, InitialActionProperties}, action_log_entry::{ActionLogEntry, InitialActionLogEntryProperties}, app::{App, AppClientType, AppParentResourceType, InitialAppProperties}, app_authorization::{AppAuthorization, InitialAppAuthorizationProperties}, app_authorization_credential::{AppAuthorizationCredential, InitialAppAuthorizationCredentialProperties}, app_credential::{AppCredential, InitialAppCredentialProperties}, session::{InitialSessionProperties, Session}, user::{InitialUserProperties, User}}, utilities::resource_hierarchy::ResourceHierarchyError};
+use crate::{DEFAULT_MAXIMUM_POSTGRES_CONNECTION_COUNT, SlashstepServerError, import_env_file, resources::{ResourceError, access_policy::{AccessPolicy, ActionPermissionLevel, InitialAccessPolicyProperties}, action::{Action, ActionParentResourceType, InitialActionProperties}, action_log_entry::{ActionLogEntry, InitialActionLogEntryProperties}, app::{App, AppClientType, AppParentResourceType, InitialAppProperties}, app_authorization::{AppAuthorization, InitialAppAuthorizationProperties}, app_authorization_credential::{AppAuthorizationCredential, InitialAppAuthorizationCredentialProperties}, app_credential::{AppCredential, InitialAppCredentialProperties}, oauth_authorization::{InitialOAuthAuthorizationProperties, OAuthAuthorization}, session::{InitialSessionProperties, Session}, user::{InitialUserProperties, User}}, utilities::resource_hierarchy::ResourceHierarchyError};
 use thiserror::Error;
 
 #[derive(Debug, Error)]
@@ -106,7 +106,7 @@ impl TestEnvironment {
       description: Some(Uuid::now_v7().to_string()),
       client_type: AppClientType::Public,
       client_secret_hash: Uuid::now_v7().to_string(),
-      parent_resource_type: AppParentResourceType::Instance,
+      parent_resource_type: AppParentResourceType::Server,
       parent_workspace_id: None,
       parent_user_id: None
     };
@@ -114,6 +114,25 @@ impl TestEnvironment {
     let app = App::create(&app_properties, &self.database_pool).await?;
 
     return Ok(app);
+
+  }
+
+  pub async fn create_random_oauth_authorization(&self, app_id: Option<&Uuid>, code_challenge: Option<&str>) -> Result<OAuthAuthorization, TestSlashstepServerError> {
+
+    let oauth_authorization_properties = InitialOAuthAuthorizationProperties {
+      app_id: app_id.copied().unwrap_or(self.create_random_app().await?.id),
+      authorizing_user_id: self.create_random_user().await?.id,
+      code_challenge: code_challenge.map(|code_challenge| code_challenge.to_string()),
+      code_challenge_method: code_challenge.and(Some("S256".to_string())),
+      redirect_uri: None,
+      scope: Uuid::now_v7().to_string(),
+      usage_date: None,
+      state: None
+    };
+
+    let oauth_authorization = OAuthAuthorization::create(&oauth_authorization_properties, &self.database_pool).await?;
+
+    return Ok(oauth_authorization);
 
   }
   
@@ -124,7 +143,7 @@ impl TestEnvironment {
       display_name: Uuid::now_v7().to_string(),
       description: Uuid::now_v7().to_string(),
       parent_app_id: parent_app_id.copied(),
-      parent_resource_type: if parent_app_id.is_some() { ActionParentResourceType::App } else { ActionParentResourceType::Instance }
+      parent_resource_type: if parent_app_id.is_some() { ActionParentResourceType::App } else { ActionParentResourceType::Server }
     };
 
     let action = Action::create(&action_properties, &self.database_pool).await?;
@@ -248,7 +267,7 @@ impl TestEnvironment {
       is_inheritance_enabled: true,
       principal_type: crate::resources::access_policy::AccessPolicyPrincipalType::User,
       principal_user_id: Some(user.id),
-      scoped_resource_type: crate::resources::access_policy::AccessPolicyResourceType::Instance,
+      scoped_resource_type: crate::resources::access_policy::AccessPolicyResourceType::Server,
       ..Default::default()
     };
 
@@ -266,7 +285,7 @@ impl TestEnvironment {
       is_inheritance_enabled: true,
       principal_type: crate::resources::access_policy::AccessPolicyPrincipalType::User,
       principal_user_id: Some(user_id.clone()),
-      scoped_resource_type: crate::resources::access_policy::AccessPolicyResourceType::Instance,
+      scoped_resource_type: crate::resources::access_policy::AccessPolicyResourceType::Server,
       ..Default::default()
     }, &self.database_pool).await?;
 

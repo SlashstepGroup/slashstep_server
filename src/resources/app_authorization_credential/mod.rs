@@ -2,6 +2,7 @@
 mod tests;
 
 use chrono::{DateTime, Utc};
+use jsonwebtoken::Header;
 use postgres_types::ToSql;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
@@ -60,6 +61,13 @@ pub struct InitialAppAuthorizationCredentialProperties {
   /// The ID of the refreshed app authorization credential, if applicable.
   pub refreshed_app_authorization_credential_id: Option<Uuid>
 
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct AppAuthorizationCredentialClaims {
+  pub jti: String,
+  pub exp: usize,
+  pub r#type: String
 }
 
 impl AppAuthorizationCredential {
@@ -121,6 +129,36 @@ impl AppAuthorizationCredential {
     let app_authorization_credential = Self::convert_from_row(&row);
 
     return Ok(app_authorization_credential);
+
+  }
+
+  pub fn generate_access_token(&self, private_key: &str) -> Result<String, ResourceError> {
+
+    let header = Header::new(jsonwebtoken::Algorithm::EdDSA);
+    let claims = AppAuthorizationCredentialClaims {
+      jti: self.id.to_string(),
+      exp: self.access_token_expiration_date.timestamp() as usize,
+      r#type: "Access".to_string()
+    };
+    let encoding_key = jsonwebtoken::EncodingKey::from_ed_pem(private_key.as_ref())?;
+    let token = jsonwebtoken::encode(&header, &claims, &encoding_key)?;
+
+    return Ok(token);
+
+  }
+
+  pub fn generate_refresh_token(&self, private_key: &str) -> Result<String, ResourceError> {
+
+    let header = Header::new(jsonwebtoken::Algorithm::EdDSA);
+    let claims = AppAuthorizationCredentialClaims {
+      jti: self.id.to_string(),
+      exp: self.refresh_token_expiration_date.timestamp() as usize,
+      r#type: "Refresh".to_string()
+    };
+    let encoding_key = jsonwebtoken::EncodingKey::from_ed_pem(private_key.as_ref())?;
+    let token = jsonwebtoken::encode(&header, &claims, &encoding_key)?;
+
+    return Ok(token);
 
   }
 

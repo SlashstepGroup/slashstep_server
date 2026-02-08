@@ -47,7 +47,7 @@ async fn handle_list_action_log_entries_request(
   // Make sure the principal has access to list resources.
   let http_transaction = http_transaction.clone();
   let list_action_log_entries_action = get_action_by_name("slashstep.actionLogEntries.list", &http_transaction, &state.database_pool).await?;
-  let resource_hierarchy: ResourceHierarchy = vec![(AccessPolicyResourceType::Instance, None)];
+  let resource_hierarchy: ResourceHierarchy = vec![(AccessPolicyResourceType::Server, None)];
   verify_delegate_permissions(authenticated_app_authorization.as_ref().map(|app_authorization| &app_authorization.id), &list_action_log_entries_action.id, &http_transaction.id, &ActionPermissionLevel::User, &state.database_pool).await?;
   let authenticated_principal = get_authenticated_principal(authenticated_user.as_ref(), authenticated_app.as_ref())?;
   verify_principal_permissions(&authenticated_principal, &list_action_log_entries_action, &resource_hierarchy, &http_transaction, &ActionPermissionLevel::User, &state.database_pool).await?;
@@ -71,7 +71,7 @@ async fn handle_list_action_log_entries_request(
 
       };
 
-      http_error.print_and_save(Some(&http_transaction.id), &state.database_pool).await.ok();
+      ServerLogEntry::from_http_error(&http_error, Some(&http_transaction.id), &state.database_pool).await.ok();
       return Err(http_error);
 
     }
@@ -86,7 +86,7 @@ async fn handle_list_action_log_entries_request(
     Err(error) => {
 
       let http_error = HTTPError::InternalServerError(Some(format!("Failed to count action log entries: {:?}", error)));
-      http_error.print_and_save(Some(&http_transaction.id), &state.database_pool).await.ok();
+      ServerLogEntry::from_http_error(&http_error, Some(&http_transaction.id), &state.database_pool).await.ok();
       return Err(http_error);
 
     }
@@ -99,7 +99,7 @@ async fn handle_list_action_log_entries_request(
     actor_type: if let AuthenticatedPrincipal::User(_) = &authenticated_principal { ActionLogEntryActorType::User } else { ActionLogEntryActorType::App },
     actor_user_id: if let AuthenticatedPrincipal::User(authenticated_user) = &authenticated_principal { Some(authenticated_user.id.clone()) } else { None },
     actor_app_id: if let AuthenticatedPrincipal::App(authenticated_app) = &authenticated_principal { Some(authenticated_app.id.clone()) } else { None },
-    target_resource_type: ActionLogEntryTargetResourceType::Instance,
+    target_resource_type: ActionLogEntryTargetResourceType::Server,
     ..Default::default()
   }, &state.database_pool).await.ok();
   let action_list_length = action_log_entries.len();

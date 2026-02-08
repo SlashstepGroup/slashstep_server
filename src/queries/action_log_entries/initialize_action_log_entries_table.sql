@@ -3,7 +3,8 @@ DO $$
     IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'action_log_entry_actor_type') THEN
       CREATE TYPE action_log_entry_actor_type AS ENUM (
         'User',
-        'App'
+        'App',
+        'Server'
       );
     END IF;
 
@@ -19,7 +20,7 @@ DO $$
         'Group',
         'GroupMembership',
         'HTTPTransaction',
-        'Instance',
+        'Server',
         'Item',
         'Milestone',
         'OAuthAuthorization',

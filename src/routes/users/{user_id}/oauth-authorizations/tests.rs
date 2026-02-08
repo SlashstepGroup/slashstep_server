@@ -1,6 +1,6 @@
 /**
  * 
- * Any test cases for /apps/{app_id}/actions should be handled here.
+ * Any test cases for /users/{user_id}/oauth-authorizations should be handled here.
  * 
  * Programmers: 
  * - Christian Toney (https://christiantoney.com)
@@ -12,10 +12,7 @@
 use std::net::SocketAddr;
 use axum_extra::extract::cookie::Cookie;
 use axum_test::TestServer;
-use ntest::timeout;
-use reqwest::StatusCode;
-use uuid::Uuid;
-use crate::{AppState, initialize_required_tables,  predefinitions::{initialize_predefined_actions, initialize_predefined_roles}, resources::{access_policy::{AccessPolicy, AccessPolicyPrincipalType, AccessPolicyResourceType, ActionPermissionLevel, IndividualPrincipal, InitialAccessPolicyProperties}, action::{Action, ActionParentResourceType, DEFAULT_ACTION_LIST_LIMIT, InitialActionPropertiesForPredefinedScope}, oauth_authorization::{InitialOAuthAuthorizationPropertiesForPredefinedAuthorizer, OAuthAuthorization}, session::Session}, tests::{TestEnvironment, TestSlashstepServerError}, utilities::reusable_route_handlers::ListResourcesResponseBody};
+use crate::{AppState, get_json_web_token_private_key, initialize_required_tables, predefinitions::{initialize_predefined_actions, initialize_predefined_roles}, resources::{access_policy::ActionPermissionLevel, action::Action, oauth_authorization::{InitialOAuthAuthorizationPropertiesForPredefinedAuthorizer},}, routes::users::user_id::oauth_authorizations::CreateOAuthAuthorizationResponseBody, tests::{TestEnvironment, TestSlashstepServerError}};
 
 /// Verifies that the router can return a 201 status code and the created resource.
 #[tokio::test]
@@ -29,7 +26,7 @@ async fn verify_successful_creation() -> Result<(), TestSlashstepServerError> {
   // Give the user access to the "slashstep.apps.create" action.
   let user = test_environment.create_random_user().await?;
   let session = test_environment.create_session(&user.id).await?;
-  let json_web_token_private_key = Session::get_json_web_token_private_key().await?;
+  let json_web_token_private_key = get_json_web_token_private_key().await?;
   let session_token = session.generate_json_web_token(&json_web_token_private_key).await?;
   let create_oauth_authorizations_action = Action::get_by_name("slashstep.oauthAuthorizations.create", &test_environment.database_pool).await?;
   test_environment.create_instance_access_policy(&user.id, &create_oauth_authorizations_action.id, &ActionPermissionLevel::User).await?;
@@ -45,7 +42,8 @@ async fn verify_successful_creation() -> Result<(), TestSlashstepServerError> {
   let initial_oauth_authorization_properties = InitialOAuthAuthorizationPropertiesForPredefinedAuthorizer {
     app_id: dummy_app.id,
     code_challenge: None,
-    scope: format!("{}:Editor", dummy_action.id)
+    scope: format!("{}:Editor", dummy_action.id),
+    ..Default::default()
   };
   let state = AppState {
     database_pool: test_environment.database_pool.clone(),
@@ -62,10 +60,13 @@ async fn verify_successful_creation() -> Result<(), TestSlashstepServerError> {
   // Verify the response.
   assert_eq!(response.status_code(), 201);
 
-  let response_oauth_authorization: OAuthAuthorization = response.json();
-  assert_eq!(initial_oauth_authorization_properties.app_id, response_oauth_authorization.app_id);
-  assert_eq!(dummy_user.id, response_oauth_authorization.authorizing_user_id);
-  assert_eq!(initial_oauth_authorization_properties.code_challenge, response_oauth_authorization.code_challenge);
+  let response_oauth_authorization: CreateOAuthAuthorizationResponseBody = response.json();
+  assert_eq!(initial_oauth_authorization_properties.app_id, response_oauth_authorization.oauth_authorization.app_id);
+  assert_eq!(dummy_user.id, response_oauth_authorization.oauth_authorization.authorizing_user_id);
+  assert_eq!(initial_oauth_authorization_properties.code_challenge, response_oauth_authorization.oauth_authorization.code_challenge);
+  // assert_eq!(initial_oauth_authorization_properties.app_id, response_oauth_authorization.app_id);
+  // assert_eq!(dummy_user.id, response_oauth_authorization.authorizing_user_id);
+  // assert_eq!(initial_oauth_authorization_properties.code_challenge, response_oauth_authorization.code_challenge);
 
   return Ok(());
   

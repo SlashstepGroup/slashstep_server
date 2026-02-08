@@ -1,3 +1,5 @@
+use chrono::{DateTime, Duration, Utc};
+use jsonwebtoken::Header;
 use postgres_types::ToSql;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
@@ -27,7 +29,22 @@ pub struct OAuthAuthorization {
   pub authorizing_user_id: Uuid,
 
   /// The OAuth authorization's code challenge, if applicable.
-  pub code_challenge: Option<String>
+  pub code_challenge: Option<String>,
+
+  /// The OAuth authorization's code challenge method, if applicable.
+  pub code_challenge_method: Option<String>,
+
+  /// The OAuth authorization's redirect URI, if applicable.
+  pub redirect_uri: Option<String>,
+
+  /// The OAuth authorization's scope.
+  pub scope: String,
+
+  /// The OAuth authorization's usage date, if applicable.
+  pub usage_date: Option<DateTime<Utc>>,
+
+  /// The OAuth authorization's state, if applicable.
+  pub state: Option<String>
 
 }
 
@@ -42,6 +59,9 @@ pub struct InitialOAuthAuthorizationProperties {
   /// The OAuth authorization's code challenge, if applicable.
   pub code_challenge: Option<String>,
 
+  /// The OAuth authorization's code challenge method, if applicable.
+  pub code_challenge_method: Option<String>,
+
   /// The OAuth authorization's scope.
   /// 
   /// Delegation policies are initially defined by this scope string.
@@ -49,11 +69,20 @@ pub struct InitialOAuthAuthorizationProperties {
   /// The string should be a space-separated list of action IDs and permission levels.
   /// 
   /// For example: `00000000-0000-0000-0000-000000000001:Editor 00000000-0000-0000-0000-000000000002:Admin`
-  pub scope: String
+  pub scope: String,
+
+  /// The OAuth authorization's redirect URI, if applicable.
+  pub redirect_uri: Option<String>,
+
+  /// The OAuth authorization's usage date, if applicable.
+  pub usage_date: Option<DateTime<Utc>>,
+
+  /// The OAuth authorization's state, if applicable.
+  pub state: Option<String>
 
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone, Default)]
 pub struct InitialOAuthAuthorizationPropertiesForPredefinedAuthorizer {
 
   /// The OAuth authorization's app ID.
@@ -62,6 +91,9 @@ pub struct InitialOAuthAuthorizationPropertiesForPredefinedAuthorizer {
   /// The OAuth authorization's code challenge, if applicable.
   pub code_challenge: Option<String>,
 
+  /// The OAuth authorization's code challenge method, if applicable.
+  pub code_challenge_method: Option<String>,
+
   /// The OAuth authorization's scope.
   /// 
   /// Delegation policies are initially defined by this scope string.
@@ -69,11 +101,43 @@ pub struct InitialOAuthAuthorizationPropertiesForPredefinedAuthorizer {
   /// The string should be a space-separated list of action IDs and permission levels.
   /// 
   /// For example: `00000000-0000-0000-0000-000000000001:Editor 00000000-0000-0000-0000-000000000002:Admin`
-  pub scope: String
+  pub scope: String,
+
+  /// The OAuth authorization's redirect URI, if applicable.
+  pub redirect_uri: Option<String>,
+
+  /// The OAuth authorization's state, if applicable.
+  pub state: Option<String>
   
 }
 
+pub struct EditableOAuthAuthorizationProperties {
+
+  pub usage_date: Option<DateTime<Utc>>
+
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct OAuthAuthorizationClaims {
+  pub jti: String,
+  pub exp: usize
+}
+
 impl OAuthAuthorization {
+
+  fn add_parameter<T: ToSql + Sync + Clone + Send + 'static>(mut parameter_boxes: Vec<Box<dyn ToSql + Sync + Send>>, mut query: String, key: &str, parameter_value: Option<&T>) -> (Vec<Box<dyn ToSql + Sync + Send>>, String) {
+
+    let parameter_value = parameter_value.and_then(|parameter_value| Some(parameter_value.clone()));
+    if let Some(parameter_value) = parameter_value.clone() {
+
+      query.push_str(format!("{}{} = ${}", if parameter_boxes.len() > 0 { ", " } else { "" }, key, parameter_boxes.len() + 1).as_str());
+      parameter_boxes.push(Box::new(parameter_value));
+
+    }
+    
+    return (parameter_boxes, query);
+
+  }
 
   /// Initializes the oauth_authorizations table.
   pub async fn initialize_resource_table(database_pool: &deadpool_postgres::Pool) -> Result<(), ResourceError> {
@@ -92,7 +156,12 @@ impl OAuthAuthorization {
       id: row.get("id"),
       app_id: row.get("app_id"),
       authorizing_user_id: row.get("authorizing_user_id"),
-      code_challenge: row.get("code_challenge")
+      code_challenge: row.get("code_challenge"),
+      code_challenge_method: row.get("code_challenge_method"),
+      redirect_uri: row.get("redirect_uri"),
+      scope: row.get("scope"),
+      usage_date: row.get("usage_date"),
+      state: row.get("state")
     }
 
   }
@@ -129,7 +198,12 @@ impl OAuthAuthorization {
     let parameters: &[&(dyn ToSql + Sync)] = &[
       &initial_properties.app_id,
       &initial_properties.authorizing_user_id,
-      &initial_properties.code_challenge
+      &initial_properties.code_challenge,
+      &initial_properties.code_challenge_method,
+      &initial_properties.redirect_uri,
+      &initial_properties.scope,
+      &initial_properties.usage_date,
+      &initial_properties.state
     ];
     let database_client = database_pool.get().await?;
     let row = database_client.query_one(query, parameters).await.map_err(|error| {
@@ -142,6 +216,20 @@ impl OAuthAuthorization {
     let oauth_authorization = Self::convert_from_row(&row);
 
     return Ok(oauth_authorization);
+
+  }
+
+  pub fn generate_authorization_code(&self, private_key: &str) -> Result<String, ResourceError> {
+
+    let header = Header::new(jsonwebtoken::Algorithm::EdDSA);
+    let expiration_date = Utc::now() + Duration::seconds(60); // TODO: Make this configurable.
+    let claims = OAuthAuthorizationClaims {
+      jti: self.id.to_string(),
+      exp: (expiration_date.timestamp_millis() as usize)
+    };
+    let encoding_key = jsonwebtoken::EncodingKey::from_ed_pem(private_key.as_ref())?;
+    let token = jsonwebtoken::encode(&header, &claims, &encoding_key)?;
+    return Ok(token);
 
   }
 
@@ -209,6 +297,26 @@ impl OAuthAuthorization {
     }
 
     return Ok(Box::new(value));
+
+  }
+
+  pub async fn update(&self, properties: &EditableOAuthAuthorizationProperties, database_pool: &deadpool_postgres::Pool) -> Result<Self, ResourceError> {
+
+    let query = String::from("UPDATE oauth_authorizations SET ");
+    let parameter_boxes: Vec<Box<dyn ToSql + Sync + Send>> = Vec::new();
+    let database_client = database_pool.get().await?;
+
+    database_client.query("BEGIN;", &[]).await?;
+    let (mut parameter_boxes, mut query) = Self::add_parameter(parameter_boxes, query, "usage_date", Some(&properties.usage_date));
+
+    query.push_str(format!(" WHERE id = ${} RETURNING *;", parameter_boxes.len() + 1).as_str());
+    parameter_boxes.push(Box::new(&self.id));
+    let parameters: Vec<&(dyn ToSql + Sync)> = parameter_boxes.iter().map(|parameter| parameter.as_ref() as &(dyn ToSql + Sync)).collect();
+    let row = database_client.query_one(&query, &parameters).await?;
+    database_client.query("COMMIT;", &[]).await?;
+
+    let oauth_authorization = OAuthAuthorization::convert_from_row(&row);
+    return Ok(oauth_authorization);
 
   }
 

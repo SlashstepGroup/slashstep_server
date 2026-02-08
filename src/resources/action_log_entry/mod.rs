@@ -67,7 +67,8 @@ pub const UUID_QUERY_KEYS: &[&str] = &[
 pub enum ActionLogEntryActorType {
   #[default]
   User,
-  App
+  App,
+  Server
 }
 
 #[derive(Debug, Clone, FromSql, ToSql, Serialize, Deserialize, Default, PartialEq, Eq)]
@@ -84,7 +85,7 @@ pub enum ActionLogEntryTargetResourceType {
   GroupMembership,
   HTTPTransaction,
   #[default]
-  Instance,
+  Server,
   Item,
   Milestone,
   OAuthAuthorization,

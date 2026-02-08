@@ -16,9 +16,10 @@ use std::sync::Arc;
 use axum::{Extension, Json, Router, extract::{Path, State, rejection::JsonRejection}};
 use regex::Regex;
 use reqwest::StatusCode;
+use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 use std::str::FromStr;
-use crate::{AppState, HTTPError, middleware::{authentication_middleware, http_request_middleware}, resources::{access_policy::{AccessPolicyResourceType, ActionPermissionLevel}, action_log_entry::{ActionLogEntry, ActionLogEntryActorType, ActionLogEntryTargetResourceType, InitialActionLogEntryProperties}, app::App, app_authorization::AppAuthorization, http_transaction::HTTPTransaction, oauth_authorization::{InitialOAuthAuthorizationProperties, InitialOAuthAuthorizationPropertiesForPredefinedAuthorizer, OAuthAuthorization}, server_log_entry::ServerLogEntry, user::User}, utilities::route_handler_utilities::{AuthenticatedPrincipal, get_action_by_id, get_action_by_name, get_app_by_id, get_authenticated_principal, get_resource_hierarchy, get_user_by_id, verify_delegate_permissions, verify_principal_permissions}};
+use crate::{AppState, HTTPError, middleware::{authentication_middleware, http_request_middleware}, resources::{access_policy::{AccessPolicyResourceType, ActionPermissionLevel}, action_log_entry::{ActionLogEntry, ActionLogEntryActorType, ActionLogEntryTargetResourceType, InitialActionLogEntryProperties}, app::App, app_authorization::AppAuthorization, http_transaction::HTTPTransaction, oauth_authorization::{InitialOAuthAuthorizationProperties, InitialOAuthAuthorizationPropertiesForPredefinedAuthorizer, OAuthAuthorization}, server_log_entry::ServerLogEntry, user::User}, utilities::route_handler_utilities::{AuthenticatedPrincipal, get_action_by_id, get_action_by_name, get_app_by_id, get_authenticated_principal, get_json_web_token_private_key, get_resource_hierarchy, get_user_by_id, verify_delegate_permissions, verify_principal_permissions}};
 
 
 // /// GET /apps
@@ -33,7 +34,7 @@ use crate::{AppState, HTTPError, middleware::{authentication_middleware, http_re
 //   Extension(authenticated_app): Extension<Option<Arc<App>>>
 // ) -> Result<ErasedJson, HTTPError> {
 
-//   let resource_hierarchy = vec![(AccessPolicyResourceType::Instance, None)];
+//   let resource_hierarchy = vec![(AccessPolicyResourceType::Server, None)];
 //   let response = list_resources(
 //     Query(query_parameters), 
 //     State(state), 
@@ -41,7 +42,7 @@ use crate::{AppState, HTTPError, middleware::{authentication_middleware, http_re
 //     Extension(authenticated_user), 
 //     Extension(authenticated_app), 
 //     resource_hierarchy, 
-//     ActionLogEntryTargetResourceType::Instance, 
+//     ActionLogEntryTargetResourceType::Server, 
 //     None, 
 //     |query, database_pool, individual_principal| Box::new(App::count(query, database_pool, individual_principal)),
 //     |query, database_pool, individual_principal| Box::new(App::list(query, database_pool, individual_principal)),
@@ -64,7 +65,7 @@ pub async fn create_regex(string: &str, http_transaction: &HTTPTransaction, data
     Err(error) => {
 
       let http_error = HTTPError::InternalServerError(Some(format!("Failed to create regex: {:?}", error)));
-      http_error.print_and_save(Some(&http_transaction.id), &database_pool).await.ok();
+      ServerLogEntry::from_http_error(&http_error, Some(&http_transaction.id), &database_pool).await.ok();
       return Err(http_error);
 
     }
@@ -73,6 +74,12 @@ pub async fn create_regex(string: &str, http_transaction: &HTTPTransaction, data
 
   return Ok(regex);
 
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct CreateOAuthAuthorizationResponseBody {
+  pub code: String,
+  pub oauth_authorization: OAuthAuthorization,
 }
 
 /// POST /users/{user_id}/oauth-authorizations
@@ -87,10 +94,10 @@ async fn handle_create_oauth_authorization_request(
   Extension(authenticated_app): Extension<Option<Arc<App>>>,
   Extension(authenticated_app_authorization): Extension<Option<Arc<AppAuthorization>>>,
   body: Result<Json<InitialOAuthAuthorizationPropertiesForPredefinedAuthorizer>, JsonRejection>
-) -> Result<(StatusCode, Json<OAuthAuthorization>), HTTPError> {
+) -> Result<(StatusCode, Json<CreateOAuthAuthorizationResponseBody>), HTTPError> {
 
   let http_transaction = http_transaction.clone();
-  ServerLogEntry::trace("Verifying request body...", Some(&http_transaction.id), &state.database_pool).await.ok();
+  ServerLogEntry::trace("Validating request body...", Some(&http_transaction.id), &state.database_pool).await.ok();
   let initial_oauth_authorization_properties_json = match body {
 
     Ok(initial_oauth_authorization_properties_json) => initial_oauth_authorization_properties_json,
@@ -111,12 +118,20 @@ async fn handle_create_oauth_authorization_request(
 
       };
       
-      http_error.print_and_save(Some(&http_transaction.id), &state.database_pool).await.ok();
+      ServerLogEntry::from_http_error(&http_error, Some(&http_transaction.id), &state.database_pool).await.ok();
       return Err(http_error);
 
     }
 
   };
+
+  if initial_oauth_authorization_properties_json.code_challenge.is_some() && initial_oauth_authorization_properties_json.code_challenge_method.as_ref().is_none_or(|code_challenge_method| code_challenge_method != "S256") {
+
+    let http_error = HTTPError::BadRequestError(Some("The code challenge method must be \"S256\" if a code challenge is provided.".to_string()));
+    ServerLogEntry::from_http_error(&http_error, Some(&http_transaction.id), &state.database_pool).await.ok();
+    return Err(http_error);
+
+  }
 
   // Verify the scope.
   let full_string_regex = create_regex(r"^(?: ?(?P<action_id>[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}):(?P<maximum_permission_level>None|User|Editor|Admin))+$", &http_transaction, &state.database_pool).await?;
@@ -125,7 +140,7 @@ async fn handle_create_oauth_authorization_request(
   if !full_string_regex.is_match(&scope) {
 
     let http_error = HTTPError::BadRequestError(Some("The scope must be a space-separated list of action IDs and permission levels.".to_string()));
-    http_error.print_and_save(Some(&http_transaction.id), &state.database_pool).await.ok();
+    ServerLogEntry::from_http_error(&http_error, Some(&http_transaction.id), &state.database_pool).await.ok();
     return Err(http_error);
 
   }
@@ -143,7 +158,7 @@ async fn handle_create_oauth_authorization_request(
         Err(_) => {
 
           let http_error = HTTPError::BadRequestError(Some(format!("The action ID \"{}\" is not a valid UUID. Check your scope string.", action_id.as_str())));
-          http_error.print_and_save(Some(&http_transaction.id), &state.database_pool).await.ok();
+          ServerLogEntry::from_http_error(&http_error, Some(&http_transaction.id), &state.database_pool).await.ok();
           return Err(http_error);
 
         }
@@ -153,7 +168,7 @@ async fn handle_create_oauth_authorization_request(
       None => {
 
         let http_error = HTTPError::BadRequestError(Some("The scope must be a space-separated list of action IDs and permission levels.".to_string()));
-        http_error.print_and_save(Some(&http_transaction.id), &state.database_pool).await.ok();
+        ServerLogEntry::from_http_error(&http_error, Some(&http_transaction.id), &state.database_pool).await.ok();
         return Err(http_error);
 
       }
@@ -169,7 +184,7 @@ async fn handle_create_oauth_authorization_request(
         Err(_) => {
 
           let http_error = HTTPError::BadRequestError(Some(format!("The maximum permission level \"{}\" is not valid. Check your scope string.", maximum_permission_level.as_str())));
-          http_error.print_and_save(Some(&http_transaction.id), &state.database_pool).await.ok();
+          ServerLogEntry::from_http_error(&http_error, Some(&http_transaction.id), &state.database_pool).await.ok();
           return Err(http_error);
 
         }
@@ -179,7 +194,7 @@ async fn handle_create_oauth_authorization_request(
       None => {
 
         let http_error = HTTPError::BadRequestError(Some("The scope must be a space-separated list of action IDs and permission levels.".to_string()));
-        http_error.print_and_save(Some(&http_transaction.id), &state.database_pool).await.ok();
+        ServerLogEntry::from_http_error(&http_error, Some(&http_transaction.id), &state.database_pool).await.ok();
         return Err(http_error);
 
       }
@@ -208,7 +223,11 @@ async fn handle_create_oauth_authorization_request(
     app_id: target_app.id,
     authorizing_user_id: target_user.id.clone(),
     code_challenge: initial_oauth_authorization_properties_json.code_challenge.clone(),
-    scope: initial_oauth_authorization_properties_json.scope.clone()
+    scope: initial_oauth_authorization_properties_json.scope.clone(),
+    redirect_uri: initial_oauth_authorization_properties_json.redirect_uri.clone(),
+    code_challenge_method: initial_oauth_authorization_properties_json.code_challenge_method.clone(),
+    state: initial_oauth_authorization_properties_json.state.clone(),
+    usage_date: None
   }, &state.database_pool).await {
 
     Ok(created_oauth_authorization) => created_oauth_authorization,
@@ -216,7 +235,23 @@ async fn handle_create_oauth_authorization_request(
     Err(error) => {
 
       let http_error = HTTPError::InternalServerError(Some(format!("Failed to create OAuth authorization: {:?}", error)));
-      http_error.print_and_save(Some(&http_transaction.id), &state.database_pool).await.ok();
+      ServerLogEntry::from_http_error(&http_error, Some(&http_transaction.id), &state.database_pool).await.ok();
+      return Err(http_error)
+
+    }
+
+  };
+
+  ServerLogEntry::trace("Generating OAuth authorization code...", Some(&http_transaction.id), &state.database_pool).await.ok();
+  let jwt_private_key = get_json_web_token_private_key(&http_transaction.id, &state.database_pool).await?;
+  let authorization_code = match created_oauth_authorization.generate_authorization_code(&jwt_private_key) {
+
+    Ok(authorization_code) => authorization_code,
+
+    Err(error) => {
+
+      let http_error = HTTPError::InternalServerError(Some(format!("Failed to generate OAuth authorization code: {:?}", error)));
+      ServerLogEntry::from_http_error(&http_error, Some(&http_transaction.id), &state.database_pool).await.ok();
       return Err(http_error)
 
     }
@@ -246,7 +281,11 @@ async fn handle_create_oauth_authorization_request(
   }, &state.database_pool).await.ok();
   ServerLogEntry::success(&format!("Successfully created OAuth authorization {}.", created_oauth_authorization.id), Some(&http_transaction.id), &state.database_pool).await.ok();
 
-  return Ok((StatusCode::CREATED, Json(created_oauth_authorization)));
+  let response_body = CreateOAuthAuthorizationResponseBody {
+    oauth_authorization: created_oauth_authorization,
+    code: authorization_code
+  };
+  return Ok((StatusCode::CREATED, Json(response_body)));
 
 }
 

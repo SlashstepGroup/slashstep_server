@@ -6,6 +6,46 @@ use pg_escape::quote_literal;
 use postgres::error::SqlState;
 use uuid::Uuid;
 
+pub async fn get_json_web_token_public_key(http_transaction_id: &Uuid, database_pool: &deadpool_postgres::Pool) -> Result<String, HTTPError> {
+
+  let json_web_token_public_key = match crate::get_json_web_token_public_key().await {
+
+    Ok(json_web_token_public_key) => json_web_token_public_key,
+
+    Err(error) => {
+
+      let http_error = HTTPError::InternalServerError(Some(format!("Failed to get JSON web token public key: {:?}", error)));
+      ServerLogEntry::from_http_error(&http_error, Some(&http_transaction_id), &database_pool).await.ok();
+      return Err(http_error);
+
+    }
+
+  };
+
+  return Ok(json_web_token_public_key);
+
+}
+
+pub async fn get_json_web_token_private_key(http_transaction_id: &Uuid, database_pool: &deadpool_postgres::Pool) -> Result<String, HTTPError> {
+
+  let json_web_token_private_key = match crate::get_json_web_token_private_key().await {
+
+    Ok(json_web_token_private_key) => json_web_token_private_key,
+
+    Err(error) => {
+
+      let http_error = HTTPError::InternalServerError(Some(format!("Failed to get JSON web token private key: {:?}", error)));
+      ServerLogEntry::from_http_error(&http_error, Some(&http_transaction_id), &database_pool).await.ok();
+      return Err(http_error);
+
+    }
+
+  };
+
+  return Ok(json_web_token_private_key);
+
+}
+
 pub fn map_postgres_error_to_http_error(error: deadpool_postgres::PoolError) -> HTTPError {
 
   let http_error = HTTPError::InternalServerError(Some(error.to_string()));
@@ -24,7 +64,7 @@ pub async fn get_action_by_name(action_name: &str, http_transaction: &HTTPTransa
     Err(error) => {
 
       let http_error = HTTPError::InternalServerError(Some(format!("Failed to get action \"{}\": {:?}", action_name, error)));
-      http_error.print_and_save(Some(&http_transaction.id), &database_pool).await.ok();
+      ServerLogEntry::from_http_error(&http_error, Some(&http_transaction.id), &database_pool).await.ok();
       return Err(http_error);
 
     }
@@ -77,7 +117,7 @@ pub async fn verify_delegate_permissions(app_authorization_id: Option<&Uuid>, ac
 
       };
 
-      http_error.print_and_save(Some(&http_transaction_id), &database_pool).await.ok();
+      ServerLogEntry::from_http_error(&http_error, Some(&http_transaction_id), &database_pool).await.ok();
       return Err(http_error);
 
     }
@@ -87,7 +127,7 @@ pub async fn verify_delegate_permissions(app_authorization_id: Option<&Uuid>, ac
   if delegation_policy.maximum_permission_level < *required_permission_level {
 
     let http_error = HTTPError::ForbiddenError(Some(format!("The app authorization {} does not have access to the action {}.", app_authorization_id, action_id)));
-    http_error.print_and_save(Some(&http_transaction_id), &database_pool).await.ok();
+    ServerLogEntry::from_http_error(&http_error, Some(&http_transaction_id), &database_pool).await.ok();
     return Err(http_error);
 
   }
@@ -167,7 +207,7 @@ pub async fn get_action_by_id(action_id_string: &str, http_transaction: &HTTPTra
         error => HTTPError::InternalServerError(Some(format!("Failed to get action {}: {:?}", action_id, error)))
 
       };
-      http_error.print_and_save(Some(&http_transaction.id), &database_pool).await.ok();
+      ServerLogEntry::from_http_error(&http_error, Some(&http_transaction.id), &database_pool).await.ok();
       return Err(http_error);
 
     }
@@ -207,7 +247,7 @@ pub async fn get_user_by_id(user_id: &str, http_transaction: &HTTPTransaction, d
         error => HTTPError::InternalServerError(Some(format!("Failed to get user {}: {:?}", user_id, error)))
 
       };
-      http_error.print_and_save(Some(&http_transaction.id), &database_pool).await.ok();
+      ServerLogEntry::from_http_error(&http_error, Some(&http_transaction.id), &database_pool).await.ok();
       return Err(http_error);
 
     }
@@ -248,7 +288,7 @@ pub async fn get_app_authorization_by_id(app_authorization_id: &str, http_transa
         error => HTTPError::InternalServerError(Some(format!("Failed to get app authorization {}: {:?}", app_authorization_id, error)))
 
       };
-      http_error.print_and_save(Some(&http_transaction.id), &database_pool).await.ok();
+      ServerLogEntry::from_http_error(&http_error, Some(&http_transaction.id), &database_pool).await.ok();
       return Err(http_error);
 
     }
@@ -289,7 +329,7 @@ pub async fn get_app_credential_by_id(app_credential_id: &str, http_transaction:
         error => HTTPError::InternalServerError(Some(format!("Failed to get app credential {}: {:?}", app_credential_id, error)))
 
       };
-      http_error.print_and_save(Some(&http_transaction.id), &database_pool).await.ok();
+      ServerLogEntry::from_http_error(&http_error, Some(&http_transaction.id), &database_pool).await.ok();
       return Err(http_error);
 
     }
@@ -330,7 +370,7 @@ pub async fn get_app_by_id(app_id_string: &str, http_transaction: &HTTPTransacti
         error => HTTPError::InternalServerError(Some(format!("Failed to get app {}: {:?}", app_id, error)))
 
       };
-      http_error.print_and_save(Some(&http_transaction.id), &database_pool).await.ok();
+      ServerLogEntry::from_http_error(&http_error, Some(&http_transaction.id), &database_pool).await.ok();
       return Err(http_error);
 
     }
@@ -371,7 +411,7 @@ pub async fn get_app_authorization_credential_by_id(app_authorization_credential
         error => HTTPError::InternalServerError(Some(format!("Failed to get app authorization credential {}: {:?}", app_authorization_credential_id, error)))
 
       };
-      http_error.print_and_save(Some(&http_transaction.id), &database_pool).await.ok();
+      ServerLogEntry::from_http_error(&http_error, Some(&http_transaction.id), &database_pool).await.ok();
       return Err(http_error);
 
     }
@@ -427,7 +467,7 @@ pub async fn get_resource_by_id<ResourceStruct, GetResourceByIDFunction>(
         error => HTTPError::InternalServerError(Some(format!("Failed to get {} {}: {:?}", resource_type_name_singular, resource_id, error)))
 
       };
-      http_error.print_and_save(Some(&http_transaction.id), &database_pool).await.ok();
+      ServerLogEntry::from_http_error(&http_error, Some(&http_transaction.id), &database_pool).await.ok();
       return Err(http_error);
 
     }
@@ -462,7 +502,7 @@ pub async fn get_resource_hierarchy<T: DeletableResource>(deletable_resource: &T
 
           };
           
-          http_error.print_and_save(Some(&http_transaction.id), &database_pool).await.ok();
+          ServerLogEntry::from_http_error(&http_error, Some(&http_transaction.id), &database_pool).await.ok();
           return Err(http_error);
 
         },

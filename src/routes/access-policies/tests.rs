@@ -13,7 +13,7 @@ use std::net::SocketAddr;
 use axum_extra::extract::cookie::Cookie;
 use axum_test::TestServer;
 use reqwest::StatusCode;
-use crate::{AppState, initialize_required_tables, predefinitions::{initialize_predefined_actions, initialize_predefined_roles}, resources::{access_policy::{AccessPolicy, ActionPermissionLevel, AccessPolicyPrincipalType, AccessPolicyResourceType, DEFAULT_ACCESS_POLICY_LIST_LIMIT, IndividualPrincipal, InitialAccessPolicyProperties}, action::Action, session::Session}, tests::{TestEnvironment, TestSlashstepServerError}, utilities::reusable_route_handlers::ListResourcesResponseBody};
+use crate::{AppState, get_json_web_token_private_key, initialize_required_tables, predefinitions::{initialize_predefined_actions, initialize_predefined_roles}, resources::{access_policy::{AccessPolicy, AccessPolicyPrincipalType, AccessPolicyResourceType, ActionPermissionLevel, DEFAULT_ACCESS_POLICY_LIST_LIMIT, IndividualPrincipal, InitialAccessPolicyProperties}, action::Action}, tests::{TestEnvironment, TestSlashstepServerError}, utilities::reusable_route_handlers::ListResourcesResponseBody};
 
 /// Verifies that the router can return a 200 status code and the requested access policy list.
 #[tokio::test]
@@ -34,7 +34,7 @@ async fn verify_returned_access_policy_list_without_query() -> Result<(), TestSl
   
   let user = test_environment.create_random_user().await?;
   let session = test_environment.create_session(&user.id).await?;
-  let json_web_token_private_key = Session::get_json_web_token_private_key().await?;
+  let json_web_token_private_key = get_json_web_token_private_key().await?;
   let session_token = session.generate_json_web_token(&json_web_token_private_key).await?;
   let get_access_policies_action = Action::get_by_name("slashstep.accessPolicies.get", &test_environment.database_pool).await?;
   let get_access_policy_properties = InitialAccessPolicyProperties {
@@ -43,7 +43,7 @@ async fn verify_returned_access_policy_list_without_query() -> Result<(), TestSl
     is_inheritance_enabled: true,
     principal_type: AccessPolicyPrincipalType::User,
     principal_user_id: Some(user.id),
-    scoped_resource_type: AccessPolicyResourceType::Instance,
+    scoped_resource_type: AccessPolicyResourceType::Server,
     ..Default::default()
   };
   AccessPolicy::create(&get_access_policy_properties, &test_environment.database_pool).await?;
@@ -55,7 +55,7 @@ async fn verify_returned_access_policy_list_without_query() -> Result<(), TestSl
     is_inheritance_enabled: true,
     principal_type: AccessPolicyPrincipalType::User,
     principal_user_id: Some(user.id),
-    scoped_resource_type: AccessPolicyResourceType::Instance,
+    scoped_resource_type: AccessPolicyResourceType::Server,
     ..Default::default()
   };
   AccessPolicy::create(&list_access_policy_properties, &test_environment.database_pool).await?;
@@ -106,7 +106,7 @@ async fn verify_returned_access_policy_list_with_query() -> Result<(), TestSlash
   
   let user = test_environment.create_random_user().await?;
   let session = test_environment.create_session(&user.id).await?;
-  let json_web_token_private_key = Session::get_json_web_token_private_key().await?;
+  let json_web_token_private_key = get_json_web_token_private_key().await?;
   let session_token = session.generate_json_web_token(&json_web_token_private_key).await?;
   let get_access_policies_action = Action::get_by_name("slashstep.accessPolicies.get", &test_environment.database_pool).await?;
   let get_access_policy_properties = InitialAccessPolicyProperties {
@@ -115,7 +115,7 @@ async fn verify_returned_access_policy_list_with_query() -> Result<(), TestSlash
     is_inheritance_enabled: true,
     principal_type: AccessPolicyPrincipalType::User,
     principal_user_id: Some(user.id),
-    scoped_resource_type: AccessPolicyResourceType::Instance,
+    scoped_resource_type: AccessPolicyResourceType::Server,
     ..Default::default()
   };
   AccessPolicy::create(&get_access_policy_properties, &test_environment.database_pool).await?;
@@ -127,7 +127,7 @@ async fn verify_returned_access_policy_list_with_query() -> Result<(), TestSlash
     is_inheritance_enabled: true,
     principal_type: AccessPolicyPrincipalType::User,
     principal_user_id: Some(user.id),
-    scoped_resource_type: AccessPolicyResourceType::Instance,
+    scoped_resource_type: AccessPolicyResourceType::Server,
     ..Default::default()
   };
   AccessPolicy::create(&list_access_policy_properties, &test_environment.database_pool).await?;
@@ -176,7 +176,7 @@ async fn verify_default_access_policy_list_limit() -> Result<(), TestSlashstepSe
   
   let user = test_environment.create_random_user().await?;
   let session = test_environment.create_session(&user.id).await?;
-  let json_web_token_private_key = Session::get_json_web_token_private_key().await?;
+  let json_web_token_private_key = get_json_web_token_private_key().await?;
   let session_token = session.generate_json_web_token(&json_web_token_private_key).await?;
   let get_access_policies_action = Action::get_by_name("slashstep.accessPolicies.get", &test_environment.database_pool).await?;
   let get_access_policy_properties = InitialAccessPolicyProperties {
@@ -185,7 +185,7 @@ async fn verify_default_access_policy_list_limit() -> Result<(), TestSlashstepSe
     is_inheritance_enabled: true,
     principal_type: AccessPolicyPrincipalType::User,
     principal_user_id: Some(user.id),
-    scoped_resource_type: AccessPolicyResourceType::Instance,
+    scoped_resource_type: AccessPolicyResourceType::Server,
     ..Default::default()
   };
   AccessPolicy::create(&get_access_policy_properties, &test_environment.database_pool).await?;
@@ -201,7 +201,7 @@ async fn verify_default_access_policy_list_limit() -> Result<(), TestSlashstepSe
       is_inheritance_enabled: true,
       principal_type: AccessPolicyPrincipalType::User,
       principal_user_id: Some(random_user.id),
-      scoped_resource_type: AccessPolicyResourceType::Instance,
+      scoped_resource_type: AccessPolicyResourceType::Server,
       ..Default::default()
     };
     AccessPolicy::create(&access_policy_properties, &test_environment.database_pool).await?;
@@ -215,7 +215,7 @@ async fn verify_default_access_policy_list_limit() -> Result<(), TestSlashstepSe
     is_inheritance_enabled: true,
     principal_type: AccessPolicyPrincipalType::User,
     principal_user_id: Some(user.id),
-    scoped_resource_type: AccessPolicyResourceType::Instance,
+    scoped_resource_type: AccessPolicyResourceType::Server,
     ..Default::default()
   };
   AccessPolicy::create(&list_access_policy_properties, &test_environment.database_pool).await?;
@@ -252,7 +252,7 @@ async fn verify_maximum_access_policy_list_limit() -> Result<(), TestSlashstepSe
   
   let user = test_environment.create_random_user().await?;
   let session = test_environment.create_session(&user.id).await?;
-  let json_web_token_private_key = Session::get_json_web_token_private_key().await?;
+  let json_web_token_private_key = get_json_web_token_private_key().await?;
   let session_token = session.generate_json_web_token(&json_web_token_private_key).await?;
   let get_access_policies_action = Action::get_by_name("slashstep.accessPolicies.get", &test_environment.database_pool).await?;
   let get_access_policy_properties = InitialAccessPolicyProperties {
@@ -261,7 +261,7 @@ async fn verify_maximum_access_policy_list_limit() -> Result<(), TestSlashstepSe
     is_inheritance_enabled: true,
     principal_type: AccessPolicyPrincipalType::User,
     principal_user_id: Some(user.id),
-    scoped_resource_type: AccessPolicyResourceType::Instance,
+    scoped_resource_type: AccessPolicyResourceType::Server,
     ..Default::default()
   };
   AccessPolicy::create(&get_access_policy_properties, &test_environment.database_pool).await?;
@@ -273,7 +273,7 @@ async fn verify_maximum_access_policy_list_limit() -> Result<(), TestSlashstepSe
     is_inheritance_enabled: true,
     principal_type: AccessPolicyPrincipalType::User,
     principal_user_id: Some(user.id),
-    scoped_resource_type: AccessPolicyResourceType::Instance,
+    scoped_resource_type: AccessPolicyResourceType::Server,
     ..Default::default()
   };
   AccessPolicy::create(&list_access_policy_properties, &test_environment.database_pool).await?;
@@ -308,7 +308,7 @@ async fn verify_query_when_listing_access_policies() -> Result<(), TestSlashstep
   
   let user = test_environment.create_random_user().await?;
   let session = test_environment.create_session(&user.id).await?;
-  let json_web_token_private_key = Session::get_json_web_token_private_key().await?;
+  let json_web_token_private_key = get_json_web_token_private_key().await?;
   let session_token = session.generate_json_web_token(&json_web_token_private_key).await?;
   let get_access_policies_action = Action::get_by_name("slashstep.accessPolicies.get", &test_environment.database_pool).await?;
   let get_access_policy_properties = InitialAccessPolicyProperties {
@@ -317,7 +317,7 @@ async fn verify_query_when_listing_access_policies() -> Result<(), TestSlashstep
     is_inheritance_enabled: true,
     principal_type: AccessPolicyPrincipalType::User,
     principal_user_id: Some(user.id),
-    scoped_resource_type: AccessPolicyResourceType::Instance,
+    scoped_resource_type: AccessPolicyResourceType::Server,
     ..Default::default()
   };
   AccessPolicy::create(&get_access_policy_properties, &test_environment.database_pool).await?;
@@ -329,7 +329,7 @@ async fn verify_query_when_listing_access_policies() -> Result<(), TestSlashstep
     is_inheritance_enabled: true,
     principal_type: AccessPolicyPrincipalType::User,
     principal_user_id: Some(user.id),
-    scoped_resource_type: AccessPolicyResourceType::Instance,
+    scoped_resource_type: AccessPolicyResourceType::Server,
     ..Default::default()
   };
   AccessPolicy::create(&list_access_policy_properties, &test_environment.database_pool).await?;
@@ -419,7 +419,7 @@ async fn verify_permission_when_listing_access_policies() -> Result<(), TestSlas
   
   let user = test_environment.create_random_user().await?;
   let session = test_environment.create_session(&user.id).await?;
-  let json_web_token_private_key = Session::get_json_web_token_private_key().await?;
+  let json_web_token_private_key = get_json_web_token_private_key().await?;
   let session_token = session.generate_json_web_token(&json_web_token_private_key).await?;
 
   let response = test_server.get(&format!("/access-policies"))

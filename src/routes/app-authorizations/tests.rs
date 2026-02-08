@@ -14,14 +14,14 @@ use axum_extra::extract::cookie::Cookie;
 use axum_test::TestServer;
 use reqwest::StatusCode;
 use crate::{
-  AppState, initialize_required_tables, predefinitions::{
+  AppState, get_json_web_token_private_key, initialize_required_tables, predefinitions::{
     initialize_predefined_actions, 
     initialize_predefined_roles
   }, resources::{
     access_policy::{
       ActionPermissionLevel,
       IndividualPrincipal
-    }, action::Action, app_authorization::{AppAuthorization, DEFAULT_APP_AUTHORIZATION_LIST_LIMIT}, session::Session
+    }, action::Action, app_authorization::{AppAuthorization, DEFAULT_APP_AUTHORIZATION_LIST_LIMIT},
   }, tests::{TestEnvironment, TestSlashstepServerError}, utilities::reusable_route_handlers::ListResourcesResponseBody
 };
 
@@ -37,7 +37,7 @@ async fn verify_returned_resource_list_without_query() -> Result<(), TestSlashst
   // Grant access to the "slashstep.appAuthorizations.get" action to the user.
   let user = test_environment.create_random_user().await?;
   let session = test_environment.create_session(&user.id).await?;
-  let json_web_token_private_key = Session::get_json_web_token_private_key().await?;
+  let json_web_token_private_key = get_json_web_token_private_key().await?;
   let session_token = session.generate_json_web_token(&json_web_token_private_key).await?;
   let get_app_authorizations_action = Action::get_by_name("slashstep.appAuthorizations.get", &test_environment.database_pool).await?;
   test_environment.create_instance_access_policy(&user.id, &get_app_authorizations_action.id, &ActionPermissionLevel::User).await?;
@@ -97,7 +97,7 @@ async fn verify_returned_resource_list_with_query() -> Result<(), TestSlashstepS
   // Grant access to the "slashstep.appAuthorizations.get" action to the user.
   let user = test_environment.create_random_user().await?;
   let session = test_environment.create_session(&user.id).await?;
-  let json_web_token_private_key = Session::get_json_web_token_private_key().await?;
+  let json_web_token_private_key = get_json_web_token_private_key().await?;
   let session_token = session.generate_json_web_token(&json_web_token_private_key).await?;
   let get_app_authorizations_action = Action::get_by_name("slashstep.appAuthorizations.get", &test_environment.database_pool).await?;
   test_environment.create_instance_access_policy(&user.id, &get_app_authorizations_action.id, &ActionPermissionLevel::User).await?;
@@ -156,7 +156,7 @@ async fn verify_default_resource_list_limit() -> Result<(), TestSlashstepServerE
   // Grant access to the "slashstep.appAuthorizations.get" action to the user.
   let user = test_environment.create_random_user().await?;
   let session = test_environment.create_session(&user.id).await?;
-  let json_web_token_private_key = Session::get_json_web_token_private_key().await?;
+  let json_web_token_private_key = get_json_web_token_private_key().await?;
   let session_token = session.generate_json_web_token(&json_web_token_private_key).await?;
   let get_app_authorizations_action = Action::get_by_name("slashstep.appAuthorizations.get", &test_environment.database_pool).await?;
   test_environment.create_instance_access_policy(&user.id, &get_app_authorizations_action.id, &ActionPermissionLevel::User).await?;
@@ -207,7 +207,7 @@ async fn verify_maximum_resource_list_limit() -> Result<(), TestSlashstepServerE
   // Grant access to the "slashstep.appAuthorizations.get" action to the user.
   let user = test_environment.create_random_user().await?;
   let session = test_environment.create_session(&user.id).await?;
-  let json_web_token_private_key = Session::get_json_web_token_private_key().await?;
+  let json_web_token_private_key = get_json_web_token_private_key().await?;
   let session_token = session.generate_json_web_token(&json_web_token_private_key).await?;
   let get_app_authorizations_action = Action::get_by_name("slashstep.appAuthorizations.get", &test_environment.database_pool).await?;
   test_environment.create_instance_access_policy(&user.id, &get_app_authorizations_action.id, &ActionPermissionLevel::User).await?;
@@ -247,7 +247,7 @@ async fn verify_query_when_listing_resources() -> Result<(), TestSlashstepServer
   // Grant access to the "slashstep.appAuthorizations.get" action to the user.
   let user = test_environment.create_random_user().await?;
   let session = test_environment.create_session(&user.id).await?;
-  let json_web_token_private_key = Session::get_json_web_token_private_key().await?;
+  let json_web_token_private_key = get_json_web_token_private_key().await?;
   let session_token = session.generate_json_web_token(&json_web_token_private_key).await?;
   let get_app_authorizations_action = Action::get_by_name("slashstep.appAuthorizations.get", &test_environment.database_pool).await?;
   test_environment.create_instance_access_policy(&user.id, &get_app_authorizations_action.id, &ActionPermissionLevel::User).await?;
@@ -345,7 +345,7 @@ async fn verify_permission_when_listing_resources() -> Result<(), TestSlashstepS
   // Create a user and a session.
   let user = test_environment.create_random_user().await?;
   let session = test_environment.create_session(&user.id).await?;
-  let json_web_token_private_key = Session::get_json_web_token_private_key().await?;
+  let json_web_token_private_key = get_json_web_token_private_key().await?;
   let session_token = session.generate_json_web_token(&json_web_token_private_key).await?;
 
   // Set up the server and send the request.
