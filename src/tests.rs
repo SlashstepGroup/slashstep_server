@@ -6,7 +6,7 @@ use postgres::NoTls;
 use testcontainers_modules::{testcontainers::runners::AsyncRunner};
 use testcontainers::{ImageExt};
 use uuid::Uuid;
-use crate::{DEFAULT_MAXIMUM_POSTGRES_CONNECTION_COUNT, SlashstepServerError, import_env_file, resources::{ResourceError, access_policy::{AccessPolicy, ActionPermissionLevel, InitialAccessPolicyProperties}, action::{Action, ActionParentResourceType, InitialActionProperties}, action_log_entry::{ActionLogEntry, InitialActionLogEntryProperties}, app::{App, AppClientType, AppParentResourceType, InitialAppProperties}, app_authorization::{AppAuthorization, InitialAppAuthorizationProperties}, app_authorization_credential::{AppAuthorizationCredential, InitialAppAuthorizationCredentialProperties}, app_credential::{AppCredential, InitialAppCredentialProperties}, session::{InitialSessionProperties, Session}, user::{InitialUserProperties, User}}, utilities::resource_hierarchy::ResourceHierarchyError};
+use crate::{DEFAULT_MAXIMUM_POSTGRES_CONNECTION_COUNT, SlashstepServerError, import_env_file, resources::{ResourceError, access_policy::{AccessPolicy, ActionPermissionLevel, InitialAccessPolicyProperties}, action::{Action, ActionParentResourceType, InitialActionProperties}, action_log_entry::{ActionLogEntry, InitialActionLogEntryProperties}, app::{App, AppClientType, AppParentResourceType, InitialAppProperties}, app_authorization::{AppAuthorization, InitialAppAuthorizationProperties}, app_authorization_credential::{AppAuthorizationCredential, InitialAppAuthorizationCredentialProperties}, app_credential::{AppCredential, InitialAppCredentialProperties}, oauth_authorization::{InitialOAuthAuthorizationProperties, OAuthAuthorization}, session::{InitialSessionProperties, Session}, user::{InitialUserProperties, User}}, utilities::resource_hierarchy::ResourceHierarchyError};
 use thiserror::Error;
 
 #[derive(Debug, Error)]
@@ -114,6 +114,25 @@ impl TestEnvironment {
     let app = App::create(&app_properties, &self.database_pool).await?;
 
     return Ok(app);
+
+  }
+
+  pub async fn create_random_oauth_authorization(&self, app_id: Option<&Uuid>) -> Result<OAuthAuthorization, TestSlashstepServerError> {
+
+    let oauth_authorization_properties = InitialOAuthAuthorizationProperties {
+      app_id: app_id.copied().unwrap_or(self.create_random_app().await?.id),
+      authorizing_user_id: self.create_random_user().await?.id,
+      code_challenge: None,
+      code_challenge_method: None,
+      redirect_uri: None,
+      scope: Uuid::now_v7().to_string(),
+      usage_date: None,
+      state: None
+    };
+
+    let oauth_authorization = OAuthAuthorization::create(&oauth_authorization_properties, &self.database_pool).await?;
+
+    return Ok(oauth_authorization);
 
   }
   

@@ -23,7 +23,7 @@ use sha2::{Digest, Sha256};
 use uuid::Uuid;
 use crate::{AppState, HTTPError, middleware::{authentication_middleware::get_decoding_key, http_request_middleware}, resources::{DeletableResource, ResourceError, action_log_entry::{ActionLogEntry, ActionLogEntryActorType, ActionLogEntryTargetResourceType, InitialActionLogEntryProperties}, app::{App, AppClientType}, app_authorization::{AppAuthorization, AppAuthorizationAuthorizingResourceType, InitialAppAuthorizationProperties}, app_authorization_credential::{AppAuthorizationCredential, InitialAppAuthorizationCredentialProperties}, http_transaction::HTTPTransaction, oauth_authorization::{EditableOAuthAuthorizationProperties, OAuthAuthorization, OAuthAuthorizationClaims}, server_log_entry::ServerLogEntry}, utilities::route_handler_utilities::{get_action_by_name, get_json_web_token_private_key, get_json_web_token_public_key}};
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Default)]
 pub struct CreateOAuthAccessTokenQueryParameters {
   pub client_id: String,
   pub client_secret: Option<String>,
@@ -335,6 +335,7 @@ pub async fn create_app_authorization(oauth_authorization: &OAuthAuthorization, 
     app_id: oauth_authorization.app_id,
     authorizing_resource_type: AppAuthorizationAuthorizingResourceType::User,
     authorizing_user_id: Some(oauth_authorization.authorizing_user_id),
+    oauth_authorization_id: Some(oauth_authorization.id),
     ..Default::default()
   }, &database_pool).await {
 
@@ -671,6 +672,20 @@ async fn handle_create_oauth_access_token_request(
     state: oauth_state,
     app_authorization_credential_id: app_authorization_credential.id
   };
+
+  let create_app_authorization_credentials_action = get_action_by_name("slashstep.appAuthorizationCredentials.create", &http_transaction, &state.database_pool).await?;
+  ActionLogEntry::create(&InitialActionLogEntryProperties {
+    action_id: create_app_authorization_credentials_action.id,
+    http_transaction_id: Some(http_transaction.id),
+    actor_type: ActionLogEntryActorType::App,
+    actor_app_id: Some(app_authorization.app_id),
+    target_resource_type: ActionLogEntryTargetResourceType::AppAuthorizationCredential,
+    target_app_authorization_credential_id: Some(app_authorization_credential.id),
+    reason: Some("OAuth was used to create an app authorization credential.".to_string()),
+    ..Default::default()
+  }, &state.database_pool).await.ok();
+
+  ServerLogEntry::success(&format!("Successfully created app authorization credential {}.", app_authorization_credential.id), Some(&http_transaction.id), &state.database_pool).await.ok();
 
   return Ok((StatusCode::CREATED, Json(access_token_response_body)));
 

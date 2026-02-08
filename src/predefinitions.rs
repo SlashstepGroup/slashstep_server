@@ -157,6 +157,12 @@ pub async fn initialize_predefined_actions(database_pool: &deadpool_postgres::Po
       ..Default::default()
     },
     InitialActionProperties {
+      name: "slashstep.appAuthorizations.create".to_string(),
+      display_name: "Create app authorizations".to_string(),
+      description: "Create new app authorizations on a particular scope.".to_string(),
+      ..Default::default()
+    },
+    InitialActionProperties {
       name: "slashstep.appAuthorizations.delete".to_string(),
       display_name: "Delete app authorizations".to_string(),
       description: "Delete app authorizations on a particular scope.".to_string(),
@@ -172,6 +178,12 @@ pub async fn initialize_predefined_actions(database_pool: &deadpool_postgres::Po
       name: "slashstep.appAuthorizationCredentials.list".to_string(),
       display_name: "List app authorization credentials".to_string(),
       description: "List app authorization credentials on a particular scope.".to_string(),
+      ..Default::default()
+    },
+    InitialActionProperties { 
+      name: "slashstep.appAuthorizationCredentials.create".to_string(),
+      display_name: "Create app authorization credentials".to_string(),
+      description: "Create new app authorization credentials on a particular scope.".to_string(),
       ..Default::default()
     },
     InitialActionProperties {

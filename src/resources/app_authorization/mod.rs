@@ -193,7 +193,8 @@ impl AppAuthorization {
       &initial_properties.authorizing_resource_type,
       &initial_properties.authorizing_project_id,
       &initial_properties.authorizing_workspace_id,
-      &initial_properties.authorizing_user_id
+      &initial_properties.authorizing_user_id,
+      &initial_properties.oauth_authorization_id
     ];
     let database_client = database_pool.get().await?;
     let row = database_client.query_one(query, parameters).await.map_err(|error| {

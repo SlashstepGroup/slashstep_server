@@ -1,6 +1,6 @@
 /**
  * 
- * Any test cases for /apps/{app_id}/actions should be handled here.
+ * Any test cases for /users/{user_id}/oauth-authorizations should be handled here.
  * 
  * Programmers: 
  * - Christian Toney (https://christiantoney.com)
