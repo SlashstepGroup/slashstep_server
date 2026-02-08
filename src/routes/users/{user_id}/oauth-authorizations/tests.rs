@@ -12,7 +12,7 @@
 use std::net::SocketAddr;
 use axum_extra::extract::cookie::Cookie;
 use axum_test::TestServer;
-use crate::{AppState, get_json_web_token_private_key, initialize_required_tables, predefinitions::{initialize_predefined_actions, initialize_predefined_roles}, resources::{access_policy::ActionPermissionLevel, action::Action, oauth_authorization::{InitialOAuthAuthorizationPropertiesForPredefinedAuthorizer, OAuthAuthorization},}, routes::users::user_id::oauth_authorizations::CreateOAuthAuthorizationResponseBody, tests::{TestEnvironment, TestSlashstepServerError}};
+use crate::{AppState, get_json_web_token_private_key, initialize_required_tables, predefinitions::{initialize_predefined_actions, initialize_predefined_roles}, resources::{access_policy::ActionPermissionLevel, action::Action, oauth_authorization::{InitialOAuthAuthorizationPropertiesForPredefinedAuthorizer},}, routes::users::user_id::oauth_authorizations::CreateOAuthAuthorizationResponseBody, tests::{TestEnvironment, TestSlashstepServerError}};
 
 /// Verifies that the router can return a 201 status code and the created resource.
 #[tokio::test]
