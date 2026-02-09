@@ -206,7 +206,7 @@ pub async fn decode_app_authorization_credential_jwt_claims(http_transaction_id:
 
       let oauth_error_response = match &error.kind() {
 
-        jsonwebtoken::errors::ErrorKind::InvalidToken | jsonwebtoken::errors::ErrorKind::MissingRequiredClaim(_) => OAuthTokenErrorResponse::new(&OAuthTokenError::InvalidGrant, "The authorization code is invalid.", None, None),
+        jsonwebtoken::errors::ErrorKind::InvalidToken | jsonwebtoken::errors::ErrorKind::ExpiredSignature | jsonwebtoken::errors::ErrorKind::MissingRequiredClaim(_) => OAuthTokenErrorResponse::new(&OAuthTokenError::InvalidGrant, "The refresh token is invalid.", None, None),
 
         _ => OAuthTokenErrorResponse::new(&OAuthTokenError::InternalServerError, &error.to_string(), None, None)
 
