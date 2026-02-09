@@ -33,7 +33,7 @@ async fn verify_successful_creation_for_public_client() -> Result<(), TestSlashs
   let authorization_code = dummy_oauth_authorization.generate_authorization_code(json_web_token_private_key.as_ref())?;
   let create_oauth_access_token_query_parameters = CreateOAuthAccessTokenQueryParameters {
     client_id: dummy_oauth_authorization.app_id.to_string(),
-    code: authorization_code,
+    code: Some(authorization_code),
     grant_type: "authorization_code".to_string(),
     ..Default::default()
   };
@@ -77,7 +77,7 @@ async fn verify_successful_creation_for_public_client_with_code_challenge() -> R
   let authorization_code = dummy_oauth_authorization.generate_authorization_code(json_web_token_private_key.as_ref())?;
   let create_oauth_access_token_query_parameters = CreateOAuthAccessTokenQueryParameters {
     client_id: dummy_oauth_authorization.app_id.to_string(),
-    code: authorization_code,
+    code: Some(authorization_code),
     grant_type: "authorization_code".to_string(),
     code_verifier: Some(code_verifier.to_string()),
     ..Default::default()
@@ -130,7 +130,7 @@ async fn verify_successful_creation_for_confidential_client() -> Result<(), Test
   let create_oauth_access_token_query_parameters = CreateOAuthAccessTokenQueryParameters {
     client_id: dummy_oauth_authorization.app_id.to_string(),
     client_secret: Some(new_client_secret),
-    code: authorization_code,
+    code: Some(authorization_code),
     grant_type: "authorization_code".to_string(),
     ..Default::default()
   };
@@ -185,7 +185,7 @@ async fn verify_successful_creation_for_confidential_client_with_code_challenge(
   let create_oauth_access_token_query_parameters = CreateOAuthAccessTokenQueryParameters {
     client_id: dummy_oauth_authorization.app_id.to_string(),
     client_secret: Some(new_client_secret),
-    code: authorization_code,
+    code: Some(authorization_code),
     grant_type: "authorization_code".to_string(),
     code_verifier: Some(code_verifier),
     ..Default::default()
@@ -227,7 +227,7 @@ async fn verify_client_id_is_uuid() -> Result<(), TestSlashstepServerError> {
   let authorization_code = dummy_oauth_authorization.generate_authorization_code(json_web_token_private_key.as_ref())?;
   let create_oauth_access_token_query_parameters = CreateOAuthAccessTokenQueryParameters {
     client_id: "not-a-uuid".to_string(),
-    code: authorization_code,
+    code: Some(authorization_code),
     grant_type: "authorization_code".to_string(),
     ..Default::default()
   };
@@ -267,7 +267,7 @@ async fn verify_authorization_code_is_valid() -> Result<(), TestSlashstepServerE
   let dummy_oauth_authorization = test_environment.create_random_oauth_authorization(None, None).await?;
   let create_oauth_access_token_query_parameters = CreateOAuthAccessTokenQueryParameters {
     client_id: dummy_oauth_authorization.app_id.to_string(),
-    code: "not-a-valid-code".to_string(),
+    code: Some("not-a-valid-code".to_string()),
     grant_type: "authorization_code".to_string(),
     ..Default::default()
   };
@@ -309,7 +309,7 @@ async fn verify_authorization_code_is_single_use() -> Result<(), TestSlashstepSe
   let authorization_code = dummy_oauth_authorization.generate_authorization_code(json_web_token_private_key.as_ref())?;
   let create_oauth_access_token_query_parameters = CreateOAuthAccessTokenQueryParameters {
     client_id: dummy_oauth_authorization.app_id.to_string(),
-    code: authorization_code,
+    code: Some(authorization_code),
     grant_type: "authorization_code".to_string(),
     ..Default::default()
   };
@@ -359,7 +359,7 @@ async fn verify_client_id_links_to_app() -> Result<(), TestSlashstepServerError>
   let authorization_code = dummy_oauth_authorization.generate_authorization_code(json_web_token_private_key.as_ref())?;
   let create_oauth_access_token_query_parameters = CreateOAuthAccessTokenQueryParameters {
     client_id: Uuid::now_v7().to_string(),
-    code: authorization_code,
+    code: Some(authorization_code),
     grant_type: "authorization_code".to_string(),
     ..Default::default()
   };
@@ -411,7 +411,7 @@ async fn verify_client_secret_is_provided_for_confidential_client() -> Result<()
   let authorization_code = dummy_oauth_authorization.generate_authorization_code(json_web_token_private_key.as_ref())?;
   let create_oauth_access_token_query_parameters = CreateOAuthAccessTokenQueryParameters {
     client_id: dummy_oauth_authorization.app_id.to_string(),
-    code: authorization_code,
+    code: Some(authorization_code),
     grant_type: "authorization_code".to_string(),
     ..Default::default()
   };
@@ -456,7 +456,7 @@ async fn verify_code_verifier_is_provided_when_code_challenge_is_present() -> Re
   let authorization_code = dummy_oauth_authorization.generate_authorization_code(json_web_token_private_key.as_ref())?;
   let create_oauth_access_token_query_parameters = CreateOAuthAccessTokenQueryParameters {
     client_id: dummy_oauth_authorization.app_id.to_string(),
-    code: authorization_code,
+    code: Some(authorization_code),
     grant_type: "authorization_code".to_string(),
     ..Default::default()
   };
@@ -501,7 +501,7 @@ async fn verify_code_verifier_is_correct_when_code_challenge_is_present() -> Res
   let authorization_code = dummy_oauth_authorization.generate_authorization_code(json_web_token_private_key.as_ref())?;
   let create_oauth_access_token_query_parameters = CreateOAuthAccessTokenQueryParameters {
     client_id: dummy_oauth_authorization.app_id.to_string(),
-    code: authorization_code,
+    code: Some(authorization_code),
     grant_type: "authorization_code".to_string(),
     code_verifier: Some("not-the-code-verifier".to_string()),
     ..Default::default()
