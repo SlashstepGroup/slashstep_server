@@ -13,6 +13,7 @@ use std::net::SocketAddr;
 use axum_extra::extract::cookie::Cookie;
 use axum_test::TestServer;
 use ntest::timeout;
+use reqwest::StatusCode;
 use uuid::Uuid;
 use crate::{
   Action, AppState, get_json_web_token_private_key, initialize_required_tables, predefinitions::{
@@ -98,7 +99,7 @@ async fn verify_uuid_when_getting_resource_by_id() -> Result<(), TestSlashstepSe
   let response = test_server.get("/fields/not-a-uuid")
     .await;
   
-  assert_eq!(response.status_code(), 400);
+  assert_eq!(response.status_code(), StatusCode::BAD_REQUEST);
   return Ok(());
 
 }
@@ -125,7 +126,7 @@ async fn verify_authentication_when_getting_resource_by_id() -> Result<(), TestS
   let response = test_server.get(&format!("/fields/{}", field.id))
     .await;
   
-  assert_eq!(response.status_code(), 401);
+  assert_eq!(response.status_code(), StatusCode::UNAUTHORIZED);
   return Ok(());
 
 }
@@ -160,7 +161,7 @@ async fn verify_permission_when_getting_resource_by_id() -> Result<(), TestSlash
     .await;
   
   // Verify the response.
-  assert_eq!(response.status_code(), 403);
+  assert_eq!(response.status_code(), StatusCode::FORBIDDEN);
   return Ok(());
 
 }
@@ -192,7 +193,7 @@ async fn verify_not_found_when_getting_resource_by_id() -> Result<(), TestSlashs
     .await;
   
   // Verify the response.
-  assert_eq!(response.status_code(), 404);
+  assert_eq!(response.status_code(), StatusCode::NOT_FOUND);
   return Ok(());
 
 }
@@ -271,7 +272,7 @@ async fn verify_not_found_when_getting_resource_by_id() -> Result<(), TestSlashs
 //   let response = test_server.delete("/fields/not-a-uuid")
 //     .await;
   
-//   assert_eq!(response.status_code(), 400);
+//   assert_eq!(response.status_code(), StatusCode::BAD_REQUEST);
 //   return Ok(());
 
 // }
@@ -300,7 +301,7 @@ async fn verify_not_found_when_getting_resource_by_id() -> Result<(), TestSlashs
 //     .await;
   
 //   // Verify the response.
-//   assert_eq!(response.status_code(), 401);
+//   assert_eq!(response.status_code(), StatusCode::UNAUTHORIZED);
 //   return Ok(());
 
 // }
@@ -336,7 +337,7 @@ async fn verify_not_found_when_getting_resource_by_id() -> Result<(), TestSlashs
 //     .await;
   
 //   // Verify the response.
-//   assert_eq!(response.status_code(), 403);
+//   assert_eq!(response.status_code(), StatusCode::FORBIDDEN);
 //   return Ok(());
 
 // }
@@ -459,7 +460,7 @@ async fn verify_not_found_when_getting_resource_by_id() -> Result<(), TestSlashs
 //     .await;
   
 //   // Verify the response.
-//   assert_eq!(response.status_code(), 400);
+//   assert_eq!(response.status_code(), StatusCode::BAD_REQUEST);
 //   return Ok(());
 
 // }
@@ -486,7 +487,7 @@ async fn verify_not_found_when_getting_resource_by_id() -> Result<(), TestSlashs
 //     .await;
   
 //   // Verify the response.
-//   assert_eq!(response.status_code(), 400);
+//   assert_eq!(response.status_code(), StatusCode::BAD_REQUEST);
 //   return Ok(());
 
 // }
@@ -518,7 +519,7 @@ async fn verify_not_found_when_getting_resource_by_id() -> Result<(), TestSlashs
 //     .await;
   
 //   // Verify the response.
-//   assert_eq!(response.status_code(), 400);
+//   assert_eq!(response.status_code(), StatusCode::BAD_REQUEST);
 //   return Ok(());
 
 // }
@@ -545,7 +546,7 @@ async fn verify_not_found_when_getting_resource_by_id() -> Result<(), TestSlashs
 //     }))
 //     .await;
   
-//   assert_eq!(response.status_code(), 400);
+//   assert_eq!(response.status_code(), StatusCode::BAD_REQUEST);
 //   return Ok(());
 
 // }
@@ -574,7 +575,7 @@ async fn verify_not_found_when_getting_resource_by_id() -> Result<(), TestSlashs
 //     }))
 //     .await;
   
-//   assert_eq!(response.status_code(), 401);
+//   assert_eq!(response.status_code(), StatusCode::UNAUTHORIZED);
 
 //   return Ok(());
 
@@ -612,7 +613,7 @@ async fn verify_not_found_when_getting_resource_by_id() -> Result<(), TestSlashs
 //     .await;
   
 //   // Verify the response.
-//   assert_eq!(response.status_code(), 403);
+//   assert_eq!(response.status_code(), StatusCode::FORBIDDEN);
 
 //   return Ok(());
 
