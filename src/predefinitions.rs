@@ -191,7 +191,13 @@ pub async fn initialize_predefined_actions(database_pool: &deadpool_postgres::Po
       display_name: "Delete app authorization credentials".to_string(),
       description: "Delete app authorization credentials on a particular scope.".to_string(),
       ..Default::default()
-    }
+    },
+    InitialActionProperties {
+      name: "slashstep.fields.get".to_string(),
+      display_name: "Get fields".to_string(),
+      description: "Get a specific field on a particular scope.".to_string(),
+      ..Default::default()
+    },
   ];
 
   let mut actions: Vec<Action> = Vec::new();
