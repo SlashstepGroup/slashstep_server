@@ -81,14 +81,9 @@ async fn verify_creation() -> Result<(), TestSlashstepServerError> {
     description: Uuid::now_v7().to_string(),
     is_required: true,
     field_type: FieldType::Text,
-    minimum_value: None,
-    maximum_value: None,
-    minimum_choice_count: None,
-    maximum_choice_count: None,
     parent_resource_type: FieldParentResourceType::User,
-    parent_project_id: None,
-    parent_workspace_id: None,
-    parent_user_id: Some(user.id)
+    parent_user_id: Some(user.id),
+    ..Default::default()
   };
   let field = Field::create(&field_properties, &test_environment.database_pool).await?;
 

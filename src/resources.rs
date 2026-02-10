@@ -10,6 +10,7 @@ pub mod app_credential;
 pub mod app;
 pub mod delegation_policy;
 pub mod field;
+pub mod field_choice;
 pub mod group;
 pub mod group_membership;
 pub mod http_transaction;

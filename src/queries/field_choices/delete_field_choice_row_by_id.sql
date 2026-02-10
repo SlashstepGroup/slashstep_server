@@ -1,0 +1,1 @@
+DELETE FROM field_choices WHERE id = $1;

@@ -1,7 +1,7 @@
 use thiserror::Error;
 use uuid::Uuid;
 
-use crate::resources::{ResourceError, access_policy::AccessPolicyResourceType, action::Action, app::{App, AppParentResourceType}, app_authorization::{AppAuthorization, AppAuthorizationAuthorizingResourceType}, app_authorization_credential::AppAuthorizationCredential, app_credential::AppCredential, field::{Field, FieldParentResourceType}, group_membership::GroupMembership, item::Item, milestone::{Milestone, MilestoneParentResourceType}, project::Project, role::{Role, RoleParentResourceType}, role_memberships::RoleMembership, session::Session};
+use crate::resources::{ResourceError, access_policy::AccessPolicyResourceType, action::Action, app::{App, AppParentResourceType}, app_authorization::{AppAuthorization, AppAuthorizationAuthorizingResourceType}, app_authorization_credential::AppAuthorizationCredential, app_credential::AppCredential, field::{Field, FieldParentResourceType}, field_choice::FieldChoice, group_membership::GroupMembership, item::Item, milestone::{Milestone, MilestoneParentResourceType}, project::Project, role::{Role, RoleParentResourceType}, role_memberships::RoleMembership, session::Session};
 
 pub type ResourceHierarchy = Vec<(AccessPolicyResourceType, Option<Uuid>)>;
 
@@ -351,6 +351,36 @@ pub async fn get_hierarchy(scoped_resource_type: &AccessPolicyResourceType, scop
           }
 
         }
+
+      },
+
+      // FieldChoice -> Field
+      AccessPolicyResourceType::FieldChoice => {
+
+        let Some(field_choice_id) = selected_resource_id else {
+
+          return Err(ResourceHierarchyError::ScopedResourceIDMissingError(AccessPolicyResourceType::FieldChoice));
+
+        };
+
+        hierarchy.push((AccessPolicyResourceType::FieldChoice, Some(field_choice_id)));
+
+        let field_choice = match FieldChoice::get_by_id(&field_choice_id, database_pool).await {
+
+          Ok(field_choice) => field_choice,
+
+          Err(error) => match error {
+
+            ResourceError::NotFoundError(_) => return Err(ResourceHierarchyError::OrphanedResourceError(AccessPolicyResourceType::FieldChoice, hierarchy)),
+
+            _ => return Err(ResourceHierarchyError::ResourceError(error))
+
+          }
+
+        };
+
+        selected_resource_type = AccessPolicyResourceType::Field;
+        selected_resource_id = Some(field_choice.field_id);
 
       },
 
