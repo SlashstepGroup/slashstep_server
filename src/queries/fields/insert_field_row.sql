@@ -1,7 +1,7 @@
 INSERT INTO fields (
   name,
-  description,
   display_name,
+  description,
   is_required,
   type,
   minimum_value,

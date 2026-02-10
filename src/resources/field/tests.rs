@@ -1,29 +1,47 @@
+use uuid::Uuid;
+
 use crate::{
   initialize_required_tables, predefinitions::initialize_predefined_actions, resources::{
     DeletableResource, ResourceError, access_policy::{AccessPolicy, InitialAccessPolicyProperties}, action::{
       Action, DEFAULT_ACTION_LIST_LIMIT
-    }, app_authorization::{AppAuthorization, AppAuthorizationAuthorizingResourceType, DEFAULT_APP_AUTHORIZATION_LIST_LIMIT, InitialAppAuthorizationProperties}
+    }, field::{DEFAULT_FIELD_LIST_LIMIT, Field, FieldParentResourceType, FieldType, InitialFieldProperties}
   }, tests::{TestEnvironment, TestSlashstepServerError}
 };
 
-fn assert_app_authorizations_are_equal(app_authorization_1: &AppAuthorization, app_authorization_2: &AppAuthorization) {
+fn assert_fields_are_equal(field_1: &Field, field_2: &Field) {
 
-  assert_eq!(app_authorization_1.id, app_authorization_2.id);
-  assert_eq!(app_authorization_1.app_id, app_authorization_2.app_id);
-  assert_eq!(app_authorization_1.authorizing_resource_type, app_authorization_2.authorizing_resource_type);
-  assert_eq!(app_authorization_1.authorizing_project_id, app_authorization_2.authorizing_project_id);
-  assert_eq!(app_authorization_1.authorizing_workspace_id, app_authorization_2.authorizing_workspace_id);
-  assert_eq!(app_authorization_1.authorizing_user_id, app_authorization_2.authorizing_user_id);
+  assert_eq!(field_1.id, field_2.id);
+  assert_eq!(field_1.name, field_2.name);
+  assert_eq!(field_1.display_name, field_2.display_name);
+  assert_eq!(field_1.description, field_2.description);
+  assert_eq!(field_1.is_required, field_2.is_required);
+  assert_eq!(field_1.field_type, field_2.field_type);
+  assert_eq!(field_1.minimum_value, field_2.minimum_value);
+  assert_eq!(field_1.maximum_value, field_2.maximum_value);
+  assert_eq!(field_1.minimum_choice_count, field_2.minimum_choice_count);
+  assert_eq!(field_1.maximum_choice_count, field_2.maximum_choice_count);
+  assert_eq!(field_1.parent_resource_type, field_2.parent_resource_type);
+  assert_eq!(field_1.parent_project_id, field_2.parent_project_id);
+  assert_eq!(field_1.parent_workspace_id, field_2.parent_workspace_id);
+  assert_eq!(field_1.parent_user_id, field_2.parent_user_id);
 
 }
 
-fn assert_app_authorization_is_equal_to_initial_properties(app_authorization: &AppAuthorization, initial_properties: &InitialAppAuthorizationProperties) {
+fn assert_field_is_equal_to_initial_properties(field: &Field, initial_properties: &InitialFieldProperties) {
 
-  assert_eq!(app_authorization.app_id, initial_properties.app_id);
-  assert_eq!(app_authorization.authorizing_resource_type, initial_properties.authorizing_resource_type);
-  assert_eq!(app_authorization.authorizing_project_id, initial_properties.authorizing_project_id);
-  assert_eq!(app_authorization.authorizing_workspace_id, initial_properties.authorizing_workspace_id);
-  assert_eq!(app_authorization.authorizing_user_id, initial_properties.authorizing_user_id);
+  assert_eq!(field.name, initial_properties.name);
+  assert_eq!(field.display_name, initial_properties.display_name);
+  assert_eq!(field.description, initial_properties.description);
+  assert_eq!(field.is_required, initial_properties.is_required);
+  assert_eq!(field.field_type, initial_properties.field_type);
+  assert_eq!(field.minimum_value, initial_properties.minimum_value);
+  assert_eq!(field.maximum_value, initial_properties.maximum_value);
+  assert_eq!(field.minimum_choice_count, initial_properties.minimum_choice_count);
+  assert_eq!(field.maximum_choice_count, initial_properties.maximum_choice_count);
+  assert_eq!(field.parent_resource_type, initial_properties.parent_resource_type);
+  assert_eq!(field.parent_project_id, initial_properties.parent_project_id);
+  assert_eq!(field.parent_workspace_id, initial_properties.parent_workspace_id);
+  assert_eq!(field.parent_user_id, initial_properties.parent_user_id);
 
 }
 
@@ -32,18 +50,18 @@ async fn verify_count() -> Result<(), TestSlashstepServerError> {
 
   let test_environment = TestEnvironment::new().await?;
   initialize_required_tables(&test_environment.database_pool).await?;
-  const MAXIMUM_APP_AUTHORIZATION_COUNT: i64 = DEFAULT_APP_AUTHORIZATION_LIST_LIMIT + 1;
-  let mut created_app_authorizations: Vec<AppAuthorization> = Vec::new();
-  for _ in 0..MAXIMUM_APP_AUTHORIZATION_COUNT {
+  const MAXIMUM_FIELD_COUNT: i64 = DEFAULT_FIELD_LIST_LIMIT + 1;
+  let mut created_fields: Vec<Field> = Vec::new();
+  for _ in 0..MAXIMUM_FIELD_COUNT {
 
-    let app_authorization = test_environment.create_random_app_authorization(None).await?;
-    created_app_authorizations.push(app_authorization);
+    let field = test_environment.create_random_field().await?;
+    created_fields.push(field);
 
   }
 
-  let retrieved_app_authorization_count = AppAuthorization::count("", &test_environment.database_pool, None).await?;
+  let retrieved_field_count = Field::count("", &test_environment.database_pool, None).await?;
 
-  assert_eq!(retrieved_app_authorization_count, MAXIMUM_APP_AUTHORIZATION_COUNT);
+  assert_eq!(retrieved_field_count, MAXIMUM_FIELD_COUNT);
 
   return Ok(());
 
@@ -56,16 +74,26 @@ async fn verify_creation() -> Result<(), TestSlashstepServerError> {
   initialize_required_tables(&test_environment.database_pool).await?;
 
   // Create the access policy.
-  let app = test_environment.create_random_app().await?;
-  let app_authorization_properties = InitialAppAuthorizationProperties {
-    app_id: app.id,
-    authorizing_resource_type: AppAuthorizationAuthorizingResourceType::Server,
-    ..Default::default()
+  let user = test_environment.create_random_user().await?;
+  let field_properties = InitialFieldProperties {
+    name: Uuid::now_v7().to_string(),
+    display_name: Uuid::now_v7().to_string(),
+    description: Uuid::now_v7().to_string(),
+    is_required: true,
+    field_type: FieldType::Text,
+    minimum_value: None,
+    maximum_value: None,
+    minimum_choice_count: None,
+    maximum_choice_count: None,
+    parent_resource_type: FieldParentResourceType::User,
+    parent_project_id: None,
+    parent_workspace_id: None,
+    parent_user_id: Some(user.id)
   };
-  let app_authorization = AppAuthorization::create(&app_authorization_properties, &test_environment.database_pool).await?;
+  let field = Field::create(&field_properties, &test_environment.database_pool).await?;
 
   // Ensure that all the properties were set correctly.
-  assert_app_authorization_is_equal_to_initial_properties(&app_authorization, &app_authorization_properties);
+  assert_field_is_equal_to_initial_properties(&field, &field_properties);
 
   return Ok(());
 
@@ -77,12 +105,12 @@ async fn verify_deletion() -> Result<(), TestSlashstepServerError> {
   // Create the access policy.
   let test_environment = TestEnvironment::new().await?;
   initialize_required_tables(&test_environment.database_pool).await?;
-  let created_app_authorization = test_environment.create_random_app_authorization(None).await?;
+  let created_field = test_environment.create_random_field().await?;
   
-  created_app_authorization.delete(&test_environment.database_pool).await?;
+  created_field.delete(&test_environment.database_pool).await?;
 
   // Ensure that the access policy is no longer in the database.
-  match AppAuthorization::get_by_id(&created_app_authorization.id, &test_environment.database_pool).await {
+  match Field::get_by_id(&created_field.id, &test_environment.database_pool).await {
 
     Ok(_) => panic!("Expected an app authorization not found error."),
 
@@ -116,9 +144,9 @@ async fn verify_get_resource_by_id() -> Result<(), TestSlashstepServerError> {
   let test_environment = TestEnvironment::new().await?;
   initialize_required_tables(&test_environment.database_pool).await?;
 
-  let created_app_authorization = test_environment.create_random_app_authorization(None).await?;
-  let retrieved_app_authorization = AppAuthorization::get_by_id(&created_app_authorization.id, &test_environment.database_pool).await?;
-  assert_app_authorizations_are_equal(&created_app_authorization, &retrieved_app_authorization);
+  let created_field = test_environment.create_random_field().await?;
+  let retrieved_field = Field::get_by_id(&created_field.id, &test_environment.database_pool).await?;
+  assert_fields_are_equal(&created_field, &retrieved_field);
 
   return Ok(());
 
@@ -130,18 +158,18 @@ async fn verify_list_resources_with_default_limit() -> Result<(), TestSlashstepS
 
   let test_environment = TestEnvironment::new().await?;
   initialize_required_tables(&test_environment.database_pool).await?;
-  const MAXIMUM_APP_AUTHORIZATION_COUNT: i64 = DEFAULT_APP_AUTHORIZATION_LIST_LIMIT + 1;
-  let mut app_authorizations: Vec<AppAuthorization> = Vec::new();
-  for _ in 0..MAXIMUM_APP_AUTHORIZATION_COUNT {
+  const MAXIMUM_FIELD_COUNT: i64 = DEFAULT_FIELD_LIST_LIMIT + 1;
+  let mut fields: Vec<Field> = Vec::new();
+  for _ in 0..MAXIMUM_FIELD_COUNT {
 
-    let app_authorization = test_environment.create_random_app_authorization(None).await?;
-    app_authorizations.push(app_authorization);
+    let field = test_environment.create_random_field().await?;
+    fields.push(field);
 
   }
 
-  let retrieved_app_authorizations = AppAuthorization::list("", &test_environment.database_pool, None).await?;
+  let retrieved_fields = Field::list("", &test_environment.database_pool, None).await?;
 
-  assert_eq!(retrieved_app_authorizations.len(), DEFAULT_ACTION_LIST_LIMIT as usize);
+  assert_eq!(retrieved_fields.len(), DEFAULT_ACTION_LIST_LIMIT as usize);
 
   return Ok(());
   
@@ -154,28 +182,25 @@ async fn verify_list_resources_with_query() -> Result<(), TestSlashstepServerErr
   let test_environment = TestEnvironment::new().await?;
   initialize_required_tables(&test_environment.database_pool).await?;
   const MAXIMUM_RESOURCE_COUNT: i32 = 5;
-  let mut created_app_authorizations: Vec<AppAuthorization> = Vec::new();
+  let mut created_fields: Vec<Field> = Vec::new();
   for _ in 0..MAXIMUM_RESOURCE_COUNT {
 
-    let app_authorization = test_environment.create_random_app_authorization(None).await?;
-    created_app_authorizations.push(app_authorization);
+    let field = test_environment.create_random_field().await?;
+    created_fields.push(field);
 
   }
-  
-  let app_authorization_with_same_app_id = test_environment.create_random_app_authorization(Some(&created_app_authorizations[0].app_id)).await?;
-  created_app_authorizations.push(app_authorization_with_same_app_id);
 
-  let query = format!("app_id = \"{}\"", created_app_authorizations[0].app_id);
-  let retrieved_app_authorizations = AppAuthorization::list(&query, &test_environment.database_pool, None).await?;
+  let query = format!("id = \"{}\"", created_fields[0].id);
+  let retrieved_fields = Field::list(&query, &test_environment.database_pool, None).await?;
 
-  let created_app_authorizations_with_specific_app_id: Vec<&AppAuthorization> = created_app_authorizations.iter().filter(|app_authorization| app_authorization.app_id == created_app_authorizations[0].app_id).collect();
-  assert_eq!(created_app_authorizations_with_specific_app_id.len(), retrieved_app_authorizations.len());
-  for i in 0..created_app_authorizations_with_specific_app_id.len() {
+  let created_fields_with_specific_id: Vec<&Field> = created_fields.iter().filter(|field| field.id == created_fields[0].id).collect();
+  assert_eq!(created_fields_with_specific_id.len(), retrieved_fields.len());
+  for i in 0..created_fields_with_specific_id.len() {
 
-    let created_app_authorization = &created_app_authorizations_with_specific_app_id[i];
-    let retrieved_app_authorization = &retrieved_app_authorizations[i];
+    let created_field = &created_fields_with_specific_id[i];
+    let retrieved_field = &retrieved_fields[i];
 
-    assert_app_authorizations_are_equal(created_app_authorization, retrieved_app_authorization);
+    assert_fields_are_equal(created_field, retrieved_field);
 
   }
 
@@ -189,22 +214,22 @@ async fn verify_list_resources_without_query() -> Result<(), TestSlashstepServer
   let test_environment = TestEnvironment::new().await?;
   initialize_required_tables(&test_environment.database_pool).await?;
   const MAXIMUM_RESOURCE_COUNT: i32 = 25;
-  let mut created_app_authorizations: Vec<AppAuthorization> = Vec::new();
+  let mut created_fields: Vec<Field> = Vec::new();
   for _ in 0..MAXIMUM_RESOURCE_COUNT {
 
-    let app_authorization = test_environment.create_random_app_authorization(None).await?;
-    created_app_authorizations.push(app_authorization);
+    let field = test_environment.create_random_field().await?;
+    created_fields.push(field);
 
   }
 
-  let retrieved_app_authorizations = AppAuthorization::list("", &test_environment.database_pool, None).await?;
-  assert_eq!(created_app_authorizations.len(), retrieved_app_authorizations.len());
-  for i in 0..created_app_authorizations.len() {
+  let retrieved_fields = Field::list("", &test_environment.database_pool, None).await?;
+  assert_eq!(created_fields.len(), retrieved_fields.len());
+  for i in 0..created_fields.len() {
 
-    let created_app_authorization = &created_app_authorizations[i];
-    let retrieved_app_authorization = &retrieved_app_authorizations[i];
+    let created_field = &created_fields[i];
+    let retrieved_field = &retrieved_fields[i];
 
-    assert_app_authorizations_are_equal(created_app_authorization, retrieved_app_authorization);
+    assert_fields_are_equal(created_field, retrieved_field);
 
   }
 
@@ -222,54 +247,54 @@ async fn verify_list_resources_without_query_and_filter_based_on_requestor_permi
   initialize_predefined_actions(&test_environment.database_pool).await?;
 
   const MINIMUM_ACTION_COUNT: i32 = 2;
-  let mut current_app_authorizations = AppAuthorization::list("", &test_environment.database_pool, None).await?;
-  if current_app_authorizations.len() < MINIMUM_ACTION_COUNT as usize {
+  let mut current_fields = Field::list("", &test_environment.database_pool, None).await?;
+  if current_fields.len() < MINIMUM_ACTION_COUNT as usize {
 
-    let remaining_action_count = MINIMUM_ACTION_COUNT - current_app_authorizations.len() as i32;
+    let remaining_action_count = MINIMUM_ACTION_COUNT - current_fields.len() as i32;
     for _ in 0..remaining_action_count {
 
-      let app_authorization = test_environment.create_random_app_authorization(None).await?;
-      current_app_authorizations.push(app_authorization);
+      let field = test_environment.create_random_field().await?;
+      current_fields.push(field);
 
     }
 
   }
 
-  // Get the "slashstep.appAuthorizations.get" action one time.
+  // Get the "slashstep.fields.get" action one time.
   let user = test_environment.create_random_user().await?;
-  let get_app_authorizations_action = Action::get_by_name("slashstep.appAuthorizations.get", &test_environment.database_pool).await?;
+  let get_fields_action = Action::get_by_name("slashstep.fields.get", &test_environment.database_pool).await?;
 
-  // Grant access to the "slashstep.appAuthorizations.get" action to the user for half of the actions.
-  let allowed_action_count = current_app_authorizations.len() / 2;
-  let mut allowed_app_authorizations = Vec::new();
+  // Grant access to the "slashstep.fields.get" action to the user for half of the actions.
+  let allowed_action_count = current_fields.len() / 2;
+  let mut allowed_fields = Vec::new();
   for index in 0..allowed_action_count {
 
-    let scoped_app_authorization = &current_app_authorizations[index];
+    let scoped_field = &current_fields[index];
 
     AccessPolicy::create(&InitialAccessPolicyProperties {
-      action_id: get_app_authorizations_action.id.clone(),
+      action_id: get_fields_action.id.clone(),
       permission_level: crate::resources::access_policy::ActionPermissionLevel::User,
       principal_type: crate::resources::access_policy::AccessPolicyPrincipalType::User,
       principal_user_id: Some(user.id.clone()),
-      scoped_resource_type: crate::resources::access_policy::AccessPolicyResourceType::AppAuthorization,
-      scoped_app_authorization_id: Some(scoped_app_authorization.id.clone()),
+      scoped_resource_type: crate::resources::access_policy::AccessPolicyResourceType::Field,
+      scoped_field_id: Some(scoped_field.id.clone()),
       ..Default::default()
     }, &test_environment.database_pool).await?;
 
-    allowed_app_authorizations.push(scoped_app_authorization.clone());
+    allowed_fields.push(scoped_field.clone());
 
   }
 
   // Make sure the user only sees the allowed actions.
   let individual_principal = crate::resources::access_policy::IndividualPrincipal::User(user.id);
-  let retrieved_app_authorizations = AppAuthorization::list("", &test_environment.database_pool, Some(&individual_principal)).await?;
+  let retrieved_fields = Field::list("", &test_environment.database_pool, Some(&individual_principal)).await?;
 
-  assert_eq!(allowed_app_authorizations.len(), retrieved_app_authorizations.len());
-  for allowed_app_authorization in allowed_app_authorizations {
+  assert_eq!(allowed_fields.len(), retrieved_fields.len());
+  for allowed_field in allowed_fields {
 
-    let retrieved_app_authorization = &retrieved_app_authorizations.iter().find(|action| action.id == allowed_app_authorization.id).unwrap();
+    let retrieved_field = &retrieved_fields.iter().find(|action| action.id == allowed_field.id).unwrap();
 
-    assert_app_authorizations_are_equal(&allowed_app_authorization, retrieved_app_authorization);
+    assert_fields_are_equal(&allowed_field, retrieved_field);
 
   }
 

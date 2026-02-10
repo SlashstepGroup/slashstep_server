@@ -33,7 +33,12 @@ BEGIN
     parent_resource_type field_parent_resource_type NOT NULL,
     parent_project_id UUID REFERENCES projects(id) ON DELETE CASCADE,
     parent_workspace_id UUID REFERENCES workspaces(id) ON DELETE CASCADE,
-    parent_user_id UUID REFERENCES users(id) ON DELETE CASCADE
+    parent_user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+    CONSTRAINT one_parent_type CHECK (
+      (parent_resource_type = 'Project' AND parent_project_id IS NOT NULL AND parent_workspace_id IS NULL AND parent_user_id IS NULL)
+      OR (parent_resource_type = 'Workspace' AND parent_project_id IS NULL AND parent_workspace_id IS NOT NULL AND parent_user_id IS NULL)
+      OR (parent_resource_type = 'User' AND parent_project_id IS NULL AND parent_workspace_id IS NULL AND parent_user_id IS NOT NULL)
+    )
   );
 
 END
