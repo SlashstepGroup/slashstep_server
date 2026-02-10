@@ -198,6 +198,60 @@ pub async fn initialize_predefined_actions(database_pool: &deadpool_postgres::Po
       description: "Get a specific field on a particular scope.".to_string(),
       ..Default::default()
     },
+    InitialActionProperties {
+      name: "slashstep.fields.list".to_string(),
+      display_name: "List fields".to_string(),
+      description: "List all fields on a particular scope.".to_string(),
+      ..Default::default()
+    },
+    InitialActionProperties {
+      name: "slashstep.fields.create".to_string(),
+      display_name: "Create field".to_string(),
+      description: "Create a specific field on a particular scope.".to_string(),
+      ..Default::default()
+    },
+    InitialActionProperties {
+      name: "slashstep.fields.update".to_string(),
+      display_name: "Update field".to_string(),
+      description: "Update a specific field on a particular scope.".to_string(),
+      ..Default::default()
+    },
+    InitialActionProperties {
+      name: "slashstep.fields.delete".to_string(),
+      display_name: "Delete field".to_string(),
+      description: "Delete a specific field on a particular scope.".to_string(),
+      ..Default::default()
+    },
+    InitialActionProperties {
+      name: "slashstep.fieldChoices.get".to_string(),
+      display_name: "Get field choices".to_string(),
+      description: "Get a specific field choice on a particular scope.".to_string(),
+      ..Default::default()
+    },
+    InitialActionProperties {
+      name: "slashstep.fieldChoices.list".to_string(),
+      display_name: "List field choices".to_string(),
+      description: "List all field choices on a particular scope.".to_string(),
+      ..Default::default()
+    },
+    InitialActionProperties {
+      name: "slashstep.fieldChoices.create".to_string(),
+      display_name: "Create field choices".to_string(),
+      description: "Create a specific field choice on a particular scope.".to_string(),
+      ..Default::default()
+    },
+    InitialActionProperties {
+      name: "slashstep.fieldChoices.update".to_string(),
+      display_name: "Update field choice".to_string(),
+      description: "Update a specific field choice on a particular scope.".to_string(),
+      ..Default::default()
+    },
+    InitialActionProperties {
+      name: "slashstep.fieldChoices.delete".to_string(),
+      display_name: "Delete field choice".to_string(),
+      description: "Delete a specific field choice on a particular scope.".to_string(),
+      ..Default::default()
+    },
   ];
 
   let mut actions: Vec<Action> = Vec::new();

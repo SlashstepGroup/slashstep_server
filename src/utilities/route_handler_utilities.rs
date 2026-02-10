@@ -1,6 +1,6 @@
 use std::{pin::Pin, sync::Arc};
 
-use crate::{HTTPError, resources::{DeletableResource, ResourceError, access_policy::{AccessPolicyResourceType, ActionPermissionLevel, IndividualPrincipal, Principal, ResourceHierarchy}, action::Action, app::App, app_authorization::AppAuthorization, app_authorization_credential::AppAuthorizationCredential, app_credential::AppCredential, delegation_policy::DelegationPolicy, field::Field, http_transaction::HTTPTransaction, server_log_entry::ServerLogEntry, user::User}, utilities::{principal_permission_verifier::{PrincipalPermissionVerifier, PrincipalPermissionVerifierError}, resource_hierarchy::{self, ResourceHierarchyError}, slashstepql::SlashstepQLError}};
+use crate::{HTTPError, resources::{DeletableResource, ResourceError, access_policy::{AccessPolicyResourceType, ActionPermissionLevel, IndividualPrincipal, Principal, ResourceHierarchy}, action::Action, app::App, app_authorization::AppAuthorization, app_authorization_credential::AppAuthorizationCredential, app_credential::AppCredential, delegation_policy::DelegationPolicy, field::Field, field_choice::FieldChoice, http_transaction::HTTPTransaction, server_log_entry::ServerLogEntry, user::User}, utilities::{principal_permission_verifier::{PrincipalPermissionVerifier, PrincipalPermissionVerifierError}, resource_hierarchy::{self, ResourceHierarchyError}, slashstepql::SlashstepQLError}};
 use colored::Colorize;
 use pg_escape::quote_literal;
 use postgres::error::SqlState;
@@ -444,8 +444,15 @@ pub async fn get_uuid_from_string(string: &str, resource_type_name_singular: &st
 
 pub async fn get_field_by_id(field_id: &Uuid, http_transaction: &HTTPTransaction, database_pool: &deadpool_postgres::Pool) -> Result<Field, HTTPError> {
 
-  let field = get_resource_by_id::<Field, _>("field", &field_id, &http_transaction, &database_pool, |app_authorization_credential_id, database_pool| Box::new(Field::get_by_id(app_authorization_credential_id, database_pool))).await?;
+  let field = get_resource_by_id::<Field, _>("field", &field_id, &http_transaction, &database_pool, |field_id, database_pool| Box::new(Field::get_by_id(field_id, database_pool))).await?;
   return Ok(field);
+
+}
+
+pub async fn get_field_choice_by_id(field_choice_id: &Uuid, http_transaction: &HTTPTransaction, database_pool: &deadpool_postgres::Pool) -> Result<FieldChoice, HTTPError> {
+
+  let field_choice = get_resource_by_id::<FieldChoice, _>("field choice", &field_choice_id, &http_transaction, &database_pool, |field_choice_id, database_pool| Box::new(FieldChoice::get_by_id(field_choice_id, database_pool))).await?;
+  return Ok(field_choice);
 
 }
 

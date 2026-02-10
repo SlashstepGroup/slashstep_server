@@ -19,6 +19,7 @@ DO $$
         'AppAuthorizationCredential',
         'AppCredential',
         'Field',
+        'FieldChoice',
         'Group',
         'GroupMembership',
         'HTTPTransaction',
@@ -44,6 +45,7 @@ DO $$
         'AppAuthorizationCredential',
         'AppCredential',
         'Field',
+        'FieldChoice',
         'Group',
         'GroupMembership',
         'HTTPTransaction',
@@ -88,6 +90,7 @@ DO $$
       scoped_app_authorization_credential_id UUID references app_authorization_credentials(id) on delete cascade,
       scoped_app_credential_id UUID references app_credentials(id) on delete cascade,
       scoped_field_id UUID references fields(id) on delete cascade,
+      scoped_field_choice_id UUID references field_choices(id) on delete cascade,
       scoped_group_id UUID references groups(id) on delete cascade,
       scoped_group_membership_id UUID references group_memberships(id) on delete cascade,
       scoped_http_transaction_id UUID references http_transactions(id) on delete cascade,
@@ -125,6 +128,7 @@ DO $$
           AND scoped_app_authorization_credential_id IS NULL
           AND scoped_app_credential_id IS NULL
           AND scoped_field_id IS NULL
+          AND scoped_field_choice_id IS NULL
           AND scoped_group_id IS NULL
           AND scoped_group_membership_id IS NULL
           AND scoped_http_transaction_id IS NULL
@@ -145,6 +149,7 @@ DO $$
           (scoped_app_authorization_credential_id IS NOT NULL)::INTEGER +
           (scoped_app_credential_id IS NOT NULL)::INTEGER +
           (scoped_field_id IS NOT NULL)::INTEGER +
+          (scoped_field_choice_id IS NOT NULL)::INTEGER +
           (scoped_group_id IS NOT NULL)::INTEGER +
           (scoped_group_membership_id IS NOT NULL)::INTEGER +
           (scoped_http_transaction_id IS NOT NULL)::INTEGER +
@@ -170,6 +175,7 @@ DO $$
         OR (scoped_resource_type = 'AppAuthorizationCredential' AND scoped_app_authorization_credential_id IS NOT NULL)
         OR (scoped_resource_type = 'AppCredential' AND scoped_app_credential_id IS NOT NULL)
         OR (scoped_resource_type = 'Field' AND scoped_field_id IS NOT NULL)
+        OR (scoped_resource_type = 'FieldChoice' AND scoped_field_choice_id IS NOT NULL)
         OR (scoped_resource_type = 'Group' AND scoped_group_id IS NOT NULL)
         OR (scoped_resource_type = 'GroupMembership' AND scoped_group_membership_id IS NOT NULL)
         OR (scoped_resource_type = 'HTTPTransaction' AND scoped_http_transaction_id IS NOT NULL)
