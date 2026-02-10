@@ -1,6 +1,7 @@
 #[cfg(test)]
 mod tests;
 
+use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 use postgres_types::{FromSql, ToSql};
@@ -52,7 +53,7 @@ pub enum FieldParentResourceType {
   User
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, ToSql, FromSql)]
 pub struct InitialFieldProperties {
 
   /// The field's name.
@@ -71,16 +72,16 @@ pub struct InitialFieldProperties {
   pub field_type: FieldType,
 
   /// The field's minimum value.
-  pub minimum_value: Option<f64>,
+  pub minimum_value: Option<Decimal>,
 
   /// The field's maximum value.
-  pub maximum_value: Option<f64>,
+  pub maximum_value: Option<Decimal>,
 
   /// The field's minimum choice count.
-  pub minimum_choice_count: Option<i64>,
+  pub minimum_choice_count: Option<i32>,
 
   /// The field's maximum choice count.
-  pub maximum_choice_count: Option<i64>,
+  pub maximum_choice_count: Option<i32>,
 
   /// The field's parent resource type.
   pub parent_resource_type: FieldParentResourceType,
@@ -96,7 +97,7 @@ pub struct InitialFieldProperties {
 
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSql, FromSql)]
 pub struct Field {
 
   /// The field's ID.
@@ -118,16 +119,16 @@ pub struct Field {
   pub field_type: FieldType,
 
   /// The field's minimum value.
-  pub minimum_value: Option<f64>,
+  pub minimum_value: Option<Decimal>,
 
   /// The field's maximum value.
-  pub maximum_value: Option<f64>,
+  pub maximum_value: Option<Decimal>,
 
   /// The field's minimum choice count.
-  pub minimum_choice_count: Option<i64>,
+  pub minimum_choice_count: Option<i32>,
 
   /// The field's maximum choice count.
-  pub maximum_choice_count: Option<i64>,
+  pub maximum_choice_count: Option<i32>,
 
   /// The field's parent resource type.
   pub parent_resource_type: FieldParentResourceType,
