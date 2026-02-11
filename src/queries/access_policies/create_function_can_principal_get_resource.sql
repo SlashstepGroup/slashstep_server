@@ -18,6 +18,9 @@ CREATE OR REPLACE FUNCTION can_principal_get_resource(
         selected_resource_parent_id UUID;
         initial_access_policy access_policies%ROWTYPE;
         needs_inheritance BOOLEAN := FALSE;
+        can_principal_get_resource_through_inheritance BOOLEAN := FALSE;
+        bidirectional_resource_type access_policy_resource_type;
+        bidirectional_resource_id UUID;
 
     BEGIN
 
@@ -899,6 +902,90 @@ CREATE OR REPLACE FUNCTION can_principal_get_resource(
 
                 selected_resource_type := 'Project';
                 selected_resource_id := selected_resource_parent_id;
+
+            ELSIF selected_resource_type = 'ItemConnection' THEN
+
+                -- ItemConnection -> Inward Item and Outward Item
+                -- Check if the item connection has an associated access policy.
+                SELECT
+                    permission_level,
+                    is_inheritance_enabled
+                INTO
+                    current_permission_Level,
+                    is_inheritance_enabled_on_selected_resource
+                FROM
+                    get_principal_access_policies(parameter_principal_type, parameter_principal_id, get_resource_action_id) principal_access_policies
+                WHERE
+                    principal_access_policies.scoped_resource_type = 'ItemConnection' AND 
+                    principal_access_policies.scoped_item_connection_id = selected_resource_id AND (
+                        NOT needs_inheritance OR
+                        principal_access_policies.is_inheritance_enabled
+                    )
+                LIMIT 1;
+
+                IF needs_inheritance AND NOT is_inheritance_enabled_on_selected_resource THEN
+
+                    RETURN FALSE;
+
+                ELSIF current_permission_Level IS NOT NULL THEN
+
+                    RETURN current_permission_Level >= 'User';
+
+                END IF;
+
+                -- Look for the parent resource type.
+                -- Since the item connection is bidirectional, we need to check both the inward and outward item.
+                -- This is possible through an iterative algorithm, but we'll use recursion for now.
+                needs_inheritance := TRUE;
+                parent_resource_type := 'Item';
+
+                SELECT
+                    inward_item_id
+                INTO
+                    selected_resource_parent_id
+                FROM
+                    item_connections
+                WHERE
+                    item_connections.id = selected_resource_id;
+
+                SELECT
+                    can_principal_get_resource(
+                        parameter_principal_type, 
+                        parameter_principal_id,
+                        parent_resource_type, 
+                        selected_resource_parent_id, 
+                        get_resource_action_name
+                    )
+                INTO
+                    can_principal_get_resource_through_inheritance;
+
+                IF can_principal_get_resource_through_inheritance THEN
+
+                    RETURN TRUE;
+
+                END IF;
+
+                SELECT
+                    outward_item_id
+                INTO
+                    selected_resource_parent_id
+                FROM
+                    item_connections
+                WHERE
+                    item_connections.id = selected_resource_id;
+
+                SELECT
+                    can_principal_get_resource(
+                        parameter_principal_type, 
+                        parameter_principal_id,
+                        parent_resource_type, 
+                        selected_resource_parent_id, 
+                        get_resource_action_name
+                    )
+                INTO
+                    can_principal_get_resource_through_inheritance;
+
+                RETURN can_principal_get_resource_through_inheritance;
 
             ELSIF selected_resource_type = 'Milestone' THEN
 
