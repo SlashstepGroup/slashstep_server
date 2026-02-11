@@ -1,7 +1,7 @@
 INSERT INTO field_choices (
   field_id,
   description,
-  type,
+  value_type,
   text_value,
   number_value,
   timestamp_value,

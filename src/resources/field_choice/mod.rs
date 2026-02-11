@@ -28,7 +28,7 @@ pub const DATABASE_TABLE_NAME: &str = "field_choices";
 pub const GET_RESOURCE_ACTION_NAME: &str = "slashstep.fieldChoices.get";
 
 #[derive(Debug, Clone, ToSql, FromSql, Serialize, Deserialize, PartialEq, Eq, Default)]
-#[postgres(name = "value_type")]
+#[postgres(name = "field_choice_type")]
 pub enum FieldChoiceType {
   #[default]
   Text,
