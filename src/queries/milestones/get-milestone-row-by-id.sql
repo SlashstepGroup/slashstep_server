@@ -1,1 +1,0 @@
-select * from hydrated_milestones where id = $1 limit 1;

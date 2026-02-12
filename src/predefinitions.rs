@@ -457,6 +457,36 @@ pub async fn initialize_predefined_actions(database_pool: &deadpool_postgres::Po
       ..Default::default()
     },
     InitialActionProperties {
+      name: "slashstep.milestones.get".to_string(),
+      display_name: "Get milestones".to_string(),
+      description: "Get a specific milestone on a particular scope.".to_string(),
+      ..Default::default()
+    },
+    InitialActionProperties {
+      name: "slashstep.milestones.list".to_string(),
+      display_name: "List milestones".to_string(),
+      description: "List all milestones on a particular scope.".to_string(),
+      ..Default::default()
+    },
+    InitialActionProperties {
+      name: "slashstep.milestones.create".to_string(),
+      display_name: "Create milestones".to_string(),
+      description: "Create new milestones on a particular scope.".to_string(),
+      ..Default::default()
+    },
+    InitialActionProperties {
+      name: "slashstep.milestones.delete".to_string(),
+      display_name: "Delete milestones".to_string(),
+      description: "Delete milestones on a particular scope.".to_string(),
+      ..Default::default()
+    },
+    InitialActionProperties {
+      name: "slashstep.milestones.update".to_string(),
+      display_name: "Update milestones".to_string(),
+      description: "Update milestones on a particular scope.".to_string(),
+      ..Default::default()
+    },
+    InitialActionProperties {
       name: "slashstep.projects.get".to_string(),
       display_name: "Get projects".to_string(),
       description: "Get a specific project on a particular scope.".to_string(),
