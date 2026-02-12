@@ -1,0 +1,1 @@
+DELETE FROM milestones WHERE id = $1;

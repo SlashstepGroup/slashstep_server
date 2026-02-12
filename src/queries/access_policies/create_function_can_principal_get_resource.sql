@@ -1209,7 +1209,7 @@ CREATE OR REPLACE FUNCTION can_principal_get_resource(
                 IF selected_resource_parent_type = 'Project' THEN
 
                     SELECT
-                        project_id
+                        parent_project_id
                     INTO
                         selected_resource_parent_id
                     FROM
@@ -1229,7 +1229,7 @@ CREATE OR REPLACE FUNCTION can_principal_get_resource(
                 ELSIF selected_resource_parent_type = 'Workspace' THEN
 
                     SELECT
-                        workspace_id
+                        parent_workspace_id
                     INTO
                         selected_resource_parent_id
                     FROM
