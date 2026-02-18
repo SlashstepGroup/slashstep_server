@@ -31,7 +31,7 @@ use crate::{
 };
 
 const DEFAULT_APP_PORT: i16 = 8080;
-const DEFAULT_MAXIMUM_POSTGRES_CONNECTION_COUNT: u32 = 5;
+const DEFAULT_MAXIMUM_POSTGRESQL_CONNECTION_COUNT: u32 = 5;
 
 fn print_shutdown_message() {
 
@@ -283,13 +283,13 @@ async fn create_database_pool() -> Result<deadpool_postgres::Pool, SlashstepServ
   };
   let manager = deadpool_postgres::Manager::from_config(postgres_config, NoTls, manager_config);
 
-  let maximum_postgres_connection_count_string = match get_environment_variable("MAXIMUM_POSTGRES_CONNECTION_COUNT") {
+  let maximum_postgres_connection_count_string = match get_environment_variable("MAXIMUM_POSTGRESQL_CONNECTION_COUNT") {
 
     Ok(maximum_postgres_connection_count) => maximum_postgres_connection_count,
     Err(_) => {
 
-      println!("{}", format!("Please set a MAXIMUM_POSTGRES_CONNECTION_COUNT environment variable. Defaulting to {}.", DEFAULT_MAXIMUM_POSTGRES_CONNECTION_COUNT).yellow());
-      DEFAULT_MAXIMUM_POSTGRES_CONNECTION_COUNT.to_string()
+      println!("{}", format!("Please set a MAXIMUM_POSTGRESQL_CONNECTION_COUNT environment variable. Defaulting to {}.", DEFAULT_MAXIMUM_POSTGRESQL_CONNECTION_COUNT).yellow());
+      DEFAULT_MAXIMUM_POSTGRESQL_CONNECTION_COUNT.to_string()
 
     }
 
