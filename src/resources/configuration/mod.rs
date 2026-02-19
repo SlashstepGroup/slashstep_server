@@ -1,6 +1,8 @@
 #[cfg(test)]
 mod tests;
 
+use std::str::FromStr;
+
 use postgres_types::{FromSql, ToSql};
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
@@ -12,16 +14,14 @@ pub const DEFAULT_MAXIMUM_RESOURCE_LIST_LIMIT: i64 = 1000;
 pub const ALLOWED_QUERY_KEYS: &[&str] = &[
   "id",
   "name",
-  "display_name",
-  "key",
-  "description",
-  "start_date",
-  "end_date",
-  "workspace_id"
+  "value_type",
+  "text_value",
+  "integer_value",
+  "decimal_value",
+  "boolean_value"
 ];
 pub const UUID_QUERY_KEYS: &[&str] = &[
-  "id",
-  "workspace_id"
+  "id"
 ];
 pub const RESOURCE_NAME: &str = "Configuration";
 pub const DATABASE_TABLE_NAME: &str = "configurations";
@@ -35,6 +35,26 @@ pub enum ConfigurationValueType {
   Integer,
   Decimal,
   Boolean
+}
+
+impl FromStr for ConfigurationValueType {
+
+  type Err = ResourceError;
+
+  fn from_str(input: &str) -> Result<ConfigurationValueType, Self::Err> {
+
+    match input {
+
+      "Text" => Ok(ConfigurationValueType::Text),
+      "Integer" => Ok(ConfigurationValueType::Integer),
+      "Decimal" => Ok(ConfigurationValueType::Decimal),
+      "Boolean" => Ok(ConfigurationValueType::Boolean),
+      _ => Err(ResourceError::UnexpectedEnumVariantError(input.to_string()))
+
+    }
+
+  }
+
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize)]
@@ -204,7 +224,28 @@ impl Configuration {
 
     }
 
-    return Ok(Box::new(value));
+    match key {
+
+      "value_type" => {
+
+        let value_type = match ConfigurationValueType::from_str(value) {
+
+          Ok(value_type) => value_type,
+          Err(_) => return Err(SlashstepQLError::StringParserError(format!("Failed to parse \"{}\" for key \"{}\".", value, key)))
+
+        };
+        
+        return Ok(Box::new(value_type));
+
+      },
+
+      _ => {
+
+        return Ok(Box::new(value));
+
+      }
+
+    }
 
   }
 
