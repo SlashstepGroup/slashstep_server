@@ -15,24 +15,17 @@ Returns a list of access policies. Authentication may be required if anonymous u
 | Query | Description | Required? |
 | :- | :- | :- |
 | `query` | A SlashstepQL query to filter and limit results. | Yes |
-| `limit` | The maximum number of results to return. | No |
 
 ### Required permissions
-* [`slashstep.accessPolicies.list`](/src/resources/AccessPolicy/README.md#slashstepaccesspolicieslist) on the server level.
+* `slashstep.accessPolicies.list` on the server level.
 
-### Status codes
-| Status code | Description |
-| :- | :- |
-| 200 | Success. |
-| 400 | There's something wrong with your request. Check the response body for more information. |
-| 401 | Anonymous users don't have the required permissions to use this endpoint. Provide authenticaton and try again. |
-| 403 | You don't have the required permissions to use this endpoint. Get permissions from the appropriate admin and try again. |
-| 500 | An internal server error happened. Try again later. If the error persists, report it to your server admin or to the Slashstep Group. |
+### Optional permissions
+* For any applicable resource, the principal must have `slashstep.accessPolicies.get` on the scoped resource level or inherited from a higher level to see the access policy through this endpoint.
 
 ## Get an access policy by ID
 | Method | Endpoint |
 | :- | :- |
-| GET | `/access-policies/:accessPolicyID` |
+| GET | `/access-policies/{access_policy_id}` |
 
 ### Headers
 None.
@@ -41,20 +34,20 @@ None.
 TBA.
 
 ### Required permissions
-* [`slashstep.accessPolicies.get`](/src/resources/AccessPolicy/README.md#slashstepaccesspoliciesget) on the access policy level or inherited from a higher level.
+* [`slashstep.accessPolicies.get`](/src/resources/AccessPolicy/README.md#slashstepaccesspoliciesget) on the scoped resource level or inherited from a higher level.
 
 ## Update an access policy
 | Method | Endpoint |
 | :- | :- |
-| PATCH | `/access-policies/:accessPolicyID` |
+| PATCH | `/access-policies/{access_policy_id}` |
 
 ### Required permissions
-* [`slashstep.accessPolicies.update`](/src/resources/AccessPolicy/README.md#slashstepaccesspoliciesupdate) on the access policy level or inherited from a higher level.
+* [`slashstep.accessPolicies.update`](/src/resources/AccessPolicy/README.md#slashstepaccesspoliciesupdate) on the scoped resource level or inherited from a higher level.
 
 ## Delete an access policy
 | Method | Endpoint |
 | :- | :- |
-| DELETE | `/access-policies/:accessPolicyID` |
+| DELETE | `/access-policies/{access_policy_id}` |
 
 ### Required permissions
-* [`slashstep.accessPolicies.delete`](/src/resources/AccessPolicy/README.md#slashstepaccesspoliciesdelete) on the access policy level or inherited from a higher level.
+* [`slashstep.accessPolicies.delete`](/src/resources/AccessPolicy/README.md#slashstepaccesspoliciesdelete) on the scoped resource level or inherited from a higher level.
