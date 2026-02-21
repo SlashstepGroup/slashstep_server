@@ -1,1 +1,6 @@
+# CI/CD applies to everyone, including maintainers; so, any changes to workflows
+# should go to the producer to preserve security.
 /.github/* @SlashstepGroup/producer
+
+# Licensing is solely decided by the producer.
+/LICENSE @SlashstepGroup/producer
