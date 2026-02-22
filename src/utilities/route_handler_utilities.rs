@@ -1,9 +1,202 @@
 use std::{pin::Pin, sync::Arc};
-use crate::{HTTPError, resources::{DeletableResource, ResourceError, access_policy::{AccessPolicyResourceType, ActionPermissionLevel, IndividualPrincipal, Principal, ResourceHierarchy}, action::Action, app::App, app_authorization::AppAuthorization, app_authorization_credential::AppAuthorizationCredential, app_credential::AppCredential, configuration::Configuration, delegation_policy::DelegationPolicy, field::Field, field_choice::FieldChoice, field_value::FieldValue, group::Group, http_transaction::HTTPTransaction, item::Item, item_connection::ItemConnection, item_connection_type::ItemConnectionType, membership::Membership, milestone::Milestone, project::Project, role::Role, server_log_entry::ServerLogEntry, session::Session, user::User, view::View, workspace::Workspace}, utilities::{principal_permission_verifier::{PrincipalPermissionVerifier, PrincipalPermissionVerifierError}, resource_hierarchy::{self, ResourceHierarchyError}, slashstepql::SlashstepQLError}};
+use crate::{HTTPError, resources::{DeletableResource, ResourceError, access_policy::{AccessPolicyResourceType, ActionPermissionLevel, IndividualPrincipal, Principal, ResourceHierarchy}, action::Action, app::App, app_authorization::AppAuthorization, app_authorization_credential::AppAuthorizationCredential, app_credential::AppCredential, configuration::Configuration, configuration_value::ConfigurationValue, delegation_policy::DelegationPolicy, field::Field, field_choice::FieldChoice, field_value::FieldValue, group::Group, http_transaction::HTTPTransaction, item::Item, item_connection::ItemConnection, item_connection_type::ItemConnectionType, membership::Membership, milestone::Milestone, project::Project, role::Role, server_log_entry::ServerLogEntry, session::Session, user::User, view::View, workspace::Workspace}, utilities::{principal_permission_verifier::{PrincipalPermissionVerifier, PrincipalPermissionVerifierError}, resource_hierarchy::{self, ResourceHierarchyError}, slashstepql::SlashstepQLError}};
+use axum::{Json, extract::rejection::JsonRejection};
+use chrono::{DateTime, Utc};
 use colored::Colorize;
 use pg_escape::quote_literal;
 use postgres::error::SqlState;
+use rust_decimal::prelude::ToPrimitive;
 use uuid::Uuid;
+
+pub async fn get_action_log_entry_expiration_timestamp(http_transaction: &HTTPTransaction, database_pool: &deadpool_postgres::Pool) -> Result<Option<DateTime<Utc>>, HTTPError> {
+
+  ServerLogEntry::trace("Getting configuration to determine whether action log entries should expire...", Some(&http_transaction.id), database_pool).await.ok();
+  let should_action_log_entries_expire_configuration = match Configuration::list(&format!("name = {} LIMIT 1", quote_literal("slashstep.actionLogEntries.shouldExpire")), &database_pool, None).await {
+
+    Ok(configurations) => match configurations.into_iter().next() {
+
+      Some(configuration) => configuration,
+
+      None => {
+
+        let http_error = HTTPError::InternalServerError(Some("Missing configuration for slashstep.actionLogEntries.shouldExpire. It may have been deleted by a user or an app. Restart the server to restore this configuration.".to_string()));
+        ServerLogEntry::from_http_error(&http_error, Some(&http_transaction.id), &database_pool).await.ok();
+        return Err(http_error);
+
+      }
+
+    }
+
+    Err(error) => {
+
+      let http_error = HTTPError::InternalServerError(Some(format!("Failed to retrieve configurations: {:?}", error)));
+      ServerLogEntry::from_http_error(&http_error, Some(&http_transaction.id), &database_pool).await.ok();
+      return Err(http_error);
+
+    }
+
+  };
+
+  ServerLogEntry::trace(&format!("Getting configuration value for configuration {}...", should_action_log_entries_expire_configuration.id), Some(&http_transaction.id), database_pool).await.ok();
+  let should_action_log_entries_expire_configuration_value = match ConfigurationValue::list(&format!("configuration_id = {} AND parent_resource_type = {} LIMIT 1", quote_literal(&should_action_log_entries_expire_configuration.id.to_string()), quote_literal("Server")), &database_pool, None).await {
+
+    Ok(configuration_values) => match configuration_values.into_iter().next() {
+
+      Some(configuration_value) => Some(configuration_value),
+
+      None => match ConfigurationValue::list(&format!("configuration_id = {} AND parent_resource_type = {} AND parent_configuration_id = {} LIMIT 1", quote_literal(&should_action_log_entries_expire_configuration.id.to_string()), quote_literal("Configuration"), quote_literal(&should_action_log_entries_expire_configuration.id.to_string())), &database_pool, None).await {
+
+        Ok(configuration_values) => match configuration_values.into_iter().next() {
+
+          Some(configuration_value) => Some(configuration_value),
+
+          None => None
+
+        }
+
+        Err(error) => {
+
+          let http_error = HTTPError::InternalServerError(Some(format!("Failed to retrieve configuration values: {:?}", error)));
+          ServerLogEntry::from_http_error(&http_error, Some(&http_transaction.id), &database_pool).await.ok();
+          return Err(http_error);
+
+        }
+
+      }
+
+    }
+
+    Err(error) => {
+
+      let http_error = HTTPError::InternalServerError(Some(format!("Failed to retrieve configuration values: {:?}", error)));
+      ServerLogEntry::from_http_error(&http_error, Some(&http_transaction.id), &database_pool).await.ok();
+      return Err(http_error);
+
+    }
+
+  };
+
+  if let Some(should_action_log_entries_expire_configuration_value) = &should_action_log_entries_expire_configuration_value {
+
+    match should_action_log_entries_expire_configuration_value.boolean_value {
+
+      Some(boolean_value) => if !boolean_value { return Ok(None); },
+
+      None => return Ok(None)
+
+    }
+
+  } else {
+    
+    return Ok(None);
+
+  }
+
+  ServerLogEntry::trace("Getting configuration to determine the expiration duration for action log entries...", Some(&http_transaction.id), database_pool).await.ok();
+  let action_log_entry_expiration_duration_configuration = match Configuration::list(&format!("name = {} LIMIT 1", quote_literal("slashstep.actionLogEntries.expirationDurationMilliseconds")), &database_pool, None).await {
+
+    Ok(configurations) => match configurations.into_iter().next() {
+
+      Some(configuration) => configuration,
+
+      None => {
+
+        let http_error = HTTPError::InternalServerError(Some("Missing configuration for slashstep.actionLogEntries.expirationDurationMilliseconds. It may have been deleted by a user or an app. Restart the server to restore this configuration.".to_string()));
+        ServerLogEntry::from_http_error(&http_error, Some(&http_transaction.id), &database_pool).await.ok();
+        return Err(http_error);
+
+      }
+
+    }
+
+    Err(error) => {
+
+      let http_error = HTTPError::InternalServerError(Some(format!("Failed to retrieve configurations: {:?}", error)));
+      ServerLogEntry::from_http_error(&http_error, Some(&http_transaction.id), &database_pool).await.ok();
+      return Err(http_error);
+
+    }
+
+  };
+
+  ServerLogEntry::trace(&format!("Getting configuration value for configuration {}...", should_action_log_entries_expire_configuration.id), Some(&http_transaction.id), database_pool).await.ok();
+  let action_log_entry_expiration_duration_configuration_value = match ConfigurationValue::list(&format!("configuration_id = {} AND parent_resource_type = {} LIMIT 1", quote_literal(&action_log_entry_expiration_duration_configuration.id.to_string()), quote_literal("Server")), &database_pool, None).await {
+
+    Ok(configuration_values) => match configuration_values.into_iter().next() {
+
+      Some(configuration_value) => Some(configuration_value),
+
+      None => match ConfigurationValue::list(&format!("configuration_id = {} AND parent_resource_type = {} AND parent_configuration_id = {} LIMIT 1", quote_literal(&action_log_entry_expiration_duration_configuration.id.to_string()), quote_literal("Configuration"), quote_literal(&action_log_entry_expiration_duration_configuration.id.to_string())), &database_pool, None).await {
+
+        Ok(configuration_values) => match configuration_values.into_iter().next() {
+
+          Some(configuration_value) => Some(configuration_value),
+
+          None => None
+
+        }
+
+        Err(error) => {
+
+          let http_error = HTTPError::InternalServerError(Some(format!("Failed to retrieve configuration values: {:?}", error)));
+          ServerLogEntry::from_http_error(&http_error, Some(&http_transaction.id), &database_pool).await.ok();
+          return Err(http_error);
+
+        }
+
+      }
+
+    }
+
+    Err(error) => {
+
+      let http_error = HTTPError::InternalServerError(Some(format!("Failed to retrieve configuration values: {:?}", error)));
+      ServerLogEntry::from_http_error(&http_error, Some(&http_transaction.id), &database_pool).await.ok();
+      return Err(http_error);
+
+    }
+
+  };
+
+  let expiration_duration_milliseconds = if let Some(configuration_value) = action_log_entry_expiration_duration_configuration_value {
+
+    match configuration_value.number_value {
+      
+      Some(number_value) => match number_value.to_i64() {
+
+        Some(duration_milliseconds) => Some(duration_milliseconds),
+
+        None => {
+
+          let http_error = HTTPError::InternalServerError(Some(format!("Configuration value {} has a number value that is out of range for an i64.", configuration_value.id)));
+          ServerLogEntry::from_http_error(&http_error, Some(&http_transaction.id), &database_pool).await.ok();
+          return Err(http_error);
+
+        }
+
+      }
+
+      None => {
+
+        let http_error = HTTPError::InternalServerError(Some(format!("Expected a number value for configuration value {}.", configuration_value.id)));
+        ServerLogEntry::from_http_error(&http_error, Some(&http_transaction.id), &database_pool).await.ok();
+        return Err(http_error);
+
+      }
+
+    }
+
+  } else {
+
+    None
+    
+  };
+
+  let expiration_timestamp = expiration_duration_milliseconds.and_then(|duration| Utc::now().checked_add_signed(chrono::Duration::milliseconds(duration)));
+
+  return Ok(expiration_timestamp);
+
+}
 
 pub async fn get_json_web_token_public_key(http_transaction_id: &Uuid, database_pool: &deadpool_postgres::Pool) -> Result<String, HTTPError> {
 
@@ -730,5 +923,39 @@ pub fn get_individual_principal_from_authenticated_principal(authenticated_princ
     AuthenticatedPrincipal::User(user) => IndividualPrincipal::User(user.id),
     AuthenticatedPrincipal::App(app) => IndividualPrincipal::App(app.id)
   }
+
+}
+
+pub async fn get_request_body_without_json_rejection<T>(request_body: Result<Json<T>, JsonRejection>, http_transaction: &HTTPTransaction, database_pool: &deadpool_postgres::Pool) -> Result<Json<T>, HTTPError> {
+
+  ServerLogEntry::trace("Verifying request body...", Some(&http_transaction.id), &database_pool).await.ok();
+  let request_body = match request_body {
+
+    Ok(updated_access_policy_properties) => updated_access_policy_properties,
+
+    Err(error) => {
+
+      let http_error = match error {
+
+        JsonRejection::JsonDataError(error) => HTTPError::BadRequestError(Some(error.to_string())),
+
+        JsonRejection::JsonSyntaxError(_) => HTTPError::BadRequestError(Some(format!("Failed to parse request body. Ensure the request body is valid JSON."))),
+
+        JsonRejection::MissingJsonContentType(_) => HTTPError::BadRequestError(Some(format!("Missing request body content type. It should be \"application/json\"."))),
+
+        JsonRejection::BytesRejection(error) => HTTPError::InternalServerError(Some(format!("Failed to parse request body: {:?}", error))),
+
+        _ => HTTPError::InternalServerError(Some(error.to_string()))
+
+      };
+      
+      ServerLogEntry::from_http_error(&http_error, Some(&http_transaction.id), &database_pool).await.ok();
+      return Err(http_error);
+
+    }
+
+  };
+
+  return Ok(request_body);
 
 }

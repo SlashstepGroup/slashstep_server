@@ -1,3 +1,4 @@
+use chrono::{DateTime, Utc};
 use postgres_types::{FromSql, ToSql};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
@@ -9,6 +10,7 @@ pub const ALLOWED_QUERY_KEYS: &[&str] = &[
   "id",
   "action_id",
   "http_transaction_id",
+  "expiration_timestamp",
   "actor_type",
   "actor_user_id",
   "actor_app_id",
@@ -21,6 +23,7 @@ pub const ALLOWED_QUERY_KEYS: &[&str] = &[
   "target_app_authorization_credential_id",
   "target_app_credential_id",
   "target_configuration_id",
+  "target_configuration_value_id",
   "target_field_id",
   "target_field_choice_id",
   "target_field_value_id",
@@ -53,6 +56,7 @@ pub const UUID_QUERY_KEYS: &[&str] = &[
   "target_app_authorization_credential_id",
   "target_app_credential_id",
   "target_configuration_id",
+  "target_configuration_value_id",
   "target_field_id",
   "target_field_choice_id",
   "target_field_value_id",
@@ -90,6 +94,7 @@ pub enum ActionLogEntryTargetResourceType {
   AppAuthorizationCredential,
   AppCredential,
   Configuration,
+  ConfigurationValue,
   Field,
   FieldChoice,
   FieldValue,
@@ -123,6 +128,9 @@ pub struct ActionLogEntry {
 
   /// The ID of the HTTP transaction related to the action log entry, if applicable.
   pub http_transaction_id: Option<Uuid>,
+
+  /// The expiration timestamp of the action log entry, if applicable.
+  pub expiration_timestamp: Option<DateTime<Utc>>,
 
   /// The type of actor that performed the action.
   pub actor_type: ActionLogEntryActorType,
@@ -159,6 +167,9 @@ pub struct ActionLogEntry {
 
   /// The target configuration ID of the action, if applicable.
   pub target_configuration_id: Option<Uuid>,
+
+  /// The target configuration value ID of the action, if applicable.
+  pub target_configuration_value_id: Option<Uuid>,
 
   /// The target field value ID of the action, if applicable.
   pub target_field_value_id: Option<Uuid>,
@@ -228,6 +239,9 @@ pub struct InitialActionLogEntryProperties {
   /// The ID of the HTTP transaction related to the action log entry, if applicable.
   pub http_transaction_id: Option<Uuid>,
 
+  /// The expiration timestamp of the action log entry, if applicable.
+  pub expiration_timestamp: Option<DateTime<Utc>>,
+
   /// The type of actor that performed the action.
   pub actor_type: ActionLogEntryActorType,
 
@@ -263,6 +277,9 @@ pub struct InitialActionLogEntryProperties {
 
   /// The target configuration ID of the action, if applicable.
   pub target_configuration_id: Option<Uuid>,
+
+  /// The target configuration value ID of the action, if applicable.
+  pub target_configuration_value_id: Option<Uuid>,
 
   /// The target field value ID of the action, if applicable.
   pub target_field_value_id: Option<Uuid>,
@@ -329,6 +346,7 @@ impl ActionLogEntry {
   pub async fn get_by_id(id: &Uuid, database_pool: &deadpool_postgres::Pool) -> Result<Self, ResourceError> {
 
     let database_client = database_pool.get().await?;
+    Self::delete_expired_action_log_entries(database_pool).await?;
     let query = include_str!("../../queries/action_log_entries/get_action_log_entry_row_by_id.sql");
     let row = match database_client.query_opt(query, &[&id]).await {
 
@@ -357,6 +375,7 @@ impl ActionLogEntry {
       id: row.get("id"),
       action_id: row.get("action_id"),
       http_transaction_id: row.get("http_transaction_id"),
+      expiration_timestamp: row.get("expiration_timestamp"),
       actor_type: row.get("actor_type"),
       actor_user_id: row.get("actor_user_id"),
       actor_app_id: row.get("actor_app_id"),
@@ -369,6 +388,7 @@ impl ActionLogEntry {
       target_app_authorization_credential_id: row.get("target_app_authorization_credential_id"),
       target_app_credential_id: row.get("target_app_credential_id"),
       target_configuration_id: row.get("target_configuration_id"),
+      target_configuration_value_id: row.get("target_configuration_value_id"),
       target_field_id: row.get("target_field_id"),
       target_field_choice_id: row.get("target_field_choice_id"),
       target_field_value_id: row.get("target_field_value_id"),
@@ -394,6 +414,8 @@ impl ActionLogEntry {
 
   /// Counts the number of action log entries based on a query.
   pub async fn count(query: &str, database_pool: &deadpool_postgres::Pool, individual_principal: Option<&IndividualPrincipal>) -> Result<i64, ResourceError> {
+
+    Self::delete_expired_action_log_entries(database_pool).await?;
 
     // Prepare the query.
     let sanitizer_options = SlashstepQLSanitizeFunctionOptions {
@@ -424,6 +446,7 @@ impl ActionLogEntry {
     let parameters: &[&(dyn ToSql + Sync)] = &[
       &initial_properties.action_id,
       &initial_properties.http_transaction_id,
+      &initial_properties.expiration_timestamp,
       &initial_properties.actor_type,
       &initial_properties.actor_user_id,
       &initial_properties.actor_app_id,
@@ -436,6 +459,7 @@ impl ActionLogEntry {
       &initial_properties.target_app_authorization_credential_id,
       &initial_properties.target_app_credential_id,
       &initial_properties.target_configuration_id,
+      &initial_properties.target_configuration_value_id,
       &initial_properties.target_field_id,
       &initial_properties.target_field_choice_id,
       &initial_properties.target_field_value_id,
@@ -478,6 +502,8 @@ impl ActionLogEntry {
   /// Returns a list of action log entries based on a query.
   pub async fn list(query: &str, database_pool: &deadpool_postgres::Pool, individual_principal: Option<&IndividualPrincipal>) -> Result<Vec<Self>, ResourceError> {
 
+    Self::delete_expired_action_log_entries(database_pool).await?;
+    
     // Prepare the query.
     let sanitizer_options = SlashstepQLSanitizeFunctionOptions {
       filter: query.to_string(),
@@ -515,6 +541,15 @@ impl ActionLogEntry {
     }
 
     return Ok(Box::new(value));
+
+  }
+
+  pub async fn delete_expired_action_log_entries(database_pool: &deadpool_postgres::Pool) -> Result<(), ResourceError> {
+
+    let database_client = database_pool.get().await?;
+    let query = include_str!("../../queries/action_log_entries/delete_expired_action_log_entry_rows.sql");
+    database_client.execute(query, &[]).await?;
+    return Ok(());
 
   }
 

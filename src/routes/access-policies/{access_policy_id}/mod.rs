@@ -13,7 +13,7 @@ use std::sync::Arc;
 use axum::{Extension, Json, Router, extract::{Path, State, rejection::JsonRejection}};
 use reqwest::StatusCode;
 use uuid::Uuid;
-use crate::{AppState, HTTPError, middleware::{authentication_middleware, http_request_middleware}, resources::{DeletableResource, ResourceError, access_policy::{AccessPolicy, ActionPermissionLevel, EditableAccessPolicyProperties, ResourceHierarchy}, action::Action, action_log_entry::{ActionLogEntry, ActionLogEntryActorType, ActionLogEntryTargetResourceType, InitialActionLogEntryProperties}, app::App, app_authorization::AppAuthorization, http_transaction::HTTPTransaction, server_log_entry::ServerLogEntry, user::User}, utilities::{resource_hierarchy::{self, ResourceHierarchyError}, reusable_route_handlers::delete_resource, route_handler_utilities::{AuthenticatedPrincipal, get_action_by_name, get_authenticated_principal, get_uuid_from_string, verify_delegate_permissions, verify_principal_permissions}}};
+use crate::{AppState, HTTPError, middleware::{authentication_middleware, http_request_middleware}, resources::{DeletableResource, ResourceError, access_policy::{AccessPolicy, ActionPermissionLevel, EditableAccessPolicyProperties, ResourceHierarchy}, action::Action, action_log_entry::{ActionLogEntry, ActionLogEntryActorType, ActionLogEntryTargetResourceType, InitialActionLogEntryProperties}, app::App, app_authorization::AppAuthorization, http_transaction::HTTPTransaction, server_log_entry::ServerLogEntry, user::User}, utilities::{resource_hierarchy::{self, ResourceHierarchyError}, reusable_route_handlers::delete_resource, route_handler_utilities::{AuthenticatedPrincipal, get_action_by_name, get_action_log_entry_expiration_timestamp, get_authenticated_principal, get_request_body_without_json_rejection, get_uuid_from_string, verify_delegate_permissions, verify_principal_permissions}}};
 
 async fn get_resource_hierarchy(access_policy: &AccessPolicy, http_transaction: &HTTPTransaction, database_pool: &deadpool_postgres::Pool) -> Result<ResourceHierarchy, HTTPError> {
 
@@ -105,7 +105,7 @@ async fn get_access_policy(access_policy_id: &str, http_transaction: &HTTPTransa
 
 async fn get_action_by_id(action_id: &Uuid, http_transaction: &HTTPTransaction, database_pool: &deadpool_postgres::Pool) -> Result<Action, HTTPError> {
 
-  ServerLogEntry::trace(&format!("Getting action {}", action_id), Some(&http_transaction.id), database_pool).await.ok();
+  ServerLogEntry::trace(&format!("Getting action {}...", action_id), Some(&http_transaction.id), database_pool).await.ok();
   let action = match Action::get_by_id(action_id, database_pool).await {
 
     Ok(action) => action,
@@ -148,11 +148,11 @@ async fn handle_get_access_policy_request(
   let authenticated_principal = get_authenticated_principal(authenticated_user.as_ref(), authenticated_app.as_ref())?;
   verify_principal_permissions(&authenticated_principal, &action, &resource_hierarchy, &http_transaction, &ActionPermissionLevel::User, &state.database_pool).await?;
   
-  // Return the access policy.
-  ServerLogEntry::success(&format!("Successfully returned access policy {}.", access_policy_id), Some(&http_transaction.id), &state.database_pool).await.ok();
+  let expiration_timestamp = get_action_log_entry_expiration_timestamp(&http_transaction, &state.database_pool).await?;
   ActionLogEntry::create(&InitialActionLogEntryProperties {
     action_id: action.id,
     http_transaction_id: Some(http_transaction.id),
+    expiration_timestamp,
     actor_type: if let AuthenticatedPrincipal::User(_) = &authenticated_principal { ActionLogEntryActorType::User } else { ActionLogEntryActorType::App },
     actor_user_id: if let AuthenticatedPrincipal::User(authenticated_user) = &authenticated_principal { Some(authenticated_user.id.clone()) } else { None },
     actor_app_id: if let AuthenticatedPrincipal::App(authenticated_app) = &authenticated_principal { Some(authenticated_app.id.clone()) } else { None },
@@ -160,6 +160,9 @@ async fn handle_get_access_policy_request(
     target_access_policy_id: Some(access_policy.id),
     ..Default::default()
   }, &state.database_pool).await.ok();
+
+  // Return the access policy.
+  ServerLogEntry::success(&format!("Successfully returned access policy {}.", access_policy_id), Some(&http_transaction.id), &state.database_pool).await.ok();
 
   return Ok(Json(access_policy));
 
@@ -181,33 +184,7 @@ async fn handle_patch_access_policy_request(
 
   let http_transaction = http_transaction.clone();
 
-  ServerLogEntry::trace("Verifying request body...", Some(&http_transaction.id), &state.database_pool).await.ok();
-  let updated_access_policy_properties = match body {
-
-    Ok(updated_access_policy_properties) => updated_access_policy_properties,
-
-    Err(error) => {
-
-      let http_error = match error {
-
-        JsonRejection::JsonDataError(error) => HTTPError::BadRequestError(Some(error.to_string())),
-
-        JsonRejection::JsonSyntaxError(_) => HTTPError::BadRequestError(Some(format!("Failed to parse request body. Ensure the request body is valid JSON."))),
-
-        JsonRejection::MissingJsonContentType(_) => HTTPError::BadRequestError(Some(format!("Missing request body content type. It should be \"application/json\"."))),
-
-        JsonRejection::BytesRejection(error) => HTTPError::InternalServerError(Some(format!("Failed to parse request body: {:?}", error))),
-
-        _ => HTTPError::InternalServerError(Some(error.to_string()))
-
-      };
-      
-      ServerLogEntry::from_http_error(&http_error, Some(&http_transaction.id), &state.database_pool).await.ok();
-      return Err(http_error);
-
-    }
-
-  };
+  let updated_access_policy_properties = get_request_body_without_json_rejection(body, &http_transaction, &state.database_pool).await?;
 
   // Make sure the delegate and principal have access to the resource.
   let access_policy = get_access_policy(&access_policy_id, &http_transaction, &state.database_pool).await?;
@@ -242,9 +219,11 @@ async fn handle_patch_access_policy_request(
 
   };
 
+  let expiration_timestamp = get_action_log_entry_expiration_timestamp(&http_transaction, &state.database_pool).await?;
   ActionLogEntry::create(&InitialActionLogEntryProperties {
     action_id: update_access_policy_action.id,
     http_transaction_id: Some(http_transaction.id),
+    expiration_timestamp,
     actor_type: if let AuthenticatedPrincipal::User(_) = &authenticated_principal { ActionLogEntryActorType::User } else { ActionLogEntryActorType::App },
     actor_user_id: if let AuthenticatedPrincipal::User(authenticated_user) = &authenticated_principal { Some(authenticated_user.id.clone()) } else { None },
     actor_app_id: if let AuthenticatedPrincipal::App(authenticated_app) = &authenticated_principal { Some(authenticated_app.id.clone()) } else { None },

@@ -21,7 +21,7 @@ use crate::{
   AppState, HTTPError, middleware::{authentication_middleware, http_request_middleware}, resources::{
     access_policy::{AccessPolicyResourceType, ActionPermissionLevel}, action_log_entry::{ActionLogEntry, ActionLogEntryActorType, ActionLogEntryTargetResourceType, InitialActionLogEntryProperties}, app::App, app_authorization::AppAuthorization, app_credential::AppCredential, http_transaction::HTTPTransaction, server_log_entry::ServerLogEntry, user::User
   }, utilities::{reusable_route_handlers::delete_resource, route_handler_utilities::{
-    AuthenticatedPrincipal, get_action_by_name, get_app_credential_by_id, get_authenticated_principal, get_resource_hierarchy, get_uuid_from_string, verify_delegate_permissions, verify_principal_permissions
+    AuthenticatedPrincipal, get_action_by_name, get_action_log_entry_expiration_timestamp, get_app_credential_by_id, get_authenticated_principal, get_resource_hierarchy, get_uuid_from_string, verify_delegate_permissions, verify_principal_permissions
   }}
 };
 
@@ -46,9 +46,11 @@ async fn handle_get_app_credential_request(
   let authenticated_principal = get_authenticated_principal(authenticated_user.as_ref(), authenticated_app.as_ref())?;
   verify_principal_permissions(&authenticated_principal, &get_app_credentials_action, &resource_hierarchy, &http_transaction, &ActionPermissionLevel::User, &state.database_pool).await?;
   
+  let expiration_timestamp = get_action_log_entry_expiration_timestamp(&http_transaction, &state.database_pool).await?;
   ActionLogEntry::create(&InitialActionLogEntryProperties {
     action_id: get_app_credentials_action.id,
     http_transaction_id: Some(http_transaction.id),
+    expiration_timestamp,
     actor_type: if let AuthenticatedPrincipal::User(_) = &authenticated_principal { ActionLogEntryActorType::User } else { ActionLogEntryActorType::App },
     actor_user_id: if let AuthenticatedPrincipal::User(user) = &authenticated_principal { Some(user.id.clone()) } else { None },
     actor_app_id: if let AuthenticatedPrincipal::App(app) = &authenticated_principal { Some(app.id.clone()) } else { None },

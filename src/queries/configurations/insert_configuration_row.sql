@@ -1,15 +1,9 @@
 INSERT INTO configurations (
   name,
-  value_type,
-  text_value,
-  integer_value,
-  decimal_value,
-  boolean_value
+  description,
+  value_type
 ) VALUES (
   $1,
   $2,
-  $3,
-  $4,
-  $5,
-  $6
+  $3
 ) RETURNING *;

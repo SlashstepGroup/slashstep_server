@@ -15,7 +15,7 @@ use axum_test::TestServer;
 use pg_escape::quote_literal;
 use reqwest::StatusCode;
 use uuid::Uuid;
-use crate::{AppState, get_json_web_token_private_key, initialize_required_tables, predefinitions::{initialize_predefined_actions, initialize_predefined_roles}, resources::{access_policy::{AccessPolicy, AccessPolicyPrincipalType, AccessPolicyResourceType, ActionPermissionLevel, DEFAULT_ACCESS_POLICY_LIST_LIMIT, IndividualPrincipal, InitialAccessPolicyProperties, InitialAccessPolicyPropertiesForPredefinedScope}, action::Action,}, tests::{TestEnvironment, TestSlashstepServerError}, utilities::reusable_route_handlers::ListResourcesResponseBody};
+use crate::{AppState, get_json_web_token_private_key, initialize_required_tables, predefinitions::{initialize_predefined_actions, initialize_predefined_configuration_values, initialize_predefined_configurations, initialize_predefined_roles}, resources::{access_policy::{AccessPolicy, AccessPolicyPrincipalType, AccessPolicyResourceType, ActionPermissionLevel, DEFAULT_ACCESS_POLICY_LIST_LIMIT, IndividualPrincipal, InitialAccessPolicyProperties, InitialAccessPolicyPropertiesForPredefinedScope}, action::Action,}, tests::{TestEnvironment, TestSlashstepServerError}, utilities::reusable_route_handlers::ListResourcesResponseBody};
 
 async fn create_action_log_entry_access_policy(database_pool: &deadpool_postgres::Pool, scoped_action_log_entry_id: &Uuid, user_id: &Uuid, action_id: &Uuid, permission_level: &ActionPermissionLevel) -> Result<AccessPolicy, TestSlashstepServerError> {
 
@@ -40,6 +40,9 @@ async fn verify_successful_access_policy_creation() -> Result<(), TestSlashstepS
   let test_environment = TestEnvironment::new().await?;
   initialize_required_tables(&test_environment.database_pool).await?;
   initialize_predefined_actions(&test_environment.database_pool).await?;
+  initialize_predefined_roles(&test_environment.database_pool).await?;
+  initialize_predefined_configurations(&test_environment.database_pool).await?;
+  initialize_predefined_configuration_values(&test_environment.database_pool).await?;
 
   // Give the user access to the "slashstep.accessPolicies.create" action.
   let user = test_environment.create_random_user().await?;
@@ -74,7 +77,7 @@ async fn verify_successful_access_policy_creation() -> Result<(), TestSlashstepS
     .json(&serde_json::json!(initial_access_policy_properties))
     .await;
   
-  assert_eq!(response.status_code(), 200);
+  assert_eq!(response.status_code(), StatusCode::CREATED);
 
   let response_access_policy: AccessPolicy = response.json();
   assert_eq!(initial_access_policy_properties.action_id, response_access_policy.action_id);
@@ -94,6 +97,9 @@ async fn verify_returned_access_policy_list_without_query() -> Result<(), TestSl
   let test_environment = TestEnvironment::new().await?;
   initialize_required_tables(&test_environment.database_pool).await?;
   initialize_predefined_actions(&test_environment.database_pool).await?;
+  initialize_predefined_roles(&test_environment.database_pool).await?;
+  initialize_predefined_configurations(&test_environment.database_pool).await?;
+  initialize_predefined_configuration_values(&test_environment.database_pool).await?;
   
   // Give the user access to the "slashstep.accessPolicies.get" action.
   let user = test_environment.create_random_user().await?;
@@ -150,6 +156,9 @@ async fn verify_returned_access_policy_list_with_query() -> Result<(), TestSlash
   let test_environment = TestEnvironment::new().await?;
   initialize_required_tables(&test_environment.database_pool).await?;
   initialize_predefined_actions(&test_environment.database_pool).await?;
+  initialize_predefined_roles(&test_environment.database_pool).await?;
+  initialize_predefined_configurations(&test_environment.database_pool).await?;
+  initialize_predefined_configuration_values(&test_environment.database_pool).await?;
   
   // Give the user access to the "slashstep.accessPolicies.get" action.
   let user = test_environment.create_random_user().await?;
@@ -208,6 +217,9 @@ async fn verify_default_access_policy_list_limit() -> Result<(), TestSlashstepSe
   let test_environment = TestEnvironment::new().await?;
   initialize_required_tables(&test_environment.database_pool).await?;
   initialize_predefined_actions(&test_environment.database_pool).await?;
+  initialize_predefined_roles(&test_environment.database_pool).await?;
+  initialize_predefined_configurations(&test_environment.database_pool).await?;
+  initialize_predefined_configuration_values(&test_environment.database_pool).await?;
   
   // Give the user access to the "slashstep.accessPolicies.get" action.
   let user = test_environment.create_random_user().await?;
@@ -258,6 +270,9 @@ async fn verify_maximum_access_policy_list_limit() -> Result<(), TestSlashstepSe
   let test_environment = TestEnvironment::new().await?;
   initialize_required_tables(&test_environment.database_pool).await?;
   initialize_predefined_actions(&test_environment.database_pool).await?;
+  initialize_predefined_roles(&test_environment.database_pool).await?;
+  initialize_predefined_configurations(&test_environment.database_pool).await?;
+  initialize_predefined_configuration_values(&test_environment.database_pool).await?;
   
   // Create the user and the session.
   let user = test_environment.create_random_user().await?;
@@ -299,6 +314,9 @@ async fn verify_query_when_listing_access_policies() -> Result<(), TestSlashstep
   let test_environment = TestEnvironment::new().await?;
   initialize_required_tables(&test_environment.database_pool).await?;
   initialize_predefined_actions(&test_environment.database_pool).await?;
+  initialize_predefined_roles(&test_environment.database_pool).await?;
+  initialize_predefined_configurations(&test_environment.database_pool).await?;
+  initialize_predefined_configuration_values(&test_environment.database_pool).await?;
   
   // Create the user and the session.
   let user = test_environment.create_random_user().await?;
@@ -370,6 +388,8 @@ async fn verify_authentication_when_listing_access_policies() -> Result<(), Test
   initialize_required_tables(&test_environment.database_pool).await?;
   initialize_predefined_actions(&test_environment.database_pool).await?;
   initialize_predefined_roles(&test_environment.database_pool).await?;
+  initialize_predefined_configurations(&test_environment.database_pool).await?;
+  initialize_predefined_configuration_values(&test_environment.database_pool).await?;
 
   // Create a dummy action.
   let dummy_action_log_entry = test_environment.create_random_action_log_entry().await?;
@@ -400,6 +420,8 @@ async fn verify_permission_when_listing_access_policies() -> Result<(), TestSlas
   initialize_required_tables(&test_environment.database_pool).await?;
   initialize_predefined_actions(&test_environment.database_pool).await?;
   initialize_predefined_roles(&test_environment.database_pool).await?;
+  initialize_predefined_configurations(&test_environment.database_pool).await?;
+  initialize_predefined_configuration_values(&test_environment.database_pool).await?;
 
   // Create the user and the session.
   let user = test_environment.create_random_user().await?;

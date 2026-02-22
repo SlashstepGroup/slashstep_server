@@ -4,7 +4,6 @@ mod tests;
 use std::str::FromStr;
 
 use postgres_types::{FromSql, ToSql};
-use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use strum::EnumIter;
 use uuid::Uuid;
@@ -15,11 +14,8 @@ pub const DEFAULT_MAXIMUM_RESOURCE_LIST_LIMIT: i64 = 1000;
 pub const ALLOWED_QUERY_KEYS: &[&str] = &[
   "id",
   "name",
-  "value_type",
-  "text_value",
-  "integer_value",
-  "decimal_value",
-  "boolean_value"
+  "description",
+  "value_type"
 ];
 pub const UUID_QUERY_KEYS: &[&str] = &[
   "id"
@@ -33,8 +29,7 @@ pub const GET_RESOURCE_ACTION_NAME: &str = "slashstep.configurations.get";
 pub enum ConfigurationValueType {
   #[default]
   Text,
-  Integer,
-  Decimal,
+  Number,
   Boolean
 }
 
@@ -47,8 +42,7 @@ impl FromStr for ConfigurationValueType {
     match input {
 
       "Text" => Ok(ConfigurationValueType::Text),
-      "Integer" => Ok(ConfigurationValueType::Integer),
-      "Decimal" => Ok(ConfigurationValueType::Decimal),
+      "Number" => Ok(ConfigurationValueType::Number),
       "Boolean" => Ok(ConfigurationValueType::Boolean),
       _ => Err(ResourceError::UnexpectedEnumVariantError(input.to_string()))
 
@@ -64,20 +58,11 @@ pub struct InitialConfigurationProperties {
   /// The configuration's name.
   pub name: String,
 
+  /// The configuration's description, if applicable.
+  pub description: Option<String>,
+
   /// The configuration's value type.
-  pub value_type: ConfigurationValueType,
-
-  /// The configuration's text value, if applicable.
-  pub text_value: Option<String>,
-
-  /// The configuration's integer value, if applicable.
-  pub integer_value: Option<i32>,
-
-  /// The configuration's decimal value, if applicable.
-  pub decimal_value: Option<Decimal>,
-
-  /// The configuration's boolean value, if applicable.
-  pub boolean_value: Option<bool>
+  pub value_type: ConfigurationValueType
 
 }
 
@@ -87,20 +72,8 @@ pub struct EditableConfigurationProperties {
   /// The configuration's name.
   pub name: Option<String>,
 
-  /// The configuration's value type.
-  pub value_type: Option<ConfigurationValueType>,
-
-  /// The configuration's text value, if applicable.
-  pub text_value: Option<String>,
-
-  /// The configuration's integer value, if applicable.
-  pub integer_value: Option<i32>,
-
-  /// The configuration's decimal value, if applicable.
-  pub decimal_value: Option<Decimal>,
-
-  /// The configuration's boolean value, if applicable.
-  pub boolean_value: Option<bool>
+  /// The configuration's description, if applicable.
+  pub description: Option<String>
 
 }
 
@@ -113,20 +86,11 @@ pub struct Configuration {
   /// The configuration's name.
   pub name: String,
 
+  /// The configuration's description, if applicable.
+  pub description: Option<String>,
+
   /// The configuration's value type.
-  pub value_type: ConfigurationValueType,
-
-  /// The configuration's text value, if applicable.
-  pub text_value: Option<String>,
-
-  /// The configuration's integer value, if applicable.
-  pub integer_value: Option<i32>,
-
-  /// The configuration's decimal value, if applicable.
-  pub decimal_value: Option<Decimal>,
-
-  /// The configuration's boolean value, if applicable.
-  pub boolean_value: Option<bool>
+  pub value_type: ConfigurationValueType
 
 }
 
@@ -202,11 +166,8 @@ impl Configuration {
     return Configuration {
       id: row.get("id"),
       name: row.get("name"),
-      value_type: row.get("value_type"),
-      text_value: row.get("text_value"),
-      integer_value: row.get("integer_value"),
-      decimal_value: row.get("decimal_value"),
-      boolean_value: row.get("boolean_value")
+      description: row.get("description"),
+      value_type: row.get("value_type")
     };
 
   }
@@ -228,11 +189,8 @@ impl Configuration {
     let query = include_str!("../../queries/configurations/insert_configuration_row.sql");
     let parameters: &[&(dyn ToSql + Sync)] = &[
       &initial_properties.name,
-      &initial_properties.value_type,
-      &initial_properties.text_value,
-      &initial_properties.integer_value,
-      &initial_properties.decimal_value,
-      &initial_properties.boolean_value
+      &initial_properties.description,
+      &initial_properties.value_type
     ];
     let database_client = database_pool.get().await?;
     let row = database_client.query_one(query, parameters).await.map_err(|error| {
@@ -321,11 +279,7 @@ impl Configuration {
 
     database_client.query("begin;", &[]).await?;
     let (parameter_boxes, query) = Self::add_parameter(parameter_boxes, query, "name", Some(&properties.name));
-    let (parameter_boxes, query) = Self::add_parameter(parameter_boxes, query, "value_type", Some(&properties.value_type));
-    let (parameter_boxes, query) = Self::add_parameter(parameter_boxes, query, "text_value", Some(&properties.text_value));
-    let (parameter_boxes, query) = Self::add_parameter(parameter_boxes, query, "integer_value", Some(&properties.integer_value));
-    let (parameter_boxes, query) = Self::add_parameter(parameter_boxes, query, "decimal_value", Some(&properties.decimal_value));
-    let (parameter_boxes, query) = Self::add_parameter(parameter_boxes, query, "boolean_value", Some(&properties.boolean_value));
+    let (parameter_boxes, query) = Self::add_parameter(parameter_boxes, query, "description", properties.description.as_ref());
     let (mut parameter_boxes, mut query) = (parameter_boxes, query);
 
     query.push_str(format!(" where id = ${} returning *;", parameter_boxes.len() + 1).as_str());
