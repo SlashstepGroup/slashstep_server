@@ -898,6 +898,7 @@ pub async fn initialize_predefined_configurations(database_pool: &deadpool_postg
       description: Some("The maximum lifetime of app authorization credentials access tokens in milliseconds. Slashstep Group recommends keeping this value small, as OAuth access tokens should be short-lived.".to_string()),
       value_type: ConfigurationValueType::Number,
       default_number_value: Some(Decimal::from(28800000 as i64)), // 8 hours in milliseconds
+      ..Default::default()
     },
     InitialConfigurationProperties {
       name: "slashstep.apps.maximumDisplayNameLength".to_string(),
