@@ -19,10 +19,11 @@ use axum_extra::response::ErasedJson;
 use base64::{Engine, engine::general_purpose};
 use chrono::{Duration, Utc};
 use reqwest::StatusCode;
+use rust_decimal::prelude::ToPrimitive;
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use uuid::Uuid;
-use crate::{AppState, HTTPError, middleware::{authentication_middleware::get_decoding_key, http_request_middleware}, resources::{DeletableResource, ResourceError, action_log_entry::{ActionLogEntry, ActionLogEntryActorType, ActionLogEntryTargetResourceType, InitialActionLogEntryProperties}, app::{App, AppClientType}, app_authorization::{AppAuthorization, AppAuthorizationAuthorizingResourceType, InitialAppAuthorizationProperties}, app_authorization_credential::{AppAuthorizationCredential, AppAuthorizationCredentialClaims, InitialAppAuthorizationCredentialProperties}, http_transaction::HTTPTransaction, oauth_authorization::{EditableOAuthAuthorizationProperties, OAuthAuthorization, OAuthAuthorizationClaims}, server_log_entry::ServerLogEntry}, utilities::route_handler_utilities::{get_action_by_name, get_action_log_entry_expiration_timestamp, get_json_web_token_private_key, get_json_web_token_public_key}};
+use crate::{AppState, HTTPError, middleware::{authentication_middleware::get_decoding_key, http_request_middleware}, resources::{DeletableResource, ResourceError, action_log_entry::{ActionLogEntry, ActionLogEntryActorType, ActionLogEntryTargetResourceType, InitialActionLogEntryProperties}, app::{App, AppClientType}, app_authorization::{AppAuthorization, AppAuthorizationAuthorizingResourceType, InitialAppAuthorizationProperties}, app_authorization_credential::{AppAuthorizationCredential, AppAuthorizationCredentialClaims, InitialAppAuthorizationCredentialProperties}, configuration::Configuration, http_transaction::HTTPTransaction, oauth_authorization::{EditableOAuthAuthorizationProperties, OAuthAuthorization, OAuthAuthorizationClaims}, server_log_entry::ServerLogEntry}, utilities::route_handler_utilities::{get_action_by_name, get_action_log_entry_expiration_timestamp, get_json_web_token_private_key, get_json_web_token_public_key}};
 
 #[derive(Debug, Serialize, Deserialize, Default, Clone)]
 pub struct CreateOAuthAccessTokenQueryParameters {
@@ -544,11 +545,53 @@ pub async fn delete_oauth_authorization(oauth_authorization: &OAuthAuthorization
 
 pub async fn create_app_authorization_credential(app_authorization_id: &Uuid, http_transaction: &HTTPTransaction, database_pool: &deadpool_postgres::Pool) -> Result<AppAuthorizationCredential, OAuthTokenErrorResponse> {
 
-  ServerLogEntry::trace(&format!("Creating app authorization credential for app authorization {}...", app_authorization_id), Some(&http_transaction.id), database_pool).await.ok();
+  let access_token_maximum_lifetime_milliseconds_configuration = match Configuration::get_by_name("slashstep.appAuthorizationCredentials.accessTokenMaximumLifetimeMilliseconds", database_pool).await {
 
+    Ok(configuration) => configuration,
+
+    Err(error) => {
+
+      let oauth_error_response = OAuthTokenErrorResponse::new(&OAuthTokenError::InternalServerError, &format!("Failed to get access token maximum lifetime configuration: {:?}", error), None, None);
+      let http_error = oauth_error_response.clone().into();
+      ServerLogEntry::from_http_error(&http_error, Some(&http_transaction.id), database_pool).await.ok();
+      return Err(oauth_error_response);
+
+    }
+
+  };
+
+  let access_token_maximum_lifetime_milliseconds = match access_token_maximum_lifetime_milliseconds_configuration.number_value.or(access_token_maximum_lifetime_milliseconds_configuration.default_number_value) {
+
+    Some(access_token_maximum_lifetime_milliseconds) => match access_token_maximum_lifetime_milliseconds.to_i64() {
+
+      Some(access_token_maximum_lifetime_milliseconds) => access_token_maximum_lifetime_milliseconds,
+
+      None => {
+
+        let oauth_error_response = OAuthTokenErrorResponse::new(&OAuthTokenError::InternalServerError, "Could not convert access token maximum lifetime configuration value to i64.", None, None);
+        let http_error = oauth_error_response.clone().into();
+        ServerLogEntry::from_http_error(&http_error, Some(&http_transaction.id), database_pool).await.ok();
+        return Err(oauth_error_response);
+
+      }
+
+    },
+
+    None => {
+
+      let oauth_error_response = OAuthTokenErrorResponse::new(&OAuthTokenError::InternalServerError, "The slashstep.appAuthorizationCredentials.accessTokenMaximumLifetimeMilliseconds configuration does not have a value or a default value. Fix this in the server configuration settings.", None, None);
+      let http_error = oauth_error_response.clone().into();
+      ServerLogEntry::from_http_error(&http_error, Some(&http_transaction.id), database_pool).await.ok();
+      return Err(oauth_error_response);
+
+    }
+
+  };
+
+  ServerLogEntry::trace(&format!("Creating app authorization credential for app authorization {}...", app_authorization_id), Some(&http_transaction.id), database_pool).await.ok();
   let app_authorization_credential = match AppAuthorizationCredential::create(&InitialAppAuthorizationCredentialProperties {
     app_authorization_id: *app_authorization_id,
-    access_token_expiration_date: Utc::now() + Duration::hours(8),
+    access_token_expiration_date: Utc::now() + Duration::milliseconds(access_token_maximum_lifetime_milliseconds),
     refresh_token_expiration_date: Utc::now() + Duration::days(30),
     refreshed_app_authorization_credential_id: None
   }, &database_pool).await {
