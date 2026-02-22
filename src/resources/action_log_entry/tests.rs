@@ -1,3 +1,5 @@
+use chrono::{DateTime, Days, Utc};
+
 use crate::{initialize_required_tables, resources::{DeletableResource, ResourceError, action_log_entry::{ActionLogEntry, ActionLogEntryActorType, InitialActionLogEntryProperties}}, tests::{TestEnvironment, TestSlashstepServerError}};
 
 fn assert_action_log_entry_is_equal_to_initial_properties(action_log_entry: &ActionLogEntry, initial_properties: &InitialActionLogEntryProperties) {
@@ -71,6 +73,44 @@ async fn verify_action_log_entry_deletion_by_id() -> Result<(), TestSlashstepSer
   let created_action_log_entry = test_environment.create_random_action_log_entry().await?;
 
   created_action_log_entry.delete(&test_environment.database_pool).await?;
+
+  // Ensure that the access policy is no longer in the database.
+  match ActionLogEntry::get_by_id(&created_action_log_entry.id, &test_environment.database_pool).await {
+
+    Ok(_) => panic!("Expected an action log entry not found error."),
+
+    Err(error) => match error {
+
+      ResourceError::NotFoundError(_) => {},
+
+      error => return Err(TestSlashstepServerError::ResourceError(error))
+
+    }
+
+  }
+
+  return Ok(());
+
+}
+
+/// Verifies that the struct can delete action log entries that have expired.
+#[tokio::test]
+async fn verify_deletion_of_expired_action_log_entries() -> Result<(), TestSlashstepServerError> {
+
+  // Create the access policy.
+  let test_environment = TestEnvironment::new().await?;
+  initialize_required_tables(&test_environment.database_pool).await?;
+  let app = test_environment.create_random_app().await?;
+  let action = test_environment.create_random_action(None).await?;
+  let created_action_log_entry = ActionLogEntry::create(&InitialActionLogEntryProperties {
+    action_id: action.id,
+    actor_type: ActionLogEntryActorType::App,
+    actor_app_id: Some(app.id),
+    expiration_timestamp: Some(Utc::now()),
+    ..Default::default()
+  }, &test_environment.database_pool).await?;
+
+  ActionLogEntry::delete_expired_action_log_entries(&test_environment.database_pool).await?;
 
   // Ensure that the access policy is no longer in the database.
   match ActionLogEntry::get_by_id(&created_action_log_entry.id, &test_environment.database_pool).await {

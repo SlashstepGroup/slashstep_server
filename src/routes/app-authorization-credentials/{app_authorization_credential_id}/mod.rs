@@ -25,7 +25,7 @@ use crate::{
     access_policy::{AccessPolicyResourceType, ActionPermissionLevel}, action_log_entry::{ActionLogEntry, ActionLogEntryActorType, ActionLogEntryTargetResourceType, InitialActionLogEntryProperties}, app::App, app_authorization::AppAuthorization, app_authorization_credential::AppAuthorizationCredential, http_transaction::HTTPTransaction, server_log_entry::ServerLogEntry, user::User
   }, 
   utilities::{reusable_route_handlers::delete_resource, route_handler_utilities::{
-    AuthenticatedPrincipal, get_action_by_name, get_app_authorization_credential_by_id, get_authenticated_principal, get_resource_hierarchy, get_uuid_from_string, verify_delegate_permissions, verify_principal_permissions
+    AuthenticatedPrincipal, get_action_by_name, get_action_log_entry_expiration_timestamp, get_app_authorization_credential_by_id, get_authenticated_principal, get_resource_hierarchy, get_uuid_from_string, verify_delegate_permissions, verify_principal_permissions
   }}
 };
 
@@ -50,9 +50,11 @@ async fn handle_get_app_authorization_credential_request(
   let authenticated_principal = get_authenticated_principal(authenticated_user.as_ref(), authenticated_app.as_ref())?;
   verify_principal_permissions(&authenticated_principal, &get_app_authorizations_action, &resource_hierarchy, &http_transaction, &ActionPermissionLevel::User, &state.database_pool).await?;
   
+  let expiration_timestamp = get_action_log_entry_expiration_timestamp(&http_transaction, &state.database_pool).await?;
   ActionLogEntry::create(&InitialActionLogEntryProperties {
     action_id: get_app_authorizations_action.id,
     http_transaction_id: Some(http_transaction.id),
+    expiration_timestamp,
     actor_type: if let AuthenticatedPrincipal::User(_) = &authenticated_principal { ActionLogEntryActorType::User } else { ActionLogEntryActorType::App },
     actor_user_id: if let AuthenticatedPrincipal::User(user) = &authenticated_principal { Some(user.id.clone()) } else { None },
     actor_app_id: if let AuthenticatedPrincipal::App(app) = &authenticated_principal { Some(app.id.clone()) } else { None },
@@ -66,12 +68,12 @@ async fn handle_get_app_authorization_credential_request(
 
 }
 
-/// DELETE /app-authorizations/{app_authorization_id}
+/// DELETE /app-authorization-credentials/{app_authorization_credential_id}
 /// 
-/// Deletes an app authorization by its ID.
+/// Deletes an app authorization credential by its ID.
 #[axum::debug_handler]
 async fn handle_delete_app_authorization_credential_request(
-  Path(app_authorization_id): Path<String>,
+  Path(app_authorization_credential_id): Path<String>,
   State(state): State<AppState>, 
   Extension(http_transaction): Extension<Arc<HTTPTransaction>>,
   Extension(authenticated_user): Extension<Option<Arc<User>>>,
@@ -79,7 +81,7 @@ async fn handle_delete_app_authorization_credential_request(
   Extension(authenticated_app_authorization): Extension<Option<Arc<AppAuthorization>>>
 ) -> Result<StatusCode, HTTPError> {
 
-  let app_authorization_id = get_uuid_from_string(&app_authorization_id, "app authorization credential", &http_transaction, &state.database_pool).await?;
+  let app_authorization_credential_id = get_uuid_from_string(&app_authorization_credential_id, "app authorization credential", &http_transaction, &state.database_pool).await?;
   let response = delete_resource(
     State(state), 
     Extension(http_transaction), 
@@ -87,7 +89,7 @@ async fn handle_delete_app_authorization_credential_request(
     Extension(authenticated_app), 
     Extension(authenticated_app_authorization),
     Some(&AccessPolicyResourceType::AppAuthorizationCredential), 
-    &app_authorization_id, 
+    &app_authorization_credential_id, 
     "slashstep.appAuthorizationCredentials.delete",
     "app authorization credential", 
     &ActionLogEntryTargetResourceType::AppAuthorizationCredential,

@@ -75,8 +75,6 @@ async fn handle_create_action_request(
 ) -> Result<(StatusCode, Json<Action>), HTTPError> {
 
   let http_transaction = http_transaction.clone();
-
-  // Verify the request body.
   ServerLogEntry::trace("Verifying request body...", Some(&http_transaction.id), &state.database_pool).await.ok();
   let action_properties_json = match body {
 

@@ -22,7 +22,7 @@ use reqwest::StatusCode;
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use uuid::Uuid;
-use crate::{AppState, HTTPError, middleware::{authentication_middleware::get_decoding_key, http_request_middleware}, resources::{DeletableResource, ResourceError, action_log_entry::{ActionLogEntry, ActionLogEntryActorType, ActionLogEntryTargetResourceType, InitialActionLogEntryProperties}, app::{App, AppClientType}, app_authorization::{AppAuthorization, AppAuthorizationAuthorizingResourceType, InitialAppAuthorizationProperties}, app_authorization_credential::{AppAuthorizationCredential, AppAuthorizationCredentialClaims, InitialAppAuthorizationCredentialProperties}, http_transaction::HTTPTransaction, oauth_authorization::{EditableOAuthAuthorizationProperties, OAuthAuthorization, OAuthAuthorizationClaims}, server_log_entry::ServerLogEntry}, utilities::route_handler_utilities::{get_action_by_name, get_json_web_token_private_key, get_json_web_token_public_key}};
+use crate::{AppState, HTTPError, middleware::{authentication_middleware::get_decoding_key, http_request_middleware}, resources::{DeletableResource, ResourceError, action_log_entry::{ActionLogEntry, ActionLogEntryActorType, ActionLogEntryTargetResourceType, InitialActionLogEntryProperties}, app::{App, AppClientType}, app_authorization::{AppAuthorization, AppAuthorizationAuthorizingResourceType, InitialAppAuthorizationProperties}, app_authorization_credential::{AppAuthorizationCredential, AppAuthorizationCredentialClaims, InitialAppAuthorizationCredentialProperties}, http_transaction::HTTPTransaction, oauth_authorization::{EditableOAuthAuthorizationProperties, OAuthAuthorization, OAuthAuthorizationClaims}, server_log_entry::ServerLogEntry}, utilities::route_handler_utilities::{get_action_by_name, get_action_log_entry_expiration_timestamp, get_json_web_token_private_key, get_json_web_token_public_key}};
 
 #[derive(Debug, Serialize, Deserialize, Default, Clone)]
 pub struct CreateOAuthAccessTokenQueryParameters {
@@ -444,9 +444,25 @@ pub async fn create_app_authorization(oauth_authorization: &OAuthAuthorization, 
     }
 
   };
+
+  let expiration_timestamp = match get_action_log_entry_expiration_timestamp(&http_transaction, &database_pool).await {
+
+    Ok(expiration_timestamp) => expiration_timestamp,
+
+    Err(error) => {
+
+      let oauth_error_response = OAuthTokenErrorResponse::new(&OAuthTokenError::InternalServerError, &error.to_string(), None, None);
+      let http_error = oauth_error_response.clone().into();
+      ServerLogEntry::from_http_error(&http_error, Some(&http_transaction.id), &database_pool).await.ok();
+      return Err(oauth_error_response);
+
+    }
+
+  };
   ActionLogEntry::create(&InitialActionLogEntryProperties {
     action_id: create_app_authorizations_action.id,
     http_transaction_id: Some(http_transaction.id),
+    expiration_timestamp,
     actor_type: ActionLogEntryActorType::App,
     actor_user_id: None,
     actor_app_id: Some(oauth_authorization.app_id),
@@ -612,9 +628,26 @@ pub async fn delete_app_authorization(app_authorization: &AppAuthorization, http
     }
 
   };
+
+  let expiration_timestamp = match get_action_log_entry_expiration_timestamp(&http_transaction, &database_pool).await {
+
+    Ok(expiration_timestamp) => expiration_timestamp,
+
+    Err(error) => {
+
+      let oauth_error_response = OAuthTokenErrorResponse::new(&OAuthTokenError::InternalServerError, &error.to_string(), None, None);
+      let http_error = oauth_error_response.clone().into();
+      ServerLogEntry::from_http_error(&http_error, Some(&http_transaction.id), &database_pool).await.ok();
+      return Err(oauth_error_response);
+
+    }
+
+  };
+
   ActionLogEntry::create(&InitialActionLogEntryProperties {
     action_id: delete_app_authorizations_action.id,
     http_transaction_id: Some(http_transaction.id),
+    expiration_timestamp,
     actor_type: ActionLogEntryActorType::Server,
     target_resource_type: ActionLogEntryTargetResourceType::AppAuthorization,
     target_app_authorization_id: Some(app_authorization.id),
@@ -827,9 +860,26 @@ async fn handle_create_oauth_access_token_request(
       }
 
     };
+
+    let expiration_timestamp = match get_action_log_entry_expiration_timestamp(&http_transaction, &state.database_pool).await {
+
+      Ok(expiration_timestamp) => expiration_timestamp,
+
+      Err(error) => {
+
+        let oauth_error_response = OAuthTokenErrorResponse::new(&OAuthTokenError::InternalServerError, &error.to_string(), None, None);
+        let http_error = oauth_error_response.clone().into();
+        ServerLogEntry::from_http_error(&http_error, Some(&http_transaction.id), &state.database_pool).await.ok();
+        return Err(oauth_error_response);
+
+      }
+
+    };
+
     ActionLogEntry::create(&InitialActionLogEntryProperties {
       action_id: delete_app_authorization_credentials_action.id,
       http_transaction_id: Some(http_transaction.id),
+      expiration_timestamp,
       actor_type: ActionLogEntryActorType::App,
       actor_user_id: None,
       actor_app_id: Some(app_authorization_credential.app_authorization_id),
@@ -931,9 +981,26 @@ async fn handle_create_oauth_access_token_request(
     }
 
   };
+
+  let expiration_timestamp = match get_action_log_entry_expiration_timestamp(&http_transaction, &state.database_pool).await {
+
+    Ok(expiration_timestamp) => expiration_timestamp,
+
+    Err(error) => {
+
+      let oauth_error_response = OAuthTokenErrorResponse::new(&OAuthTokenError::InternalServerError, &error.to_string(), None, None);
+      let http_error = oauth_error_response.clone().into();
+      ServerLogEntry::from_http_error(&http_error, Some(&http_transaction.id), &state.database_pool).await.ok();
+      return Err(oauth_error_response);
+
+    }
+
+  };
+
   ActionLogEntry::create(&InitialActionLogEntryProperties {
     action_id: create_app_authorization_credentials_action.id,
     http_transaction_id: Some(http_transaction.id),
+    expiration_timestamp,
     actor_type: ActionLogEntryActorType::App,
     actor_app_id: Some(app_authorization.app_id),
     target_resource_type: ActionLogEntryTargetResourceType::AppAuthorizationCredential,

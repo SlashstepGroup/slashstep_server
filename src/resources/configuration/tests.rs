@@ -1,7 +1,7 @@
 use uuid::Uuid;
 
 use crate::{
-  initialize_required_tables, predefinitions::initialize_predefined_actions, resources::{
+  initialize_required_tables, predefinitions::initialize_predefined_actions, initialize_predefined_configuration_values, initialize_predefined_configurations, resources::{
     DeletableResource, ResourceError, access_policy::{AccessPolicy, InitialAccessPolicyProperties}, action::{
       Action, DEFAULT_ACTION_LIST_LIMIT
     }, configuration::ConfigurationValueType
@@ -13,22 +13,16 @@ fn assert_configurations_are_equal(configuration_1: &Configuration, configuratio
 
   assert_eq!(configuration_1.id, configuration_2.id);
   assert_eq!(configuration_1.name, configuration_2.name);
+  assert_eq!(configuration_1.description, configuration_2.description);
   assert_eq!(configuration_1.value_type, configuration_2.value_type);
-  assert_eq!(configuration_1.text_value, configuration_2.text_value);
-  assert_eq!(configuration_1.integer_value, configuration_2.integer_value);
-  assert_eq!(configuration_1.decimal_value, configuration_2.decimal_value);
-  assert_eq!(configuration_1.boolean_value, configuration_2.boolean_value);
 
 }
 
 fn assert_configuration_is_equal_to_initial_properties(configuration: &Configuration, initial_properties: &InitialConfigurationProperties) {
 
   assert_eq!(configuration.name, initial_properties.name);
+  assert_eq!(configuration.description, initial_properties.description);
   assert_eq!(configuration.value_type, initial_properties.value_type);
-  assert_eq!(configuration.text_value, initial_properties.text_value);
-  assert_eq!(configuration.integer_value, initial_properties.integer_value);
-  assert_eq!(configuration.decimal_value, initial_properties.decimal_value);
-  assert_eq!(configuration.boolean_value, initial_properties.boolean_value);
 
 }
 
@@ -63,8 +57,8 @@ async fn verify_creation() -> Result<(), TestSlashstepServerError> {
   // Create the configuration.
   let configuration_properties = InitialConfigurationProperties {
     name: Uuid::now_v7().to_string(),
+    description: Some(Uuid::now_v7().to_string()),
     value_type: ConfigurationValueType::Text,
-    text_value: Some(Uuid::now_v7().to_string()),
     ..Default::default()
   };
   let configuration = Configuration::create(&configuration_properties, &test_environment.database_pool).await?;

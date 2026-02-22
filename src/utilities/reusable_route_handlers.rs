@@ -1,10 +1,10 @@
 use std::{pin::Pin, sync::Arc};
-use axum::{Extension, extract::{Query, State}};
+use axum::{Extension, extract::{Query, State, rejection::JsonRejection}};
 use axum_extra::response::ErasedJson;
 use reqwest::StatusCode;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
-use crate::{AppState, HTTPError, resources::{DeletableResource, ResourceError, access_policy::{AccessPolicyResourceType, ActionPermissionLevel, IndividualPrincipal}, action_log_entry::{ActionLogEntry, ActionLogEntryActorType, ActionLogEntryTargetResourceType, InitialActionLogEntryProperties}, app::App, app_authorization::AppAuthorization, http_transaction::HTTPTransaction, server_log_entry::ServerLogEntry, user::User}, utilities::{resource_hierarchy::ResourceHierarchy, route_handler_utilities::{AuthenticatedPrincipal, get_action_by_name, get_authenticated_principal, get_individual_principal_from_authenticated_principal, get_resource_by_id, get_resource_hierarchy, match_db_error, match_slashstepql_error, verify_delegate_permissions, verify_principal_permissions}}};
+use crate::{AppState, HTTPError, resources::{DeletableResource, ResourceError, access_policy::{AccessPolicyResourceType, ActionPermissionLevel, IndividualPrincipal}, action_log_entry::{ActionLogEntry, ActionLogEntryActorType, ActionLogEntryTargetResourceType, InitialActionLogEntryProperties}, app::App, app_authorization::AppAuthorization, configuration::Configuration, configuration_value::ConfigurationValue, http_transaction::HTTPTransaction, server_log_entry::ServerLogEntry, user::User}, utilities::{resource_hierarchy::ResourceHierarchy, route_handler_utilities::{AuthenticatedPrincipal, get_action_by_name, get_action_log_entry_expiration_timestamp, get_authenticated_principal, get_individual_principal_from_authenticated_principal, get_resource_by_id, get_resource_hierarchy, match_db_error, match_slashstepql_error, verify_delegate_permissions, verify_principal_permissions}}};
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct ListResourcesResponseBody<ResourceStruct> {
@@ -83,9 +83,11 @@ pub async fn list_resources<ResourceType: Serialize, CountResourcesFunction, Lis
 
   };
 
+  let expiration_timestamp = get_action_log_entry_expiration_timestamp(&http_transaction, &state.database_pool).await?;
   ActionLogEntry::create(&InitialActionLogEntryProperties {
     action_id: list_resources_action.id,
     http_transaction_id: Some(http_transaction.id),
+    expiration_timestamp: expiration_timestamp,
     reason: None, // TODO: Support reasons.
     actor_type: if let AuthenticatedPrincipal::User(_) = &authenticated_principal { ActionLogEntryActorType::User } else { ActionLogEntryActorType::App },
     actor_user_id: if let AuthenticatedPrincipal::User(user) = &authenticated_principal { Some(user.id.clone()) } else { None },
@@ -99,6 +101,7 @@ pub async fn list_resources<ResourceType: Serialize, CountResourcesFunction, Lis
     target_app_authorization_credential_id: if action_log_entry_target_resource_type == ActionLogEntryTargetResourceType::AppAuthorizationCredential { action_log_entry_target_resource_id.clone() } else { None },
     target_app_credential_id: if action_log_entry_target_resource_type == ActionLogEntryTargetResourceType::AppCredential { action_log_entry_target_resource_id.clone() } else { None },
     target_configuration_id: if action_log_entry_target_resource_type == ActionLogEntryTargetResourceType::Configuration { action_log_entry_target_resource_id.clone() } else { None },
+    target_configuration_value_id: if action_log_entry_target_resource_type == ActionLogEntryTargetResourceType::ConfigurationValue { action_log_entry_target_resource_id.clone() } else { None },
     target_field_id: if action_log_entry_target_resource_type == ActionLogEntryTargetResourceType::Field { action_log_entry_target_resource_id.clone() } else { None },
     target_field_choice_id: if action_log_entry_target_resource_type == ActionLogEntryTargetResourceType::FieldChoice { action_log_entry_target_resource_id.clone() } else { None },
     target_field_value_id: if action_log_entry_target_resource_type == ActionLogEntryTargetResourceType::FieldValue { action_log_entry_target_resource_id.clone() } else { None },
@@ -175,9 +178,11 @@ pub async fn delete_resource<ResourceStruct, GetResourceByIDFunction>(
 
   }
 
+  let expiration_timestamp = get_action_log_entry_expiration_timestamp(&http_transaction, &state.database_pool).await?;
   ActionLogEntry::create(&InitialActionLogEntryProperties {
     action_id: delete_resources_action.id,
     http_transaction_id: Some(http_transaction.id),
+    expiration_timestamp: expiration_timestamp,
     reason: None, // TODO: Support reasons.
     actor_type: if let AuthenticatedPrincipal::User(_) = &authenticated_principal { ActionLogEntryActorType::User } else { ActionLogEntryActorType::App },
     actor_user_id: if let AuthenticatedPrincipal::User(user) = &authenticated_principal { Some(user.id.clone()) } else { None },
@@ -191,6 +196,7 @@ pub async fn delete_resource<ResourceStruct, GetResourceByIDFunction>(
     target_app_authorization_credential_id: if *action_log_entry_target_resource_type == ActionLogEntryTargetResourceType::AppAuthorizationCredential { Some(resource_id.clone()) } else { None },
     target_app_credential_id: if *action_log_entry_target_resource_type == ActionLogEntryTargetResourceType::AppCredential { Some(resource_id.clone()) } else { None },
     target_configuration_id: if *action_log_entry_target_resource_type == ActionLogEntryTargetResourceType::Configuration { Some(resource_id.clone()) } else { None },
+    target_configuration_value_id: if *action_log_entry_target_resource_type == ActionLogEntryTargetResourceType::ConfigurationValue { Some(resource_id.clone()) } else { None },
     target_field_id: if *action_log_entry_target_resource_type == ActionLogEntryTargetResourceType::Field { Some(resource_id.clone()) } else { None },
     target_field_choice_id: if *action_log_entry_target_resource_type == ActionLogEntryTargetResourceType::FieldChoice { Some(resource_id.clone()) } else { None },
     target_field_value_id: if *action_log_entry_target_resource_type == ActionLogEntryTargetResourceType::FieldValue { Some(resource_id.clone()) } else { None },

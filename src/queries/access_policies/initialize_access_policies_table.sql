@@ -19,6 +19,7 @@ DO $$
         'AppAuthorizationCredential',
         'AppCredential',
         'Configuration',
+        'ConfigurationValue',
         'Field',
         'FieldChoice',
         'FieldValue',
@@ -49,6 +50,7 @@ DO $$
         'AppAuthorizationCredential',
         'AppCredential',
         'Configuration',
+        'ConfigurationValue',
         'Field',
         'FieldChoice',
         'FieldValue',
@@ -98,6 +100,7 @@ DO $$
       scoped_app_authorization_credential_id UUID REFERENCES app_authorization_credentials(id) ON DELETE CASCADE,
       scoped_app_credential_id UUID REFERENCES app_credentials(id) ON DELETE CASCADE,
       scoped_configuration_id UUID REFERENCES configurations(id) ON DELETE CASCADE,
+      scoped_configuration_value_id UUID REFERENCES configuration_values(id) ON DELETE CASCADE,
       scoped_field_id UUID REFERENCES fields(id) ON DELETE CASCADE,
       scoped_field_choice_id UUID REFERENCES field_choices(id) ON DELETE CASCADE,
       scoped_field_value_id UUID REFERENCES field_values(id) ON DELETE CASCADE,
@@ -140,6 +143,7 @@ DO $$
           AND scoped_app_authorization_credential_id IS NULL
           AND scoped_app_credential_id IS NULL
           AND scoped_configuration_id IS NULL
+          AND scoped_configuration_value_id IS NULL
           AND scoped_field_id IS NULL
           AND scoped_field_choice_id IS NULL
           AND scoped_field_value_id IS NULL
@@ -165,6 +169,7 @@ DO $$
           (scoped_app_authorization_credential_id IS NOT NULL)::INTEGER +
           (scoped_app_credential_id IS NOT NULL)::INTEGER +
           (scoped_configuration_id IS NOT NULL)::INTEGER +
+          (scoped_configuration_value_id IS NOT NULL)::INTEGER +
           (scoped_field_id IS NOT NULL)::INTEGER +
           (scoped_field_choice_id IS NOT NULL)::INTEGER +
           (scoped_field_value_id IS NOT NULL)::INTEGER +
@@ -195,6 +200,7 @@ DO $$
         OR (scoped_resource_type = 'AppAuthorizationCredential' AND scoped_app_authorization_credential_id IS NOT NULL)
         OR (scoped_resource_type = 'AppCredential' AND scoped_app_credential_id IS NOT NULL)
         OR (scoped_resource_type = 'Configuration' AND scoped_configuration_id IS NOT NULL)
+        OR (scoped_resource_type = 'ConfigurationValue' AND scoped_configuration_value_id IS NOT NULL)
         OR (scoped_resource_type = 'Field' AND scoped_field_id IS NOT NULL)
         OR (scoped_resource_type = 'FieldChoice' AND scoped_field_choice_id IS NOT NULL)
         OR (scoped_resource_type = 'FieldValue' AND scoped_field_value_id IS NOT NULL)

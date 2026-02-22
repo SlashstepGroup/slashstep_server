@@ -16,7 +16,7 @@ use ntest::timeout;
 use reqwest::StatusCode;
 use crate::{
   Action, AppState, get_json_web_token_private_key, initialize_required_tables, predefinitions::{
-    initialize_predefined_actions, 
+    initialize_predefined_actions, initialize_predefined_configuration_values, initialize_predefined_configurations, 
     initialize_predefined_roles
   }, resources::{
     ResourceError, access_policy::ActionPermissionLevel, app_authorization_credential::AppAuthorizationCredential,
@@ -32,6 +32,8 @@ async fn verify_returned_resource_by_id() -> Result<(), TestSlashstepServerError
   initialize_required_tables(&test_environment.database_pool).await?;
   initialize_predefined_actions(&test_environment.database_pool).await?;
   initialize_predefined_roles(&test_environment.database_pool).await?;
+  initialize_predefined_configurations(&test_environment.database_pool).await?;
+  initialize_predefined_configuration_values(&test_environment.database_pool).await?;
   let state = AppState {
     database_pool: test_environment.database_pool.clone(),
   };
@@ -76,6 +78,8 @@ async fn verify_uuid_when_getting_resource_by_id() -> Result<(), TestSlashstepSe
   initialize_required_tables(&test_environment.database_pool).await?;
   initialize_predefined_actions(&test_environment.database_pool).await?;
   initialize_predefined_roles(&test_environment.database_pool).await?;
+  initialize_predefined_configurations(&test_environment.database_pool).await?;
+  initialize_predefined_configuration_values(&test_environment.database_pool).await?;
   let state = AppState {
     database_pool: test_environment.database_pool.clone(),
   };
@@ -101,6 +105,8 @@ async fn verify_authentication_when_getting_resource_by_id() -> Result<(), TestS
   initialize_required_tables(&test_environment.database_pool).await?;
   initialize_predefined_actions(&test_environment.database_pool).await?;
   initialize_predefined_roles(&test_environment.database_pool).await?;
+  initialize_predefined_configurations(&test_environment.database_pool).await?;
+  initialize_predefined_configuration_values(&test_environment.database_pool).await?;
   let state = AppState {
     database_pool: test_environment.database_pool.clone(),
   };
@@ -129,6 +135,8 @@ async fn verify_permission_when_getting_resource_by_id() -> Result<(), TestSlash
   initialize_required_tables(&test_environment.database_pool).await?;
   initialize_predefined_actions(&test_environment.database_pool).await?;
   initialize_predefined_roles(&test_environment.database_pool).await?;
+  initialize_predefined_configurations(&test_environment.database_pool).await?;
+  initialize_predefined_configuration_values(&test_environment.database_pool).await?;
 
   // Create the user, the session, and the resource.
   let user = test_environment.create_random_user().await?;
@@ -164,6 +172,8 @@ async fn verify_not_found_when_getting_resource_by_id() -> Result<(), TestSlashs
   initialize_required_tables(&test_environment.database_pool).await?;
   initialize_predefined_actions(&test_environment.database_pool).await?;
   initialize_predefined_roles(&test_environment.database_pool).await?;
+  initialize_predefined_configurations(&test_environment.database_pool).await?;
+  initialize_predefined_configuration_values(&test_environment.database_pool).await?;
 
   // Set up the server and send the request.
   let state = AppState {
@@ -190,6 +200,8 @@ async fn verify_successful_deletion_when_deleting_resource_by_id() -> Result<(),
   initialize_required_tables(&test_environment.database_pool).await?;
   initialize_predefined_actions(&test_environment.database_pool).await?;
   initialize_predefined_roles(&test_environment.database_pool).await?;
+  initialize_predefined_configurations(&test_environment.database_pool).await?;
+  initialize_predefined_configuration_values(&test_environment.database_pool).await?;
   
   // Create the user and the session.
   let user = test_environment.create_random_user().await?;
@@ -236,6 +248,8 @@ async fn verify_uuid_when_deleting_resource_by_id() -> Result<(), TestSlashstepS
   initialize_required_tables(&test_environment.database_pool).await?;
   initialize_predefined_actions(&test_environment.database_pool).await?;
   initialize_predefined_roles(&test_environment.database_pool).await?;
+  initialize_predefined_configurations(&test_environment.database_pool).await?;
+  initialize_predefined_configuration_values(&test_environment.database_pool).await?;
   let state = AppState {
     database_pool: test_environment.database_pool.clone(),
   };
@@ -261,6 +275,8 @@ async fn verify_authentication_when_deleting_resource_by_id() -> Result<(), Test
   initialize_required_tables(&test_environment.database_pool).await?;
   initialize_predefined_actions(&test_environment.database_pool).await?;
   initialize_predefined_roles(&test_environment.database_pool).await?;
+  initialize_predefined_configurations(&test_environment.database_pool).await?;
+  initialize_predefined_configuration_values(&test_environment.database_pool).await?;
   
   // Create dummy resources.
   let app_authorization_credential = test_environment.create_random_app_authorization_credential(None).await?;
@@ -290,6 +306,8 @@ async fn verify_permission_when_deleting_resource_by_id() -> Result<(), TestSlas
   initialize_required_tables(&test_environment.database_pool).await?;
   initialize_predefined_actions(&test_environment.database_pool).await?;
   initialize_predefined_roles(&test_environment.database_pool).await?;
+  initialize_predefined_configurations(&test_environment.database_pool).await?;
+  initialize_predefined_configuration_values(&test_environment.database_pool).await?;
   
   // Create the user and the session.
   let user = test_environment.create_random_user().await?;
