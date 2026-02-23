@@ -2,6 +2,9 @@
  * 
  * Any functionality for /actions should be handled here.
  * 
+ * Creating server level actions through the REST API is unsupported because server level actions are intended to be created by Slashstep Server.
+ * All other actions should be app level.
+ * 
  * Programmers: 
  * - Christian Toney (https://christiantoney.com)
  * 
