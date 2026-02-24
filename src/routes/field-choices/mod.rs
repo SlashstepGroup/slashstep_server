@@ -12,7 +12,7 @@
 use std::sync::Arc;
 use axum::{Extension, Router, extract::{Query, State}};
 use axum_extra::response::ErasedJson;
-use crate::{AppState, HTTPError, middleware::{authentication_middleware, http_request_middleware}, resources::{access_policy::AccessPolicyResourceType, action_log_entry::ActionLogEntryTargetResourceType, app::{App}, app_authorization::AppAuthorization, field_choice::{DEFAULT_MAXIMUM_RESOURCE_LIST_LIMIT, FieldChoice}, http_transaction::HTTPTransaction, user::User}, utilities::reusable_route_handlers::{ResourceListQueryParameters, list_resources}};
+use crate::{AppState, HTTPError, middleware::{authentication_middleware, http_request_middleware}, resources::{access_policy::AccessPolicyResourceType, action_log_entry::ActionLogEntryTargetResourceType, app::App, app_authorization::AppAuthorization, field_choice::{DEFAULT_MAXIMUM_RESOURCE_LIST_LIMIT, FieldChoice}, http_transaction::HTTPTransaction, user::User}, utilities::reusable_route_handlers::{ResourceListQueryParameters, list_resources}};
 
 #[path = "./{field_choice_id}/mod.rs"]
 mod field_choice_id;
@@ -45,7 +45,7 @@ async fn handle_list_field_choices_request(
     None, 
     |query, database_pool, individual_principal| Box::new(FieldChoice::count(query, database_pool, individual_principal)),
     |query, database_pool, individual_principal| Box::new(FieldChoice::list(query, database_pool, individual_principal)),
-    "slashstep.fieldChoices.list", 
+    "fieldChoices.list", 
     DEFAULT_MAXIMUM_RESOURCE_LIST_LIMIT,
     "field choices",
     "field choice"

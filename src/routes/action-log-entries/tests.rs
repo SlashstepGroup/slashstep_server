@@ -36,12 +36,12 @@ async fn verify_returned_action_log_entry_list_without_query() -> Result<(), Tes
   initialize_predefined_roles(&test_environment.database_pool).await?;
   initialize_predefined_configurations(&test_environment.database_pool).await?;
   
-  // Grant access to the "slashstep.actionLogEntries.get" action to the user.
+  // Grant access to the "actionLogEntries.get" action to the user.
   let user = test_environment.create_random_user().await?;
   let session = test_environment.create_random_session(Some(&user.id)).await?;
   let json_web_token_private_key = get_json_web_token_private_key().await?;
   let session_token = session.generate_json_web_token(&json_web_token_private_key).await?;
-  let get_action_log_entries_action = Action::get_by_name("slashstep.actionLogEntries.get", &test_environment.database_pool).await?;
+  let get_action_log_entries_action = Action::get_by_name("actionLogEntries.get", &test_environment.database_pool).await?;
   AccessPolicy::create(&InitialAccessPolicyProperties {
     action_id: get_action_log_entries_action.id,
     permission_level: ActionPermissionLevel::User,
@@ -52,8 +52,8 @@ async fn verify_returned_action_log_entry_list_without_query() -> Result<(), Tes
     ..Default::default()
   }, &test_environment.database_pool).await?;
 
-  // Grant access to the "slashstep.actionLogEntries.list" action to the user.
-  let list_action_log_entries_action = Action::get_by_name("slashstep.actionLogEntries.list", &test_environment.database_pool).await?;
+  // Grant access to the "actionLogEntries.list" action to the user.
+  let list_action_log_entries_action = Action::get_by_name("actionLogEntries.list", &test_environment.database_pool).await?;
   AccessPolicy::create(&InitialAccessPolicyProperties {
     action_id: list_action_log_entries_action.id,
     permission_level: ActionPermissionLevel::User,
@@ -128,12 +128,12 @@ async fn verify_returned_action_log_entry_list_with_query() -> Result<(), TestSl
   initialize_predefined_roles(&test_environment.database_pool).await?;
   initialize_predefined_configurations(&test_environment.database_pool).await?;
   
-  // Grant access to the "slashstep.actionLogEntries.get" action to the user.
+  // Grant access to the "actionLogEntries.get" action to the user.
   let user = test_environment.create_random_user().await?;
   let session = test_environment.create_random_session(Some(&user.id)).await?;
   let json_web_token_private_key = get_json_web_token_private_key().await?;
   let session_token = session.generate_json_web_token(&json_web_token_private_key).await?;
-  let get_action_log_entries_action = Action::get_by_name("slashstep.actionLogEntries.get", &test_environment.database_pool).await?;
+  let get_action_log_entries_action = Action::get_by_name("actionLogEntries.get", &test_environment.database_pool).await?;
   AccessPolicy::create(&InitialAccessPolicyProperties {
     action_id: get_action_log_entries_action.id,
     permission_level: ActionPermissionLevel::User,
@@ -144,8 +144,8 @@ async fn verify_returned_action_log_entry_list_with_query() -> Result<(), TestSl
     ..Default::default()
   }, &test_environment.database_pool).await?;
 
-  // Grant access to the "slashstep.actionLogEntries.list" action to the user.
-  let list_action_log_entries_action = Action::get_by_name("slashstep.actionLogEntries.list", &test_environment.database_pool).await?;
+  // Grant access to the "actionLogEntries.list" action to the user.
+  let list_action_log_entries_action = Action::get_by_name("actionLogEntries.list", &test_environment.database_pool).await?;
   AccessPolicy::create(&InitialAccessPolicyProperties {
     action_id: list_action_log_entries_action.id,
     permission_level: ActionPermissionLevel::User,
@@ -208,12 +208,12 @@ async fn verify_default_action_log_entry_list_limit() -> Result<(), TestSlashste
   initialize_predefined_roles(&test_environment.database_pool).await?;
   initialize_predefined_configurations(&test_environment.database_pool).await?;
   
-  // Grant access to the "slashstep.actionLogEntries.get" action to the user.
+  // Grant access to the "actionLogEntries.get" action to the user.
   let user = test_environment.create_random_user().await?;
   let session = test_environment.create_random_session(Some(&user.id)).await?;
   let json_web_token_private_key = get_json_web_token_private_key().await?;
   let session_token = session.generate_json_web_token(&json_web_token_private_key).await?;
-  let get_action_log_entries_action = Action::get_by_name("slashstep.actionLogEntries.get", &test_environment.database_pool).await?;
+  let get_action_log_entries_action = Action::get_by_name("actionLogEntries.get", &test_environment.database_pool).await?;
   AccessPolicy::create(&InitialAccessPolicyProperties {
     action_id: get_action_log_entries_action.id,
     permission_level: ActionPermissionLevel::User,
@@ -224,8 +224,8 @@ async fn verify_default_action_log_entry_list_limit() -> Result<(), TestSlashste
     ..Default::default()
   }, &test_environment.database_pool).await?;
 
-  // Grant access to the "slashstep.actionLogEntries.list" action to the user.
-  let list_action_log_entries_action = Action::get_by_name("slashstep.actionLogEntries.list", &test_environment.database_pool).await?;
+  // Grant access to the "actionLogEntries.list" action to the user.
+  let list_action_log_entries_action = Action::get_by_name("actionLogEntries.list", &test_environment.database_pool).await?;
   AccessPolicy::create(&InitialAccessPolicyProperties {
     action_id: list_action_log_entries_action.id,
     permission_level: ActionPermissionLevel::User,
@@ -276,12 +276,12 @@ async fn verify_maximum_action_log_entry_list_limit() -> Result<(), TestSlashste
   initialize_predefined_roles(&test_environment.database_pool).await?;
   initialize_predefined_configurations(&test_environment.database_pool).await?;
   
-  // Grant access to the "slashstep.actionLogEntries.get" action to the user.
+  // Grant access to the "actionLogEntries.get" action to the user.
   let user = test_environment.create_random_user().await?;
   let session = test_environment.create_random_session(Some(&user.id)).await?;
   let json_web_token_private_key = get_json_web_token_private_key().await?;
   let session_token = session.generate_json_web_token(&json_web_token_private_key).await?;
-  let get_action_log_entries_action = Action::get_by_name("slashstep.actionLogEntries.get", &test_environment.database_pool).await?;
+  let get_action_log_entries_action = Action::get_by_name("actionLogEntries.get", &test_environment.database_pool).await?;
   AccessPolicy::create(&InitialAccessPolicyProperties {
     action_id: get_action_log_entries_action.id,
     permission_level: ActionPermissionLevel::User,
@@ -292,8 +292,8 @@ async fn verify_maximum_action_log_entry_list_limit() -> Result<(), TestSlashste
     ..Default::default()
   }, &test_environment.database_pool).await?;
 
-  // Grant access to the "slashstep.actionLogEntries.list" action to the user.
-  let list_action_log_entries_action = Action::get_by_name("slashstep.actionLogEntries.list", &test_environment.database_pool).await?;
+  // Grant access to the "actionLogEntries.list" action to the user.
+  let list_action_log_entries_action = Action::get_by_name("actionLogEntries.list", &test_environment.database_pool).await?;
   AccessPolicy::create(&InitialAccessPolicyProperties {
     action_id: list_action_log_entries_action.id,
     permission_level: ActionPermissionLevel::User,
@@ -333,12 +333,12 @@ async fn verify_query_when_listing_action_log_entries() -> Result<(), TestSlashs
   initialize_predefined_roles(&test_environment.database_pool).await?;
   initialize_predefined_configurations(&test_environment.database_pool).await?;
   
-  // Grant access to the "slashstep.actionLogEntries.get" action to the user.
+  // Grant access to the "actionLogEntries.get" action to the user.
   let user = test_environment.create_random_user().await?;
   let session = test_environment.create_random_session(Some(&user.id)).await?;
   let json_web_token_private_key = get_json_web_token_private_key().await?;
   let session_token = session.generate_json_web_token(&json_web_token_private_key).await?;
-  let get_action_log_entries_action = Action::get_by_name("slashstep.actionLogEntries.get", &test_environment.database_pool).await?;
+  let get_action_log_entries_action = Action::get_by_name("actionLogEntries.get", &test_environment.database_pool).await?;
   AccessPolicy::create(&InitialAccessPolicyProperties {
     action_id: get_action_log_entries_action.id,
     permission_level: ActionPermissionLevel::User,
@@ -349,8 +349,8 @@ async fn verify_query_when_listing_action_log_entries() -> Result<(), TestSlashs
     ..Default::default()
   }, &test_environment.database_pool).await?;
 
-  // Grant access to the "slashstep.actionLogEntries.list" action to the user.
-  let list_action_log_entries_action = Action::get_by_name("slashstep.actionLogEntries.list", &test_environment.database_pool).await?;
+  // Grant access to the "actionLogEntries.list" action to the user.
+  let list_action_log_entries_action = Action::get_by_name("actionLogEntries.list", &test_environment.database_pool).await?;
   AccessPolicy::create(&InitialAccessPolicyProperties {
     action_id: list_action_log_entries_action.id,
     permission_level: ActionPermissionLevel::User,

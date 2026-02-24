@@ -59,7 +59,7 @@ async fn handle_list_access_policies_request(
     Some(action_log_entry.id), 
     |query, database_pool, individual_principal| Box::new(AccessPolicy::count(query, database_pool, individual_principal)),
     |query, database_pool, individual_principal| Box::new(AccessPolicy::list(query, database_pool, individual_principal)),
-    "slashstep.accessPolicies.list", 
+    "accessPolicies.list", 
     DEFAULT_MAXIMUM_ACCESS_POLICY_LIST_LIMIT,
     "access policies",
     "access policy"
@@ -89,7 +89,7 @@ async fn handle_create_access_policy_request(
   // Make sure the authenticated_user can create access policies for the target action log entry.
   let target_action_log_entry = get_action_log_entry_by_id(&action_log_entry_id, &http_transaction, &state.database_pool).await?;
   let resource_hierarchy = get_resource_hierarchy(&target_action_log_entry, &AccessPolicyResourceType::ActionLogEntry, &target_action_log_entry.id, &http_transaction, &state.database_pool).await?;
-  let create_access_policies_action = get_action_by_name("slashstep.accessPolicies.create", &http_transaction, &state.database_pool).await?;
+  let create_access_policies_action = get_action_by_name("accessPolicies.create", &http_transaction, &state.database_pool).await?;
   verify_delegate_permissions(authenticated_app_authorization.as_ref().map(|app_authorization| &app_authorization.id), &create_access_policies_action.id, &http_transaction.id, &ActionPermissionLevel::User, &state.database_pool).await?;
   let authenticated_principal = get_authenticated_principal(authenticated_user.as_ref(), authenticated_app.as_ref())?;
   verify_principal_permissions(&authenticated_principal, &create_access_policies_action, &resource_hierarchy, &http_transaction, &ActionPermissionLevel::User, &state.database_pool).await?;

@@ -50,7 +50,7 @@ async fn verify_returned_resource_by_id() -> Result<(), TestSlashstepServerError
   let session = test_environment.create_random_session(Some(&user.id)).await?;
   let json_web_token_private_key = get_json_web_token_private_key().await?;
   let session_token = session.generate_json_web_token(&json_web_token_private_key).await?;
-  let get_http_transactions_action = Action::get_by_name("slashstep.httpTransactions.get", &test_environment.database_pool).await?;
+  let get_http_transactions_action = Action::get_by_name("httpTransactions.get", &test_environment.database_pool).await?;
   test_environment.create_server_access_policy(&user.id, &get_http_transactions_action.id, &ActionPermissionLevel::User).await?;
   
   let http_transaction = test_environment.create_random_http_transaction().await?;
@@ -211,8 +211,8 @@ async fn verify_not_found_when_getting_resource_by_id() -> Result<(), TestSlashs
 //   let json_web_token_private_key = get_json_web_token_private_key().await?;
 //   let session_token = session.generate_json_web_token(&json_web_token_private_key).await?;
 
-//   // Grant access to the "slashstep.httpTransactions.delete" action to the user.
-//   let delete_http_transactions_action = Action::get_by_name("slashstep.httpTransactions.delete", &test_environment.database_pool).await?;
+//   // Grant access to the "httpTransactions.delete" action to the user.
+//   let delete_http_transactions_action = Action::get_by_name("httpTransactions.delete", &test_environment.database_pool).await?;
 //   AccessPolicy::create(&InitialAccessPolicyProperties {
 //     action_id: delete_http_transactions_action.id,
 //     permission_level: ActionPermissionLevel::User,
@@ -385,7 +385,7 @@ async fn verify_not_found_when_getting_resource_by_id() -> Result<(), TestSlashs
 //   let session = test_environment.create_random_session(Some(&user.id)).await?;
 //   let json_web_token_private_key = get_json_web_token_private_key().await?;
 //   let session_token = session.generate_json_web_token(&json_web_token_private_key).await?;
-//   let update_http_transactions_action = Action::get_by_name("slashstep.httpTransactions.update", &test_environment.database_pool).await?;
+//   let update_http_transactions_action = Action::get_by_name("httpTransactions.update", &test_environment.database_pool).await?;
 //   AccessPolicy::create(&InitialAccessPolicyProperties {
 //     action_id: update_http_transactions_action.id,
 //     permission_level: ActionPermissionLevel::Editor,

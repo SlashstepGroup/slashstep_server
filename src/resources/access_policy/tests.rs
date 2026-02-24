@@ -153,12 +153,12 @@ async fn list_access_policies_without_query() -> Result<(), TestSlashstepServerE
 #[tokio::test]
 async fn list_access_policies_without_query_and_filter_based_on_requestor_permissions() -> Result<(), TestSlashstepServerError> {
 
-  // Get the "slashstep.accessPolicies.get" action one time.
+  // Get the "accessPolicies.get" action one time.
   let test_environment = TestEnvironment::new().await?;
   initialize_required_tables(&test_environment.database_pool).await?;
   initialize_predefined_actions(&test_environment.database_pool).await?;
   let user = test_environment.create_random_user().await?;
-  let get_access_policies_action = Action::get_by_name("slashstep.accessPolicies.get", &test_environment.database_pool).await?;
+  let get_access_policies_action = Action::get_by_name("accessPolicies.get", &test_environment.database_pool).await?;
 
   // Create dummy access policies.
   const MAXIMUM_ACTION_COUNT: i32 = 25;

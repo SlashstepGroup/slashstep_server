@@ -25,7 +25,7 @@ pub const UUID_QUERY_KEYS: &[&str] = &[
 ];
 pub const RESOURCE_NAME: &str = "AppAuthorization";
 pub const DATABASE_TABLE_NAME: &str = "app_authorizations";
-pub const GET_RESOURCE_ACTION_NAME: &str = "slashstep.appAuthorizations.get";
+pub const GET_RESOURCE_ACTION_NAME: &str = "appAuthorizations.get";
 
 #[derive(Debug, Clone, ToSql, FromSql, Serialize, Deserialize, Default, PartialEq, Eq)]
 #[postgres(name = "app_authorization_authorizing_resource_type")]

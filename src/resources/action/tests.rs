@@ -237,12 +237,12 @@ async fn list_access_policies_without_query_and_filter_based_on_requestor_permis
 
   }
 
-  // Get the "slashstep.actions.get" action one time.
+  // Get the "actions.get" action one time.
   initialize_predefined_actions(&test_environment.database_pool).await?;
   let user = test_environment.create_random_user().await?;
-  let get_actions_action = Action::get_by_name("slashstep.actions.get", &test_environment.database_pool).await?;
+  let get_actions_action = Action::get_by_name("actions.get", &test_environment.database_pool).await?;
 
-  // Grant access to the "slashstep.actions.get" action to the user for half of the actions.
+  // Grant access to the "actions.get" action to the user for half of the actions.
   let allowed_action_count = current_actions.len() / 2;
   let mut allowed_actions = Vec::new();
   for index in 0..allowed_action_count {

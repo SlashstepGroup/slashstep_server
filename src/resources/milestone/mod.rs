@@ -25,7 +25,7 @@ pub const UUID_QUERY_KEYS: &[&str] = &[
 ];
 pub const RESOURCE_NAME: &str = "Milestone";
 pub const DATABASE_TABLE_NAME: &str = "milestones";
-pub const GET_RESOURCE_ACTION_NAME: &str = "slashstep.milestones.get";
+pub const GET_RESOURCE_ACTION_NAME: &str = "milestones.get";
 
 #[derive(Debug, PartialEq, Eq, ToSql, FromSql, Clone, Default, Serialize, Deserialize)]
 #[postgres(name = "milestone_parent_resource_type")]

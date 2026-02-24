@@ -34,7 +34,7 @@ pub const UUID_QUERY_KEYS: &[&str] = &[
 ];
 pub const RESOURCE_NAME: &str = "Field";
 pub const DATABASE_TABLE_NAME: &str = "fields";
-pub const GET_RESOURCE_ACTION_NAME: &str = "slashstep.fields.get";
+pub const GET_RESOURCE_ACTION_NAME: &str = "fields.get";
 
 #[derive(Debug, Clone, ToSql, FromSql, Serialize, Deserialize, PartialEq, Eq, Default)]
 #[postgres(name = "field_value_type")]

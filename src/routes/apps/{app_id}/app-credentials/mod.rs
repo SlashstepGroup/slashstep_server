@@ -74,7 +74,7 @@ pub async fn handle_list_app_credentials_request(
     Some(app.id), 
     |query, database_pool, individual_principal| Box::new(AppCredential::count(query, database_pool, individual_principal)),
     |query, database_pool, individual_principal| Box::new(AppCredential::list(query, database_pool, individual_principal)),
-    "slashstep.appCredentials.list", 
+    "appCredentials.list", 
     DEFAULT_MAXIMUM_APP_CREDENTIAL_LIST_LIMIT,
     "app credentials",
     "app credential"
@@ -130,7 +130,7 @@ async fn handle_create_app_credential_request(
   // Make sure the authenticated_user can create access policies for the target action.
   let target_app = get_app_by_id(&app_id, &http_transaction, &state.database_pool).await?;
   let resource_hierarchy = get_resource_hierarchy(&target_app, &AccessPolicyResourceType::App, &target_app.id, &http_transaction, &state.database_pool).await?;
-  let create_app_credentials_action = get_action_by_name("slashstep.appCredentials.create", &http_transaction, &state.database_pool).await?;
+  let create_app_credentials_action = get_action_by_name("appCredentials.create", &http_transaction, &state.database_pool).await?;
   verify_delegate_permissions(authenticated_app_authorization.as_ref().map(|app_authorization| &app_authorization.id), &create_app_credentials_action.id, &http_transaction.id, &ActionPermissionLevel::User, &state.database_pool).await?;
   let authenticated_principal = get_authenticated_principal(authenticated_user.as_ref(), authenticated_app.as_ref())?;
   verify_principal_permissions(&authenticated_principal, &create_app_credentials_action, &resource_hierarchy, &http_transaction, &ActionPermissionLevel::User, &state.database_pool).await?;

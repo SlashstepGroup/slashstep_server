@@ -41,7 +41,7 @@ async fn handle_get_app_authorization_request(
   let http_transaction = http_transaction.clone();
   let target_app_authorization = get_app_authorization_by_id(&app_authorization_id, &http_transaction, &state.database_pool).await?;
   let resource_hierarchy = get_resource_hierarchy(&target_app_authorization, &AccessPolicyResourceType::AppAuthorization, &target_app_authorization.id, &http_transaction, &state.database_pool).await?;
-  let get_app_authorizations_action = get_action_by_name("slashstep.appAuthorizations.get", &http_transaction, &state.database_pool).await?;
+  let get_app_authorizations_action = get_action_by_name("appAuthorizations.get", &http_transaction, &state.database_pool).await?;
   verify_delegate_permissions(authenticated_app_authorization.as_ref().map(|app_authorization| &app_authorization.id), &get_app_authorizations_action.id, &http_transaction.id, &ActionPermissionLevel::User, &state.database_pool).await?;
   let authenticated_principal = get_authenticated_principal(authenticated_user.as_ref(), authenticated_app.as_ref())?;
   verify_principal_permissions(&authenticated_principal, &get_app_authorizations_action, &resource_hierarchy, &http_transaction, &ActionPermissionLevel::User, &state.database_pool).await?;
@@ -86,7 +86,7 @@ async fn handle_delete_app_authorization_request(
     Extension(authenticated_app_authorization),
     Some(&AccessPolicyResourceType::AppAuthorization),
     &app_authorization_id, 
-    "slashstep.appAuthorizations.delete",
+    "appAuthorizations.delete",
     "app authorization",
     &ActionLogEntryTargetResourceType::AppAuthorization,
     |app_authorization_id, database_pool| Box::new(AppAuthorization::get_by_id(app_authorization_id, database_pool))

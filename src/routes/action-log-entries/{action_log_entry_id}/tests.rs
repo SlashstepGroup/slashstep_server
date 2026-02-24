@@ -47,7 +47,7 @@ async fn verify_returned_action_log_entry_by_id() -> Result<(), TestSlashstepSer
   let session = test_environment.create_random_session(Some(&user.id)).await?;
   let json_web_token_private_key = get_json_web_token_private_key().await?;
   let session_token = session.generate_json_web_token(&json_web_token_private_key).await?;
-  let get_action_log_entries_action = Action::get_by_name("slashstep.actionLogEntries.get", &test_environment.database_pool).await?;
+  let get_action_log_entries_action = Action::get_by_name("actionLogEntries.get", &test_environment.database_pool).await?;
   AccessPolicy::create(&InitialAccessPolicyProperties {
     action_id: get_action_log_entries_action.id,
     permission_level: ActionPermissionLevel::User,
@@ -234,8 +234,8 @@ async fn verify_successful_deletion_when_deleting_action_log_entry_by_id() -> Re
   let json_web_token_private_key = get_json_web_token_private_key().await?;
   let session_token = session.generate_json_web_token(&json_web_token_private_key).await?;
 
-  // Grant access to the "slashstep.actions.delete" action to the user.
-  let delete_action_log_entries_action = Action::get_by_name("slashstep.actionLogEntries.delete", &test_environment.database_pool).await?;
+  // Grant access to the "actions.delete" action to the user.
+  let delete_action_log_entries_action = Action::get_by_name("actionLogEntries.delete", &test_environment.database_pool).await?;
   AccessPolicy::create(&InitialAccessPolicyProperties {
     action_id: delete_action_log_entries_action.id,
     permission_level: ActionPermissionLevel::User,

@@ -24,7 +24,7 @@ pub const UUID_QUERY_KEYS: &[&str] = &[
 ];
 pub const RESOURCE_NAME: &str = "AppCredential";
 pub const DATABASE_TABLE_NAME: &str = "app_credentials";
-pub const GET_RESOURCE_ACTION_NAME: &str = "slashstep.appCredentials.get";
+pub const GET_RESOURCE_ACTION_NAME: &str = "appCredentials.get";
 
 /// A credential that can be used to generate JSON web tokens (JWT) for apps so that they can authenticate with Slashstep Server.
 /// To protect the app, Slashstep Server only stores the app credential's metadata and public key. App admins are responsible for managing the private key. 

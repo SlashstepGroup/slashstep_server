@@ -46,7 +46,7 @@ async fn handle_list_app_authorization_credentials_request(
     None, 
     |query, database_pool, individual_principal| Box::new(AppAuthorizationCredential::count(query, database_pool, individual_principal)),
     |query, database_pool, individual_principal| Box::new(AppAuthorizationCredential::list(query, database_pool, individual_principal)),
-    "slashstep.appAuthorizationCredentials.list", 
+    "appAuthorizationCredentials.list", 
     DEFAULT_MAXIMUM_APP_AUTHORIZATION_CREDENTIAL_LIST_LIMIT,
     "app authorization credentials",
     "app authorization credential"

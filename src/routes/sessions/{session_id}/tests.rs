@@ -46,7 +46,7 @@ async fn verify_returned_resource_by_id() -> Result<(), TestSlashstepServerError
   let session = test_environment.create_random_session(Some(&user.id)).await?;
   let json_web_token_private_key = get_json_web_token_private_key().await?;
   let session_token = session.generate_json_web_token(&json_web_token_private_key).await?;
-  let get_server_log_entries_action = Action::get_by_name("slashstep.sessions.get", &test_environment.database_pool).await?;
+  let get_server_log_entries_action = Action::get_by_name("sessions.get", &test_environment.database_pool).await?;
   test_environment.create_server_access_policy(&user.id, &get_server_log_entries_action.id, &ActionPermissionLevel::User).await?;
 
   let response = test_server.get(&format!("/sessions/{}", session.id))
@@ -204,8 +204,8 @@ async fn verify_not_found_when_getting_resource_by_id() -> Result<(), TestSlashs
 //   let json_web_token_private_key = get_json_web_token_private_key().await?;
 //   let session_token = session.generate_json_web_token(&json_web_token_private_key).await?;
 
-//   // Grant access to the "slashstep.sessions.delete" action to the user.
-//   let delete_fields_action = Action::get_by_name("slashstep.sessions.delete", &test_environment.database_pool).await?;
+//   // Grant access to the "sessions.delete" action to the user.
+//   let delete_fields_action = Action::get_by_name("sessions.delete", &test_environment.database_pool).await?;
 //   AccessPolicy::create(&InitialAccessPolicyProperties {
 //     action_id: delete_fields_action.id,
 //     permission_level: ActionPermissionLevel::User,
@@ -378,7 +378,7 @@ async fn verify_not_found_when_getting_resource_by_id() -> Result<(), TestSlashs
 //   let session = test_environment.create_random_session(Some(&user.id)).await?;
 //   let json_web_token_private_key = get_json_web_token_private_key().await?;
 //   let session_token = session.generate_json_web_token(&json_web_token_private_key).await?;
-//   let update_fields_action = Action::get_by_name("slashstep.sessions.update", &test_environment.database_pool).await?;
+//   let update_fields_action = Action::get_by_name("sessions.update", &test_environment.database_pool).await?;
 //   AccessPolicy::create(&InitialAccessPolicyProperties {
 //     action_id: update_fields_action.id,
 //     permission_level: ActionPermissionLevel::Editor,

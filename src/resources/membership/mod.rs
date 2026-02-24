@@ -30,7 +30,7 @@ pub const UUID_QUERY_KEYS: &[&str] = &[
 ];
 pub const RESOURCE_NAME: &str = "Membership";
 pub const DATABASE_TABLE_NAME: &str = "memberships";
-pub const GET_RESOURCE_ACTION_NAME: &str = "slashstep.memberships.get";
+pub const GET_RESOURCE_ACTION_NAME: &str = "memberships.get";
 
 #[derive(Debug, Clone, ToSql, FromSql, Serialize, Deserialize, PartialEq, Eq, Default)]
 #[postgres(name = "membership_parent_resource_type")]

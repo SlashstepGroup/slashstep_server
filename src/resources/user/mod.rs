@@ -31,7 +31,7 @@ pub const UUID_QUERY_KEYS: &[&str] = &[
 ];
 pub const RESOURCE_NAME: &str = "User";
 pub const DATABASE_TABLE_NAME: &str = "users";
-pub const GET_RESOURCE_ACTION_NAME: &str = "slashstep.users.get";
+pub const GET_RESOURCE_ACTION_NAME: &str = "users.get";
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct User {

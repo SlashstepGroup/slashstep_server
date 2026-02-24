@@ -24,7 +24,7 @@ pub const UUID_QUERY_KEYS: &[&str] = &[
 ];
 pub const RESOURCE_NAME: &str = "HTTPTransaction";
 pub const DATABASE_TABLE_NAME: &str = "http_transactions";
-pub const GET_RESOURCE_ACTION_NAME: &str = "slashstep.httpTransactions.get";
+pub const GET_RESOURCE_ACTION_NAME: &str = "httpTransactions.get";
 
 #[derive(Debug, Clone, ToSql, FromSql, Serialize, Deserialize, PartialEq, Eq)]
 pub struct InitialHTTPTransactionProperties {

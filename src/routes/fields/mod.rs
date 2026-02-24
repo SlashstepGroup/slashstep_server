@@ -45,7 +45,7 @@ async fn handle_list_fields_request(
     None, 
     |query, database_pool, individual_principal| Box::new(Field::count(query, database_pool, individual_principal)),
     |query, database_pool, individual_principal| Box::new(Field::list(query, database_pool, individual_principal)),
-    "slashstep.fields.list", 
+    "fields.list", 
     DEFAULT_MAXIMUM_RESOURCE_LIST_LIMIT,
     "fields",
     "field"

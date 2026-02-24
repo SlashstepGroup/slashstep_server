@@ -33,12 +33,12 @@
 //   initialize_predefined_actions(&test_environment.database_pool).await?;
 //   initialize_predefined_roles(&test_environment.database_pool).await?;
   
-//   // Grant access to the "slashstep.apps.get" action to the user.
+//   // Grant access to the "apps.get" action to the user.
 //   let user = test_environment.create_random_user().await?;
 //   let session = test_environment.create_random_session(Some(&user.id)).await?;
 //   let json_web_token_private_key = get_json_web_token_private_key().await?;
 //   let session_token = session.generate_json_web_token(&json_web_token_private_key).await?;
-//   let get_actions_action = Action::get_by_name("slashstep.apps.get", &test_environment.database_pool).await?;
+//   let get_actions_action = Action::get_by_name("apps.get", &test_environment.database_pool).await?;
 //   AccessPolicy::create(&InitialAccessPolicyProperties {
 //     action_id: get_actions_action.id,
 //     permission_level: ActionPermissionLevel::User,
@@ -49,8 +49,8 @@
 //     ..Default::default()
 //   }, &test_environment.database_pool).await?;
 
-//   // Grant access to the "slashstep.apps.list" action to the user.
-//   let list_actions_action = Action::get_by_name("slashstep.apps.list", &test_environment.database_pool).await?;
+//   // Grant access to the "apps.list" action to the user.
+//   let list_actions_action = Action::get_by_name("apps.list", &test_environment.database_pool).await?;
 //   AccessPolicy::create(&InitialAccessPolicyProperties {
 //     action_id: list_actions_action.id,
 //     permission_level: ActionPermissionLevel::User,
@@ -109,12 +109,12 @@
 //   initialize_predefined_actions(&test_environment.database_pool).await?;
 //   initialize_predefined_roles(&test_environment.database_pool).await?;
   
-//   // Grant access to the "slashstep.apps.get" action to the user.
+//   // Grant access to the "apps.get" action to the user.
 //   let user = test_environment.create_random_user().await?;
 //   let session = test_environment.create_random_session(Some(&user.id)).await?;
 //   let json_web_token_private_key = get_json_web_token_private_key().await?;
 //   let session_token = session.generate_json_web_token(&json_web_token_private_key).await?;
-//   let get_actions_action = Action::get_by_name("slashstep.apps.get", &test_environment.database_pool).await?;
+//   let get_actions_action = Action::get_by_name("apps.get", &test_environment.database_pool).await?;
 //   AccessPolicy::create(&InitialAccessPolicyProperties {
 //     action_id: get_actions_action.id,
 //     permission_level: ActionPermissionLevel::User,
@@ -125,8 +125,8 @@
 //     ..Default::default()
 //   }, &test_environment.database_pool).await?;
 
-//   // Grant access to the "slashstep.apps.list" action to the user.
-//   let list_actions_action = Action::get_by_name("slashstep.apps.list", &test_environment.database_pool).await?;
+//   // Grant access to the "apps.list" action to the user.
+//   let list_actions_action = Action::get_by_name("apps.list", &test_environment.database_pool).await?;
 //   AccessPolicy::create(&InitialAccessPolicyProperties {
 //     action_id: list_actions_action.id,
 //     permission_level: ActionPermissionLevel::User,
@@ -188,12 +188,12 @@
 //   initialize_predefined_actions(&test_environment.database_pool).await?;
 //   initialize_predefined_roles(&test_environment.database_pool).await?;
   
-//   // Grant access to the "slashstep.apps.get" action to the user.
+//   // Grant access to the "apps.get" action to the user.
 //   let user = test_environment.create_random_user().await?;
 //   let session = test_environment.create_random_session(Some(&user.id)).await?;
 //   let json_web_token_private_key = get_json_web_token_private_key().await?;
 //   let session_token = session.generate_json_web_token(&json_web_token_private_key).await?;
-//   let get_actions_action = Action::get_by_name("slashstep.apps.get", &test_environment.database_pool).await?;
+//   let get_actions_action = Action::get_by_name("apps.get", &test_environment.database_pool).await?;
 //   AccessPolicy::create(&InitialAccessPolicyProperties {
 //     action_id: get_actions_action.id,
 //     permission_level: ActionPermissionLevel::User,
@@ -204,8 +204,8 @@
 //     ..Default::default()
 //   }, &test_environment.database_pool).await?;
 
-//   // Grant access to the "slashstep.apps.list" action to the user.
-//   let list_actions_action = Action::get_by_name("slashstep.apps.list", &test_environment.database_pool).await?;
+//   // Grant access to the "apps.list" action to the user.
+//   let list_actions_action = Action::get_by_name("apps.list", &test_environment.database_pool).await?;
 //   AccessPolicy::create(&InitialAccessPolicyProperties {
 //     action_id: list_actions_action.id,
 //     permission_level: ActionPermissionLevel::User,
@@ -255,12 +255,12 @@
 //   initialize_predefined_actions(&test_environment.database_pool).await?;
 //   initialize_predefined_roles(&test_environment.database_pool).await?;
   
-//   // Grant access to the "slashstep.apps.get" action to the user.
+//   // Grant access to the "apps.get" action to the user.
 //   let user = test_environment.create_random_user().await?;
 //   let session = test_environment.create_random_session(Some(&user.id)).await?;
 //   let json_web_token_private_key = get_json_web_token_private_key().await?;
 //   let session_token = session.generate_json_web_token(&json_web_token_private_key).await?;
-//   let get_actions_action = Action::get_by_name("slashstep.apps.get", &test_environment.database_pool).await?;
+//   let get_actions_action = Action::get_by_name("apps.get", &test_environment.database_pool).await?;
 //   AccessPolicy::create(&InitialAccessPolicyProperties {
 //     action_id: get_actions_action.id,
 //     permission_level: ActionPermissionLevel::User,
@@ -271,8 +271,8 @@
 //     ..Default::default()
 //   }, &test_environment.database_pool).await?;
 
-//   // Grant access to the "slashstep.apps.list" action to the user.
-//   let list_actions_action = Action::get_by_name("slashstep.apps.list", &test_environment.database_pool).await?;
+//   // Grant access to the "apps.list" action to the user.
+//   let list_actions_action = Action::get_by_name("apps.list", &test_environment.database_pool).await?;
 //   AccessPolicy::create(&InitialAccessPolicyProperties {
 //     action_id: list_actions_action.id,
 //     permission_level: ActionPermissionLevel::User,
@@ -311,12 +311,12 @@
 //   initialize_predefined_actions(&test_environment.database_pool).await?;
 //   initialize_predefined_roles(&test_environment.database_pool).await?;
   
-//   // Grant access to the "slashstep.apps.get" action to the user.
+//   // Grant access to the "apps.get" action to the user.
 //   let user = test_environment.create_random_user().await?;
 //   let session = test_environment.create_random_session(Some(&user.id)).await?;
 //   let json_web_token_private_key = get_json_web_token_private_key().await?;
 //   let session_token = session.generate_json_web_token(&json_web_token_private_key).await?;
-//   let get_actions_action = Action::get_by_name("slashstep.apps.get", &test_environment.database_pool).await?;
+//   let get_actions_action = Action::get_by_name("apps.get", &test_environment.database_pool).await?;
 //   AccessPolicy::create(&InitialAccessPolicyProperties {
 //     action_id: get_actions_action.id,
 //     permission_level: ActionPermissionLevel::User,
@@ -327,8 +327,8 @@
 //     ..Default::default()
 //   }, &test_environment.database_pool).await?;
 
-//   // Grant access to the "slashstep.apps.list" action to the user.
-//   let list_actions_action = Action::get_by_name("slashstep.apps.list", &test_environment.database_pool).await?;
+//   // Grant access to the "apps.list" action to the user.
+//   let list_actions_action = Action::get_by_name("apps.list", &test_environment.database_pool).await?;
 //   AccessPolicy::create(&InitialAccessPolicyProperties {
 //     action_id: list_actions_action.id,
 //     permission_level: ActionPermissionLevel::User,

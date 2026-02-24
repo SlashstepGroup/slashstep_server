@@ -39,12 +39,12 @@ async fn verify_returned_action_list_without_query() -> Result<(), TestSlashstep
   initialize_predefined_roles(&test_environment.database_pool).await?;
   initialize_predefined_configurations(&test_environment.database_pool).await?;
   
-  // Grant access to the "slashstep.actions.get" action to the user.
+  // Grant access to the "actions.get" action to the user.
   let user = test_environment.create_random_user().await?;
   let session = test_environment.create_random_session(Some(&user.id)).await?;
   let json_web_token_private_key = get_json_web_token_private_key().await?;
   let session_token = session.generate_json_web_token(&json_web_token_private_key).await?;
-  let get_actions_action = Action::get_by_name("slashstep.actions.get", &test_environment.database_pool).await?;
+  let get_actions_action = Action::get_by_name("actions.get", &test_environment.database_pool).await?;
   AccessPolicy::create(&InitialAccessPolicyProperties {
     action_id: get_actions_action.id,
     permission_level: ActionPermissionLevel::User,
@@ -55,8 +55,8 @@ async fn verify_returned_action_list_without_query() -> Result<(), TestSlashstep
     ..Default::default()
   }, &test_environment.database_pool).await?;
 
-  // Grant access to the "slashstep.actions.list" action to the user.
-  let list_actions_action = Action::get_by_name("slashstep.actions.list", &test_environment.database_pool).await?;
+  // Grant access to the "actions.list" action to the user.
+  let list_actions_action = Action::get_by_name("actions.list", &test_environment.database_pool).await?;
   AccessPolicy::create(&InitialAccessPolicyProperties {
     action_id: list_actions_action.id,
     permission_level: ActionPermissionLevel::User,
@@ -113,12 +113,12 @@ async fn verify_returned_action_list_with_query() -> Result<(), TestSlashstepSer
   initialize_predefined_roles(&test_environment.database_pool).await?;
   initialize_predefined_configurations(&test_environment.database_pool).await?;
   
-  // Grant access to the "slashstep.actions.get" action to the user.
+  // Grant access to the "actions.get" action to the user.
   let user = test_environment.create_random_user().await?;
   let session = test_environment.create_random_session(Some(&user.id)).await?;
   let json_web_token_private_key = get_json_web_token_private_key().await?;
   let session_token = session.generate_json_web_token(&json_web_token_private_key).await?;
-  let get_actions_action = Action::get_by_name("slashstep.actions.get", &test_environment.database_pool).await?;
+  let get_actions_action = Action::get_by_name("actions.get", &test_environment.database_pool).await?;
   AccessPolicy::create(&InitialAccessPolicyProperties {
     action_id: get_actions_action.id,
     permission_level: ActionPermissionLevel::User,
@@ -129,8 +129,8 @@ async fn verify_returned_action_list_with_query() -> Result<(), TestSlashstepSer
     ..Default::default()
   }, &test_environment.database_pool).await?;
 
-  // Grant access to the "slashstep.actions.list" action to the user.
-  let list_actions_action = Action::get_by_name("slashstep.actions.list", &test_environment.database_pool).await?;
+  // Grant access to the "actions.list" action to the user.
+  let list_actions_action = Action::get_by_name("actions.list", &test_environment.database_pool).await?;
   AccessPolicy::create(&InitialAccessPolicyProperties {
     action_id: list_actions_action.id,
     permission_level: ActionPermissionLevel::User,
@@ -186,12 +186,12 @@ async fn verify_default_action_list_limit() -> Result<(), TestSlashstepServerErr
   initialize_predefined_roles(&test_environment.database_pool).await?;
   initialize_predefined_configurations(&test_environment.database_pool).await?;
   
-  // Grant access to the "slashstep.actions.get" action to the user.
+  // Grant access to the "actions.get" action to the user.
   let user = test_environment.create_random_user().await?;
   let session = test_environment.create_random_session(Some(&user.id)).await?;
   let json_web_token_private_key = get_json_web_token_private_key().await?;
   let session_token = session.generate_json_web_token(&json_web_token_private_key).await?;
-  let get_actions_action = Action::get_by_name("slashstep.actions.get", &test_environment.database_pool).await?;
+  let get_actions_action = Action::get_by_name("actions.get", &test_environment.database_pool).await?;
   AccessPolicy::create(&InitialAccessPolicyProperties {
     action_id: get_actions_action.id,
     permission_level: ActionPermissionLevel::User,
@@ -202,8 +202,8 @@ async fn verify_default_action_list_limit() -> Result<(), TestSlashstepServerErr
     ..Default::default()
   }, &test_environment.database_pool).await?;
 
-  // Grant access to the "slashstep.actions.list" action to the user.
-  let list_actions_action = Action::get_by_name("slashstep.actions.list", &test_environment.database_pool).await?;
+  // Grant access to the "actions.list" action to the user.
+  let list_actions_action = Action::get_by_name("actions.list", &test_environment.database_pool).await?;
   AccessPolicy::create(&InitialAccessPolicyProperties {
     action_id: list_actions_action.id,
     permission_level: ActionPermissionLevel::User,
@@ -254,12 +254,12 @@ async fn verify_maximum_action_list_limit() -> Result<(), TestSlashstepServerErr
   initialize_predefined_roles(&test_environment.database_pool).await?;
   initialize_predefined_configurations(&test_environment.database_pool).await?;
   
-  // Grant access to the "slashstep.actions.get" action to the user.
+  // Grant access to the "actions.get" action to the user.
   let user = test_environment.create_random_user().await?;
   let session = test_environment.create_random_session(Some(&user.id)).await?;
   let json_web_token_private_key = get_json_web_token_private_key().await?;
   let session_token = session.generate_json_web_token(&json_web_token_private_key).await?;
-  let get_actions_action = Action::get_by_name("slashstep.actions.get", &test_environment.database_pool).await?;
+  let get_actions_action = Action::get_by_name("actions.get", &test_environment.database_pool).await?;
   AccessPolicy::create(&InitialAccessPolicyProperties {
     action_id: get_actions_action.id,
     permission_level: ActionPermissionLevel::User,
@@ -270,8 +270,8 @@ async fn verify_maximum_action_list_limit() -> Result<(), TestSlashstepServerErr
     ..Default::default()
   }, &test_environment.database_pool).await?;
 
-  // Grant access to the "slashstep.actions.list" action to the user.
-  let list_actions_action = Action::get_by_name("slashstep.actions.list", &test_environment.database_pool).await?;
+  // Grant access to the "actions.list" action to the user.
+  let list_actions_action = Action::get_by_name("actions.list", &test_environment.database_pool).await?;
   AccessPolicy::create(&InitialAccessPolicyProperties {
     action_id: list_actions_action.id,
     permission_level: ActionPermissionLevel::User,
@@ -311,12 +311,12 @@ async fn verify_query_when_listing_actions() -> Result<(), TestSlashstepServerEr
   initialize_predefined_roles(&test_environment.database_pool).await?;
   initialize_predefined_configurations(&test_environment.database_pool).await?;
   
-  // Grant access to the "slashstep.actions.get" action to the user.
+  // Grant access to the "actions.get" action to the user.
   let user = test_environment.create_random_user().await?;
   let session = test_environment.create_random_session(Some(&user.id)).await?;
   let json_web_token_private_key = get_json_web_token_private_key().await?;
   let session_token = session.generate_json_web_token(&json_web_token_private_key).await?;
-  let get_actions_action = Action::get_by_name("slashstep.actions.get", &test_environment.database_pool).await?;
+  let get_actions_action = Action::get_by_name("actions.get", &test_environment.database_pool).await?;
   AccessPolicy::create(&InitialAccessPolicyProperties {
     action_id: get_actions_action.id,
     permission_level: ActionPermissionLevel::User,
@@ -327,8 +327,8 @@ async fn verify_query_when_listing_actions() -> Result<(), TestSlashstepServerEr
     ..Default::default()
   }, &test_environment.database_pool).await?;
 
-  // Grant access to the "slashstep.actions.list" action to the user.
-  let list_actions_action = Action::get_by_name("slashstep.actions.list", &test_environment.database_pool).await?;
+  // Grant access to the "actions.list" action to the user.
+  let list_actions_action = Action::get_by_name("actions.list", &test_environment.database_pool).await?;
   AccessPolicy::create(&InitialAccessPolicyProperties {
     action_id: list_actions_action.id,
     permission_level: ActionPermissionLevel::User,

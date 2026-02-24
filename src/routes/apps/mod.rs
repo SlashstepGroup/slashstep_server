@@ -51,14 +51,14 @@ pub struct AppWithClientSecret {
 
 pub async fn validate_app_name(name: &str, http_transaction: &HTTPTransaction, database_pool: &deadpool_postgres::Pool) -> Result<(), HTTPError> {
 
-  let allowed_name_regex_configuration = get_configuration_by_name("slashstep.apps.allowedNameRegex", http_transaction, database_pool).await?;
+  let allowed_name_regex_configuration = get_configuration_by_name("apps.allowedNameRegex", http_transaction, database_pool).await?;
   let allowed_name_regex_string = match allowed_name_regex_configuration.text_value.or(allowed_name_regex_configuration.default_text_value) {
 
     Some(allowed_name_regex_string) => allowed_name_regex_string,
 
     None => {
 
-      ServerLogEntry::warning("Missing value and default value for configuration slashstep.apps.allowedNameRegex. Using default regex pattern that allows any non-empty string as an app name. Consider setting a restrictive regex pattern in the configuration for better security.", Some(&http_transaction.id), database_pool).await.ok();
+      ServerLogEntry::warning("Missing value and default value for configuration apps.allowedNameRegex. Using default regex pattern that allows any non-empty string as an app name. Consider setting a restrictive regex pattern in the configuration for better security.", Some(&http_transaction.id), database_pool).await.ok();
       return Ok(());
 
     }
@@ -95,14 +95,14 @@ pub async fn validate_app_name(name: &str, http_transaction: &HTTPTransaction, d
 
 pub async fn validate_app_display_name(name: &str, http_transaction: &HTTPTransaction, database_pool: &deadpool_postgres::Pool) -> Result<(), HTTPError> {
 
-  let allowed_display_name_regex_configuration = get_configuration_by_name("slashstep.apps.allowedDisplayNameRegex", http_transaction, database_pool).await?;
+  let allowed_display_name_regex_configuration = get_configuration_by_name("apps.allowedDisplayNameRegex", http_transaction, database_pool).await?;
   let allowed_display_name_regex_string = match allowed_display_name_regex_configuration.text_value.or(allowed_display_name_regex_configuration.default_text_value) {
 
     Some(allowed_display_name_regex_string) => allowed_display_name_regex_string,
 
     None => {
 
-      ServerLogEntry::warning("Missing value and default value for configuration slashstep.apps.allowedDisplayNameRegex. Consider setting a regex pattern in the configuration for better security.", Some(&http_transaction.id), database_pool).await.ok();
+      ServerLogEntry::warning("Missing value and default value for configuration apps.allowedDisplayNameRegex. Consider setting a regex pattern in the configuration for better security.", Some(&http_transaction.id), database_pool).await.ok();
       return Ok(());
 
     }
@@ -139,7 +139,7 @@ pub async fn validate_app_display_name(name: &str, http_transaction: &HTTPTransa
 
 pub async fn validate_app_display_name_length(display_name: &str, http_transaction: &HTTPTransaction, database_pool: &deadpool_postgres::Pool) -> Result<(), HTTPError> {
 
-  let maximum_display_name_length_configuration = get_configuration_by_name("slashstep.apps.maximumDisplayNameLength", http_transaction, database_pool).await?;
+  let maximum_display_name_length_configuration = get_configuration_by_name("apps.maximumDisplayNameLength", http_transaction, database_pool).await?;
   let maximum_display_name_length = match maximum_display_name_length_configuration.number_value.or(maximum_display_name_length_configuration.default_number_value) {
 
     Some(maximum_display_name_length) => match maximum_display_name_length.to_usize() {
@@ -148,7 +148,7 @@ pub async fn validate_app_display_name_length(display_name: &str, http_transacti
 
       None => {
 
-        let http_error = HTTPError::InternalServerError(Some("Invalid number value for configuration slashstep.apps.maximumDisplayNameLength. The value must be a positive integer that can be represented as a usize.".to_string()));
+        let http_error = HTTPError::InternalServerError(Some("Invalid number value for configuration apps.maximumDisplayNameLength. The value must be a positive integer that can be represented as a usize.".to_string()));
         ServerLogEntry::from_http_error(&http_error, Some(&http_transaction.id), database_pool).await.ok();
         return Err(http_error);
 
@@ -158,7 +158,7 @@ pub async fn validate_app_display_name_length(display_name: &str, http_transacti
 
     None => {
 
-      ServerLogEntry::warning("Missing value and default value for configuration slashstep.apps.maximumDisplayNameLength. This is a security risk. Consider setting a restrictive maximum display name length in the configuration.", Some(&http_transaction.id), database_pool).await.ok();
+      ServerLogEntry::warning("Missing value and default value for configuration apps.maximumDisplayNameLength. This is a security risk. Consider setting a restrictive maximum display name length in the configuration.", Some(&http_transaction.id), database_pool).await.ok();
       return Ok(());
 
     }
@@ -181,7 +181,7 @@ pub async fn validate_app_display_name_length(display_name: &str, http_transacti
 
 pub async fn validate_app_name_length(name: &str, http_transaction: &HTTPTransaction, database_pool: &deadpool_postgres::Pool) -> Result<(), HTTPError> {
 
-  let maximum_name_length_configuration = get_configuration_by_name("slashstep.apps.maximumNameLength", http_transaction, database_pool).await?;
+  let maximum_name_length_configuration = get_configuration_by_name("apps.maximumNameLength", http_transaction, database_pool).await?;
   let maximum_name_length = match maximum_name_length_configuration.number_value.or(maximum_name_length_configuration.default_number_value) {
 
     Some(maximum_name_length) => match maximum_name_length.to_usize() {
@@ -190,7 +190,7 @@ pub async fn validate_app_name_length(name: &str, http_transaction: &HTTPTransac
 
       None => {
 
-        let http_error = HTTPError::InternalServerError(Some("Invalid number value for configuration slashstep.apps.maximumNameLength. The value must be a positive integer that can be represented as a usize.".to_string()));
+        let http_error = HTTPError::InternalServerError(Some("Invalid number value for configuration apps.maximumNameLength. The value must be a positive integer that can be represented as a usize.".to_string()));
         ServerLogEntry::from_http_error(&http_error, Some(&http_transaction.id), database_pool).await.ok();
         return Err(http_error);
 
@@ -200,7 +200,7 @@ pub async fn validate_app_name_length(name: &str, http_transaction: &HTTPTransac
 
     None => {
 
-      ServerLogEntry::warning("Missing value and default value for configuration slashstep.apps.maximumNameLength. This is a security risk. Consider setting a restrictive maximum name length in the configuration.", Some(&http_transaction.id), database_pool).await.ok();
+      ServerLogEntry::warning("Missing value and default value for configuration apps.maximumNameLength. This is a security risk. Consider setting a restrictive maximum name length in the configuration.", Some(&http_transaction.id), database_pool).await.ok();
       return Ok(());
 
     }
@@ -247,7 +247,7 @@ async fn handle_list_apps_request(
     None, 
     |query, database_pool, individual_principal| Box::new(App::count(query, database_pool, individual_principal)),
     |query, database_pool, individual_principal| Box::new(App::list(query, database_pool, individual_principal)),
-    "slashstep.apps.list", 
+    "apps.list", 
     DEFAULT_MAXIMUM_APP_LIST_LIMIT,
     "apps",
     "app"
@@ -279,7 +279,7 @@ async fn handle_create_app_request(
 
   // Make sure the authenticated_user can create apps for the target action log entry.
   let resource_hierarchy: ResourceHierarchy = vec![(AccessPolicyResourceType::Server, None)];
-  let create_apps_action = get_action_by_name("slashstep.apps.create", &http_transaction, &state.database_pool).await?;
+  let create_apps_action = get_action_by_name("apps.create", &http_transaction, &state.database_pool).await?;
   verify_delegate_permissions(authenticated_app_authorization.as_ref().map(|app_authorization| &app_authorization.id), &create_apps_action.id, &http_transaction.id, &ActionPermissionLevel::User, &state.database_pool).await?;
   let authenticated_principal = get_authenticated_principal(authenticated_user.as_ref(), authenticated_app.as_ref())?;
   verify_principal_permissions(&authenticated_principal, &create_apps_action, &resource_hierarchy, &http_transaction, &ActionPermissionLevel::User, &state.database_pool).await?;

@@ -48,7 +48,7 @@ async fn verify_returned_resource_by_id() -> Result<(), TestSlashstepServerError
   let session = test_environment.create_random_session(Some(&user.id)).await?;
   let json_web_token_private_key = get_json_web_token_private_key().await?;
   let session_token = session.generate_json_web_token(&json_web_token_private_key).await?;
-  let get_groups_action = Action::get_by_name("slashstep.groups.get", &test_environment.database_pool).await?;
+  let get_groups_action = Action::get_by_name("groups.get", &test_environment.database_pool).await?;
   test_environment.create_server_access_policy(&user.id, &get_groups_action.id, &ActionPermissionLevel::User).await?;
   
   let group = test_environment.create_random_group().await?;
@@ -208,8 +208,8 @@ async fn verify_not_found_when_getting_resource_by_id() -> Result<(), TestSlashs
 //   let json_web_token_private_key = get_json_web_token_private_key().await?;
 //   let session_token = session.generate_json_web_token(&json_web_token_private_key).await?;
 
-//   // Grant access to the "slashstep.groups.delete" action to the user.
-//   let delete_fields_action = Action::get_by_name("slashstep.groups.delete", &test_environment.database_pool).await?;
+//   // Grant access to the "groups.delete" action to the user.
+//   let delete_fields_action = Action::get_by_name("groups.delete", &test_environment.database_pool).await?;
 //   AccessPolicy::create(&InitialAccessPolicyProperties {
 //     action_id: delete_fields_action.id,
 //     permission_level: ActionPermissionLevel::User,
@@ -382,7 +382,7 @@ async fn verify_not_found_when_getting_resource_by_id() -> Result<(), TestSlashs
 //   let session = test_environment.create_random_session(Some(&user.id)).await?;
 //   let json_web_token_private_key = get_json_web_token_private_key().await?;
 //   let session_token = session.generate_json_web_token(&json_web_token_private_key).await?;
-//   let update_fields_action = Action::get_by_name("slashstep.groups.update", &test_environment.database_pool).await?;
+//   let update_fields_action = Action::get_by_name("groups.update", &test_environment.database_pool).await?;
 //   AccessPolicy::create(&InitialAccessPolicyProperties {
 //     action_id: update_fields_action.id,
 //     permission_level: ActionPermissionLevel::Editor,

@@ -18,7 +18,7 @@ Returns a list of access policies. Authentication may be required if anonymous u
 | `limit` | The maximum number of results to return. | No |
 
 ### Required permissions
-* [`slashstep.accessPolicies.list`](/src/resources/AccessPolicy/README.md#slashstepaccesspolicieslist) on the server level.
+* [`accessPolicies.list`](/src/resources/AccessPolicy/README.md#slashstepaccesspolicieslist) on the server level.
 
 ### Status codes
 | Status code | Description |
@@ -41,7 +41,7 @@ None.
 TBA.
 
 ### Required permissions
-* [`slashstep.accessPolicies.get`](/src/resources/AccessPolicy/README.md#slashstepaccesspoliciesget) on the access policy level or inherited from a higher level.
+* [`accessPolicies.get`](/src/resources/AccessPolicy/README.md#slashstepaccesspoliciesget) on the access policy level or inherited from a higher level.
 
 ## Update an access policy
 | Method | Endpoint |
@@ -49,7 +49,7 @@ TBA.
 | PATCH | `/access-policies/:accessPolicyID` |
 
 ### Required permissions
-* [`slashstep.accessPolicies.update`](/src/resources/AccessPolicy/README.md#slashstepaccesspoliciesupdate) on the access policy level or inherited from a higher level.
+* [`accessPolicies.update`](/src/resources/AccessPolicy/README.md#slashstepaccesspoliciesupdate) on the access policy level or inherited from a higher level.
 
 ## Delete an access policy
 | Method | Endpoint |
@@ -57,4 +57,4 @@ TBA.
 | DELETE | `/access-policies/:accessPolicyID` |
 
 ### Required permissions
-* [`slashstep.accessPolicies.delete`](/src/resources/AccessPolicy/README.md#slashstepaccesspoliciesdelete) on the access policy level or inherited from a higher level.
+* [`accessPolicies.delete`](/src/resources/AccessPolicy/README.md#slashstepaccesspoliciesdelete) on the access policy level or inherited from a higher level.

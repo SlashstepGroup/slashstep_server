@@ -35,16 +35,16 @@ async fn verify_returned_list_without_query() -> Result<(), TestSlashstepServerE
   initialize_predefined_roles(&test_environment.database_pool).await?;
   initialize_predefined_configurations(&test_environment.database_pool).await?;
 
-  // Grant access to the "slashstep.fields.get" action to the user.
+  // Grant access to the "fields.get" action to the user.
   let user = test_environment.create_random_user().await?;
   let session = test_environment.create_random_session(Some(&user.id)).await?;
   let json_web_token_private_key = get_json_web_token_private_key().await?;
   let session_token = session.generate_json_web_token(&json_web_token_private_key).await?;
-  let get_fields_action = Action::get_by_name("slashstep.fields.get", &test_environment.database_pool).await?;
+  let get_fields_action = Action::get_by_name("fields.get", &test_environment.database_pool).await?;
   test_environment.create_server_access_policy(&user.id, &get_fields_action.id, &ActionPermissionLevel::User).await?;
 
-  // Grant access to the "slashstep.fields.list" action to the user.
-  let list_fields_action = Action::get_by_name("slashstep.fields.list", &test_environment.database_pool).await?;
+  // Grant access to the "fields.list" action to the user.
+  let list_fields_action = Action::get_by_name("fields.list", &test_environment.database_pool).await?;
   test_environment.create_server_access_policy(&user.id, &list_fields_action.id, &ActionPermissionLevel::User).await?;
 
   // Create a dummy delegation policy.
@@ -96,16 +96,16 @@ async fn verify_returned_list_with_query() -> Result<(), TestSlashstepServerErro
   initialize_predefined_roles(&test_environment.database_pool).await?;
   initialize_predefined_configurations(&test_environment.database_pool).await?;
   
-  // Grant access to the "slashstep.apps.get" action to the user.
+  // Grant access to the "apps.get" action to the user.
   let user = test_environment.create_random_user().await?;
   let session = test_environment.create_random_session(Some(&user.id)).await?;
   let json_web_token_private_key = get_json_web_token_private_key().await?;
   let session_token = session.generate_json_web_token(&json_web_token_private_key).await?;
-  let get_fields_action = Action::get_by_name("slashstep.fields.get", &test_environment.database_pool).await?;
+  let get_fields_action = Action::get_by_name("fields.get", &test_environment.database_pool).await?;
   test_environment.create_server_access_policy(&user.id, &get_fields_action.id, &ActionPermissionLevel::User).await?;
 
-  // Grant access to the "slashstep.apps.list" action to the user.
-  let list_fields_action = Action::get_by_name("slashstep.fields.list", &test_environment.database_pool).await?;
+  // Grant access to the "apps.list" action to the user.
+  let list_fields_action = Action::get_by_name("fields.list", &test_environment.database_pool).await?;
   test_environment.create_server_access_policy(&user.id, &list_fields_action.id, &ActionPermissionLevel::User).await?;
 
   // Create a dummy delegation policy.
@@ -160,16 +160,16 @@ async fn verify_default_list_limit() -> Result<(), TestSlashstepServerError> {
   initialize_predefined_roles(&test_environment.database_pool).await?;
   initialize_predefined_configurations(&test_environment.database_pool).await?;
   
-  // Grant access to the "slashstep.fields.get" action to the user.
+  // Grant access to the "fields.get" action to the user.
   let user = test_environment.create_random_user().await?;
   let session = test_environment.create_random_session(Some(&user.id)).await?;
   let json_web_token_private_key = get_json_web_token_private_key().await?;
   let session_token = session.generate_json_web_token(&json_web_token_private_key).await?;
-  let get_fields_action = Action::get_by_name("slashstep.fields.get", &test_environment.database_pool).await?;
+  let get_fields_action = Action::get_by_name("fields.get", &test_environment.database_pool).await?;
   test_environment.create_server_access_policy(&user.id, &get_fields_action.id, &ActionPermissionLevel::User).await?;
 
-  // Grant access to the "slashstep.fields.list" action to the user.
-  let list_fields_action = Action::get_by_name("slashstep.fields.list", &test_environment.database_pool).await?;
+  // Grant access to the "fields.list" action to the user.
+  let list_fields_action = Action::get_by_name("fields.list", &test_environment.database_pool).await?;
   test_environment.create_server_access_policy(&user.id, &list_fields_action.id, &ActionPermissionLevel::User).await?;
 
   // Create dummy delegation policies.
@@ -212,16 +212,16 @@ async fn verify_maximum_list_limit() -> Result<(), TestSlashstepServerError> {
   initialize_predefined_roles(&test_environment.database_pool).await?;
   initialize_predefined_configurations(&test_environment.database_pool).await?;
   
-  // Grant access to the "slashstep.fields.get" action to the user.
+  // Grant access to the "fields.get" action to the user.
   let user = test_environment.create_random_user().await?;
   let session = test_environment.create_random_session(Some(&user.id)).await?;
   let json_web_token_private_key = get_json_web_token_private_key().await?;
   let session_token = session.generate_json_web_token(&json_web_token_private_key).await?;
-  let get_fields_action = Action::get_by_name("slashstep.fields.get", &test_environment.database_pool).await?;
+  let get_fields_action = Action::get_by_name("fields.get", &test_environment.database_pool).await?;
   test_environment.create_server_access_policy(&user.id, &get_fields_action.id, &ActionPermissionLevel::User).await?;
 
-  // Grant access to the "slashstep.apps.list" action to the user.
-  let list_fields_action = Action::get_by_name("slashstep.fields.list", &test_environment.database_pool).await?;
+  // Grant access to the "apps.list" action to the user.
+  let list_fields_action = Action::get_by_name("fields.list", &test_environment.database_pool).await?;
   test_environment.create_server_access_policy(&user.id, &list_fields_action.id, &ActionPermissionLevel::User).await?;
 
   // Set up the server and send the request.
@@ -253,16 +253,16 @@ async fn verify_query_validity() -> Result<(), TestSlashstepServerError> {
   initialize_predefined_roles(&test_environment.database_pool).await?;
   initialize_predefined_configurations(&test_environment.database_pool).await?;
   
-  // Grant access to the "slashstep.fields.get" action to the user.
+  // Grant access to the "fields.get" action to the user.
   let user = test_environment.create_random_user().await?;
   let session = test_environment.create_random_session(Some(&user.id)).await?;
   let json_web_token_private_key = get_json_web_token_private_key().await?;
   let session_token = session.generate_json_web_token(&json_web_token_private_key).await?;
-  let get_fields_action = Action::get_by_name("slashstep.fields.get", &test_environment.database_pool).await?;
+  let get_fields_action = Action::get_by_name("fields.get", &test_environment.database_pool).await?;
   test_environment.create_server_access_policy(&user.id, &get_fields_action.id, &ActionPermissionLevel::User).await?;
 
-  // Grant access to the "slashstep.fields.list" action to the user.
-  let list_fields_action = Action::get_by_name("slashstep.fields.list", &test_environment.database_pool).await?;
+  // Grant access to the "fields.list" action to the user.
+  let list_fields_action = Action::get_by_name("fields.list", &test_environment.database_pool).await?;
   test_environment.create_server_access_policy(&user.id, &list_fields_action.id, &ActionPermissionLevel::User).await?;
 
   // Set up the server and send the request.

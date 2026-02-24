@@ -23,7 +23,7 @@ pub const UUID_QUERY_KEYS: &[&str] = &[
 ];
 pub const RESOURCE_NAME: &str = "ServerLogEntry";
 pub const DATABASE_TABLE_NAME: &str = "server_log_entries";
-pub const GET_RESOURCE_ACTION_NAME: &str = "slashstep.serverLogEntries.get";
+pub const GET_RESOURCE_ACTION_NAME: &str = "serverLogEntries.get";
 
 #[derive(Debug, ToSql, FromSql, Copy, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[postgres(name = "server_log_entry_level")]
