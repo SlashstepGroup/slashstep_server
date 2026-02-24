@@ -1,6 +1,7 @@
 name: Run Rust tests
 on:
   pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
     paths: 
       - src/**
       - Cargo.toml
@@ -20,6 +21,7 @@ jobs:
     name: Test pull request
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    if: github.event.pull_request.draft == false
     steps:
       - uses: actions/checkout@v6.0.0
       - uses: actions-rust-lang/setup-rust-toolchain@v1
