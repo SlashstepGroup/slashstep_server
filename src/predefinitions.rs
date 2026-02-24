@@ -889,6 +889,13 @@ pub async fn initialize_predefined_configurations(database_pool: &deadpool_postg
 
   let predefined_configurations: Vec<InitialConfigurationProperties> = vec![
     InitialConfigurationProperties {
+      name: "slashstep.actions.maximumNameLength".to_string(),
+      description: Some("The maximum length of action names in characters. Slashstep Group recommends keeping this value at a reasonable length to maintain performance.".to_string()),
+      value_type: ConfigurationValueType::Number,
+      default_number_value: Some(Decimal::from(128 as i64)),
+      ..Default::default()
+    },
+    InitialConfigurationProperties {
       name: "slashstep.actionLogEntries.shouldExpire".to_string(),
       description: Some("Whether action log entries should expire after a certain amount of time. If true, action log entries will expire after the amount of time specified in the \"slashstep.actionLogEntries.defaultMaximumLifetimeMilliseconds\" configuration.".to_string()),
       value_type: ConfigurationValueType::Boolean,

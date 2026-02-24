@@ -23,7 +23,7 @@ use reqwest::StatusCode;
 use rust_decimal::prelude::ToPrimitive;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
-use crate::{AppState, HTTPError, middleware::{authentication_middleware, http_request_middleware}, resources::{ResourceError, access_policy::{AccessPolicyResourceType, ActionPermissionLevel, ResourceHierarchy}, action_log_entry::{ActionLogEntry, ActionLogEntryActorType, ActionLogEntryTargetResourceType, InitialActionLogEntryProperties}, app::{App, AppClientType, AppParentResourceType, DEFAULT_MAXIMUM_APP_LIST_LIMIT, InitialAppProperties}, app_authorization::AppAuthorization, configuration::Configuration, http_transaction::HTTPTransaction, server_log_entry::ServerLogEntry, user::User}, utilities::{reusable_route_handlers::{ResourceListQueryParameters, list_resources}, route_handler_utilities::{AuthenticatedPrincipal, get_action_by_id, get_action_by_name, get_action_log_entry_expiration_timestamp, get_authenticated_principal, get_request_body_without_json_rejection, verify_delegate_permissions, verify_principal_permissions}}};
+use crate::{AppState, HTTPError, middleware::{authentication_middleware, http_request_middleware}, resources::{ResourceError, access_policy::{AccessPolicyResourceType, ActionPermissionLevel, ResourceHierarchy}, action_log_entry::{ActionLogEntry, ActionLogEntryActorType, ActionLogEntryTargetResourceType, InitialActionLogEntryProperties}, app::{App, AppClientType, AppParentResourceType, DEFAULT_MAXIMUM_APP_LIST_LIMIT, InitialAppProperties}, app_authorization::AppAuthorization, configuration::Configuration, http_transaction::HTTPTransaction, server_log_entry::ServerLogEntry, user::User}, utilities::{reusable_route_handlers::{ResourceListQueryParameters, list_resources}, route_handler_utilities::{AuthenticatedPrincipal, get_action_by_id, get_action_by_name, get_action_log_entry_expiration_timestamp, get_authenticated_principal, get_configuration_by_name, get_request_body_without_json_rejection, verify_delegate_permissions, verify_principal_permissions}}};
 
 #[derive(Debug, Serialize, Deserialize, Default)]
 pub struct InitialAppPropertiesWithoutClientSecretHash {
@@ -51,27 +51,7 @@ pub struct AppWithClientSecret {
 
 pub async fn validate_app_name(name: &str, http_transaction: &HTTPTransaction, database_pool: &deadpool_postgres::Pool) -> Result<(), HTTPError> {
 
-  ServerLogEntry::trace("Getting allowed name regex configuration...", Some(&http_transaction.id), database_pool).await.ok();
-  let allowed_name_regex_configuration = match Configuration::get_by_name("slashstep.apps.allowedNameRegex", database_pool).await {
-
-    Ok(configuration) => configuration,
-
-    Err(error) => {
-
-      let http_error = match error {
-
-        ResourceError::NotFoundError(_) => HTTPError::InternalServerError(Some("Missing configuration for slashstep.apps.allowedNameRegex. It may have been deleted by a user or an app. Restart the server to restore this configuration.".to_string())),
-
-        _ => HTTPError::InternalServerError(Some(format!("Failed to get configuration for validating app names: {:?}", error)))
-
-      };
-      ServerLogEntry::from_http_error(&http_error, Some(&http_transaction.id), database_pool).await.ok();
-      return Err(http_error)
-
-    }
-
-  };
-
+  let allowed_name_regex_configuration = get_configuration_by_name("slashstep.apps.allowedNameRegex", http_transaction, database_pool).await?;
   let allowed_name_regex_string = match allowed_name_regex_configuration.text_value.or(allowed_name_regex_configuration.default_text_value) {
 
     Some(allowed_name_regex_string) => allowed_name_regex_string,
@@ -115,27 +95,7 @@ pub async fn validate_app_name(name: &str, http_transaction: &HTTPTransaction, d
 
 pub async fn validate_app_display_name(name: &str, http_transaction: &HTTPTransaction, database_pool: &deadpool_postgres::Pool) -> Result<(), HTTPError> {
 
-  ServerLogEntry::trace("Getting allowed app display name regex configuration...", Some(&http_transaction.id), database_pool).await.ok();
-  let allowed_display_name_regex_configuration = match Configuration::get_by_name("slashstep.apps.allowedDisplayNameRegex", database_pool).await {
-
-    Ok(configuration) => configuration,
-
-    Err(error) => {
-
-      let http_error = match error {
-
-        ResourceError::NotFoundError(_) => HTTPError::InternalServerError(Some("Missing configuration for slashstep.apps.allowedDisplayNameRegex. It may have been deleted by a user or an app. Restart the server to restore this configuration.".to_string())),
-
-        _ => HTTPError::InternalServerError(Some(format!("Failed to get configuration for validating app display names: {:?}", error)))
-
-      };
-      ServerLogEntry::from_http_error(&http_error, Some(&http_transaction.id), database_pool).await.ok();
-      return Err(http_error)
-
-    }
-
-  };
-
+  let allowed_display_name_regex_configuration = get_configuration_by_name("slashstep.apps.allowedDisplayNameRegex", http_transaction, database_pool).await?;
   let allowed_display_name_regex_string = match allowed_display_name_regex_configuration.text_value.or(allowed_display_name_regex_configuration.default_text_value) {
 
     Some(allowed_display_name_regex_string) => allowed_display_name_regex_string,
@@ -179,27 +139,7 @@ pub async fn validate_app_display_name(name: &str, http_transaction: &HTTPTransa
 
 pub async fn validate_app_display_name_length(display_name: &str, http_transaction: &HTTPTransaction, database_pool: &deadpool_postgres::Pool) -> Result<(), HTTPError> {
 
-  ServerLogEntry::trace("Getting allowed display name length configuration...", Some(&http_transaction.id), database_pool).await.ok();
-  let maximum_display_name_length_configuration = match Configuration::get_by_name("slashstep.apps.maximumDisplayNameLength", database_pool).await {
-
-    Ok(configuration) => configuration,
-
-    Err(error) => {
-
-      let http_error = match error {
-
-        ResourceError::NotFoundError(_) => HTTPError::InternalServerError(Some("Missing configuration for slashstep.apps.maximumDisplayNameLength. It may have been deleted by a user or an app. Restart the server to restore this configuration.".to_string())),
-
-        _ => HTTPError::InternalServerError(Some(format!("Failed to get configuration for validating app display names: {:?}", error)))
-
-      };
-      ServerLogEntry::from_http_error(&http_error, Some(&http_transaction.id), database_pool).await.ok();
-      return Err(http_error)
-
-    }
-
-  };
-
+  let maximum_display_name_length_configuration = get_configuration_by_name("slashstep.apps.maximumDisplayNameLength", http_transaction, database_pool).await?;
   let maximum_display_name_length = match maximum_display_name_length_configuration.number_value.or(maximum_display_name_length_configuration.default_number_value) {
 
     Some(maximum_display_name_length) => match maximum_display_name_length.to_usize() {
@@ -241,27 +181,7 @@ pub async fn validate_app_display_name_length(display_name: &str, http_transacti
 
 pub async fn validate_app_name_length(name: &str, http_transaction: &HTTPTransaction, database_pool: &deadpool_postgres::Pool) -> Result<(), HTTPError> {
 
-  ServerLogEntry::trace("Getting allowed name length configuration...", Some(&http_transaction.id), database_pool).await.ok();
-  let maximum_name_length_configuration = match Configuration::get_by_name("slashstep.apps.maximumNameLength", database_pool).await {
-
-    Ok(configuration) => configuration,
-
-    Err(error) => {
-
-      let http_error = match error {
-
-        ResourceError::NotFoundError(_) => HTTPError::InternalServerError(Some("Missing configuration for slashstep.apps.maximumNameLength. It may have been deleted by a user or an app. Restart the server to restore this configuration.".to_string())),
-
-        _ => HTTPError::InternalServerError(Some(format!("Failed to get configuration for validating app names: {:?}", error)))
-
-      };
-      ServerLogEntry::from_http_error(&http_error, Some(&http_transaction.id), database_pool).await.ok();
-      return Err(http_error)
-
-    }
-
-  };
-
+  let maximum_name_length_configuration = get_configuration_by_name("slashstep.apps.maximumNameLength", http_transaction, database_pool).await?;
   let maximum_name_length = match maximum_name_length_configuration.number_value.or(maximum_name_length_configuration.default_number_value) {
 
     Some(maximum_name_length) => match maximum_name_length.to_usize() {
