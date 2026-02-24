@@ -45,7 +45,7 @@ async fn handle_list_delegation_policies_request(
     None, 
     |query, database_pool, individual_principal| Box::new(DelegationPolicy::count(query, database_pool, individual_principal)),
     |query, database_pool, individual_principal| Box::new(DelegationPolicy::list(query, database_pool, individual_principal)),
-    "slashstep.delegationPolicies.list", 
+    "delegationPolicies.list", 
     DEFAULT_MAXIMUM_RESOURCE_LIST_LIMIT,
     "delegation policies",
     "delegation policy"

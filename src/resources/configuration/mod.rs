@@ -23,7 +23,7 @@ pub const UUID_QUERY_KEYS: &[&str] = &[
 ];
 pub const RESOURCE_NAME: &str = "Configuration";
 pub const DATABASE_TABLE_NAME: &str = "configurations";
-pub const GET_RESOURCE_ACTION_NAME: &str = "slashstep.configurations.get";
+pub const GET_RESOURCE_ACTION_NAME: &str = "configurations.get";
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default, ToSql, FromSql, EnumIter)]
 #[postgres(name = "configuration_value_type")]

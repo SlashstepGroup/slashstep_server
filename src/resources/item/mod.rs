@@ -25,7 +25,7 @@ pub const UUID_QUERY_KEYS: &[&str] = &[
 ];
 pub const RESOURCE_NAME: &str = "Item";
 pub const DATABASE_TABLE_NAME: &str = "items";
-pub const GET_RESOURCE_ACTION_NAME: &str = "slashstep.items.get";
+pub const GET_RESOURCE_ACTION_NAME: &str = "items.get";
 
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct InitialItemProperties {

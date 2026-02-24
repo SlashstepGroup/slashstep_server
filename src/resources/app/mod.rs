@@ -26,7 +26,7 @@ pub const UUID_QUERY_KEYS: &[&str] = &[
 ];
 pub const RESOURCE_NAME: &str = "App";
 pub const DATABASE_TABLE_NAME: &str = "apps";
-pub const GET_RESOURCE_ACTION_NAME: &str = "slashstep.apps.get";
+pub const GET_RESOURCE_ACTION_NAME: &str = "apps.get";
 
 #[derive(Debug, PartialEq, Eq, ToSql, FromSql, Clone, Serialize, Deserialize, Default)]
 #[postgres(name = "app_client_type")]

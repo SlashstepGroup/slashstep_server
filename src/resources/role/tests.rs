@@ -241,11 +241,11 @@ async fn verify_list_resources_without_query_and_filter_based_on_requestor_permi
 
   }
 
-  // Get the "slashstep.roles.get" action one time.
+  // Get the "roles.get" action one time.
   let user = test_environment.create_random_user().await?;
   let get_roles_action = Action::get_by_name(GET_RESOURCE_ACTION_NAME, &test_environment.database_pool).await?;
 
-  // Grant access to the "slashstep.roles.get" action to the user for half of the actions.
+  // Grant access to the "roles.get" action to the user for half of the actions.
   let allowed_resource_count = current_resources.len() / 2;
   let mut allowed_resources = Vec::new();
   for index in 0..allowed_resource_count {

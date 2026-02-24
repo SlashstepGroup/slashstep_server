@@ -25,7 +25,7 @@ pub const UUID_QUERY_KEYS: &[&str] = &[
 ];
 pub const RESOURCE_NAME: &str = "View";
 pub const DATABASE_TABLE_NAME: &str = "views";
-pub const GET_RESOURCE_ACTION_NAME: &str = "slashstep.views.get";
+pub const GET_RESOURCE_ACTION_NAME: &str = "views.get";
 
 #[derive(Debug, Clone, Serialize, Deserialize, FromSql, ToSql, Default, PartialEq, Eq)]
 #[postgres(name = "view_type")]

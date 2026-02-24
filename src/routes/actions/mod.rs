@@ -46,7 +46,7 @@ async fn handle_list_actions_request(
     None, 
     |query, database_pool, individual_principal| Box::new(Action::count(query, database_pool, individual_principal)),
     |query, database_pool, individual_principal| Box::new(Action::list(query, database_pool, individual_principal)),
-    "slashstep.actions.list", 
+    "actions.list", 
     DEFAULT_MAXIMUM_ACTION_LIST_LIMIT,
     "actions",
     "action"

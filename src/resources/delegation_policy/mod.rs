@@ -25,7 +25,7 @@ pub const UUID_QUERY_KEYS: &[&str] = &[
 ];
 pub const RESOURCE_NAME: &str = "DelegationPolicy";
 pub const DATABASE_TABLE_NAME: &str = "delegation_policies";
-pub const GET_RESOURCE_ACTION_NAME: &str = "slashstep.delegationPolicies.get";
+pub const GET_RESOURCE_ACTION_NAME: &str = "delegationPolicies.get";
 
 /// A piece of information that defines the maximum level of access that a delgate can use on behalf of a principal.
 #[derive(Debug, Serialize, Deserialize, Clone)]

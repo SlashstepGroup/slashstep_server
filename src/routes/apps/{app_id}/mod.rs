@@ -46,7 +46,7 @@ async fn handle_get_app_request(
   let http_transaction = http_transaction.clone();
   let target_app = get_app_by_id(&app_id, &http_transaction, &state.database_pool).await?;
   let resource_hierarchy = get_resource_hierarchy(&target_app, &AccessPolicyResourceType::App, &target_app.id, &http_transaction, &state.database_pool).await?;
-  let get_apps_action = get_action_by_name("slashstep.apps.get", &http_transaction, &state.database_pool).await?;
+  let get_apps_action = get_action_by_name("apps.get", &http_transaction, &state.database_pool).await?;
   verify_delegate_permissions(authenticated_app_authorization.as_ref().map(|app_authorization| &app_authorization.id), &get_apps_action.id, &http_transaction.id, &ActionPermissionLevel::User, &state.database_pool).await?;
   let authenticated_principal = get_authenticated_principal(authenticated_user.as_ref(), authenticated_app.as_ref())?;
   verify_principal_permissions(&authenticated_principal, &get_apps_action, &resource_hierarchy, &http_transaction, &ActionPermissionLevel::User, &state.database_pool).await?;
@@ -91,7 +91,7 @@ async fn handle_delete_app_request(
     Extension(authenticated_app_authorization),
     Some(&AccessPolicyResourceType::App),
     &app_id, 
-    "slashstep.apps.delete",
+    "apps.delete",
     "app",
     &ActionLogEntryTargetResourceType::App,
     |app_id, database_pool| Box::new(App::get_by_id(app_id, database_pool))
@@ -147,7 +147,7 @@ async fn handle_patch_app_request(
 
   let original_target_app = get_app_by_id(&app_id, &http_transaction, &state.database_pool).await?;
   let resource_hierarchy = get_resource_hierarchy(&original_target_app, &AccessPolicyResourceType::App, &original_target_app.id, &http_transaction, &state.database_pool).await?;
-  let update_access_policy_action = get_action_by_name("slashstep.apps.update", &http_transaction, &state.database_pool).await?;
+  let update_access_policy_action = get_action_by_name("apps.update", &http_transaction, &state.database_pool).await?;
   verify_delegate_permissions(authenticated_app_authorization.as_ref().map(|app_authorization| &app_authorization.id), &update_access_policy_action.id, &http_transaction.id, &ActionPermissionLevel::User, &state.database_pool).await?;
   let authenticated_principal = get_authenticated_principal(authenticated_user.as_ref(), authenticated_app.as_ref())?;
   verify_principal_permissions(&authenticated_principal, &update_access_policy_action, &resource_hierarchy, &http_transaction, &ActionPermissionLevel::User, &state.database_pool).await?;

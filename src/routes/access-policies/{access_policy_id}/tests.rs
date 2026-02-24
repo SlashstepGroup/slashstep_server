@@ -49,7 +49,7 @@ async fn verify_returned_access_policy_by_id() -> Result<(), TestSlashstepServer
   let session = test_environment.create_random_session(Some(&user.id)).await?;
   let json_web_token_private_key = get_json_web_token_private_key().await?;
   let session_token = session.generate_json_web_token(&json_web_token_private_key).await?;
-  let get_access_policies_action = Action::get_by_name("slashstep.accessPolicies.get", &test_environment.database_pool).await?;
+  let get_access_policies_action = Action::get_by_name("accessPolicies.get", &test_environment.database_pool).await?;
   let access_policy_properties = InitialAccessPolicyProperties {
     action_id: get_access_policies_action.id,
     permission_level: ActionPermissionLevel::User,
@@ -231,7 +231,7 @@ async fn verify_successful_deletion_when_deleting_access_policy_by_id() -> Resul
   let session = test_environment.create_random_session(Some(&user.id)).await?;
   let json_web_token_private_key = get_json_web_token_private_key().await?;
   let session_token = session.generate_json_web_token(&json_web_token_private_key).await?;
-  let delete_access_policies_action = Action::get_by_name("slashstep.accessPolicies.delete", &test_environment.database_pool).await?;
+  let delete_access_policies_action = Action::get_by_name("accessPolicies.delete", &test_environment.database_pool).await?;
   let access_policy_properties = InitialAccessPolicyProperties {
     action_id: delete_access_policies_action.id,
     permission_level: ActionPermissionLevel::Editor,
@@ -399,7 +399,7 @@ async fn verify_successful_patch_access_policy_by_id() -> Result<(), TestSlashst
   let session = test_environment.create_random_session(Some(&user.id)).await?;
   let json_web_token_private_key = get_json_web_token_private_key().await?;
   let session_token = session.generate_json_web_token(&json_web_token_private_key).await?;
-  let get_access_policies_action = Action::get_by_name("slashstep.accessPolicies.update", &test_environment.database_pool).await?;
+  let get_access_policies_action = Action::get_by_name("accessPolicies.update", &test_environment.database_pool).await?;
   let access_policy_properties = InitialAccessPolicyProperties {
     action_id: get_access_policies_action.id,
     permission_level: ActionPermissionLevel::Editor,
@@ -581,7 +581,7 @@ async fn verify_authentication_when_patching_access_policy_by_id() -> Result<(),
   let test_server = TestServer::new(router)?;
   
   let user = test_environment.create_random_user().await?;
-  let get_access_policies_action = Action::get_by_name("slashstep.accessPolicies.update", &test_environment.database_pool).await?;
+  let get_access_policies_action = Action::get_by_name("accessPolicies.update", &test_environment.database_pool).await?;
   let access_policy_properties = InitialAccessPolicyProperties {
     action_id: get_access_policies_action.id,
     permission_level: ActionPermissionLevel::Editor,
@@ -628,7 +628,7 @@ async fn verify_permission_when_patching_access_policy() -> Result<(), TestSlash
   let session = test_environment.create_random_session(Some(&user.id)).await?;
   let json_web_token_private_key = get_json_web_token_private_key().await?;
   let session_token = session.generate_json_web_token(&json_web_token_private_key).await?;
-  let update_access_policies_action = Action::get_by_name("slashstep.accessPolicies.update", &test_environment.database_pool).await?;
+  let update_access_policies_action = Action::get_by_name("accessPolicies.update", &test_environment.database_pool).await?;
   let access_policy_properties = InitialAccessPolicyProperties {
     action_id: update_access_policies_action.id,
     permission_level: ActionPermissionLevel::None,

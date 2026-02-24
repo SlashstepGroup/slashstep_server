@@ -49,7 +49,7 @@ async fn verify_returned_app_by_id() -> Result<(), TestSlashstepServerError> {
   let session = test_environment.create_random_session(Some(&user.id)).await?;
   let json_web_token_private_key = get_json_web_token_private_key().await?;
   let session_token = session.generate_json_web_token(&json_web_token_private_key).await?;
-  let get_apps_action = Action::get_by_name("slashstep.apps.get", &test_environment.database_pool).await?;
+  let get_apps_action = Action::get_by_name("apps.get", &test_environment.database_pool).await?;
   AccessPolicy::create(&InitialAccessPolicyProperties {
     action_id: get_apps_action.id,
     permission_level: ActionPermissionLevel::User,
@@ -220,8 +220,8 @@ async fn verify_successful_deletion_when_deleting_by_id() -> Result<(), TestSlas
   let json_web_token_private_key = get_json_web_token_private_key().await?;
   let session_token = session.generate_json_web_token(&json_web_token_private_key).await?;
 
-  // Grant access to the "slashstep.apps.delete" action to the user.
-  let delete_apps_action = Action::get_by_name("slashstep.apps.delete", &test_environment.database_pool).await?;
+  // Grant access to the "apps.delete" action to the user.
+  let delete_apps_action = Action::get_by_name("apps.delete", &test_environment.database_pool).await?;
   AccessPolicy::create(&InitialAccessPolicyProperties {
     action_id: delete_apps_action.id,
     permission_level: ActionPermissionLevel::User,
@@ -398,7 +398,7 @@ async fn verify_successful_patch_by_id() -> Result<(), TestSlashstepServerError>
   let session = test_environment.create_random_session(Some(&user.id)).await?;
   let json_web_token_private_key = get_json_web_token_private_key().await?;
   let session_token = session.generate_json_web_token(&json_web_token_private_key).await?;
-  let update_apps_action = Action::get_by_name("slashstep.apps.update", &test_environment.database_pool).await?;
+  let update_apps_action = Action::get_by_name("apps.update", &test_environment.database_pool).await?;
   AccessPolicy::create(&InitialAccessPolicyProperties {
     action_id: update_apps_action.id,
     permission_level: ActionPermissionLevel::Editor,

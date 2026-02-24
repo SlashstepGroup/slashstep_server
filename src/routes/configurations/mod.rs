@@ -45,7 +45,7 @@ async fn handle_list_configurations_request(
     None, 
     |query, database_pool, individual_principal| Box::new(Configuration::count(query, database_pool, individual_principal)),
     |query, database_pool, individual_principal| Box::new(Configuration::list(query, database_pool, individual_principal)),
-    "slashstep.configurations.list", 
+    "configurations.list", 
     configuration::DEFAULT_MAXIMUM_RESOURCE_LIST_LIMIT,
     "configurations",
     "configuration"

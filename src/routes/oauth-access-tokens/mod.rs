@@ -433,7 +433,7 @@ pub async fn create_app_authorization(oauth_authorization: &OAuthAuthorization, 
 
   };
 
-  let create_app_authorizations_action = match get_action_by_name("slashstep.appAuthorizations.create", &http_transaction, &database_pool).await {
+  let create_app_authorizations_action = match get_action_by_name("appAuthorizations.create", &http_transaction, &database_pool).await {
 
     Ok(create_app_authorizations_action) => create_app_authorizations_action,
 
@@ -545,7 +545,7 @@ pub async fn delete_oauth_authorization(oauth_authorization: &OAuthAuthorization
 
 pub async fn create_app_authorization_credential(app_authorization_id: &Uuid, http_transaction: &HTTPTransaction, database_pool: &deadpool_postgres::Pool) -> Result<AppAuthorizationCredential, OAuthTokenErrorResponse> {
 
-  let access_token_maximum_lifetime_milliseconds_configuration = match Configuration::get_by_name("slashstep.appAuthorizationCredentials.accessTokenMaximumLifetimeMilliseconds", database_pool).await {
+  let access_token_maximum_lifetime_milliseconds_configuration = match Configuration::get_by_name("appAuthorizationCredentials.accessTokenMaximumLifetimeMilliseconds", database_pool).await {
 
     Ok(configuration) => configuration,
 
@@ -579,7 +579,7 @@ pub async fn create_app_authorization_credential(app_authorization_id: &Uuid, ht
 
     None => {
 
-      let oauth_error_response = OAuthTokenErrorResponse::new(&OAuthTokenError::InternalServerError, "The slashstep.appAuthorizationCredentials.accessTokenMaximumLifetimeMilliseconds configuration does not have a value or a default value. Fix this in the server configuration settings.", None, None);
+      let oauth_error_response = OAuthTokenErrorResponse::new(&OAuthTokenError::InternalServerError, "The appAuthorizationCredentials.accessTokenMaximumLifetimeMilliseconds configuration does not have a value or a default value. Fix this in the server configuration settings.", None, None);
       let http_error = oauth_error_response.clone().into();
       ServerLogEntry::from_http_error(&http_error, Some(&http_transaction.id), database_pool).await.ok();
       return Err(oauth_error_response);
@@ -588,7 +588,7 @@ pub async fn create_app_authorization_credential(app_authorization_id: &Uuid, ht
 
   };
 
-  let refresh_token_maximum_lifetime_milliseconds_configuration = match Configuration::get_by_name("slashstep.appAuthorizationCredentials.refreshTokenMaximumLifetimeMilliseconds", database_pool).await {
+  let refresh_token_maximum_lifetime_milliseconds_configuration = match Configuration::get_by_name("appAuthorizationCredentials.refreshTokenMaximumLifetimeMilliseconds", database_pool).await {
 
     Ok(configuration) => configuration,
 
@@ -622,7 +622,7 @@ pub async fn create_app_authorization_credential(app_authorization_id: &Uuid, ht
 
     None => {
 
-      let oauth_error_response = OAuthTokenErrorResponse::new(&OAuthTokenError::InternalServerError, "The slashstep.appAuthorizationCredentials.refreshTokenMaximumLifetimeMilliseconds configuration does not have a value or a default value. Fix this in the server configuration settings.", None, None);
+      let oauth_error_response = OAuthTokenErrorResponse::new(&OAuthTokenError::InternalServerError, "The appAuthorizationCredentials.refreshTokenMaximumLifetimeMilliseconds configuration does not have a value or a default value. Fix this in the server configuration settings.", None, None);
       let http_error = oauth_error_response.clone().into();
       ServerLogEntry::from_http_error(&http_error, Some(&http_transaction.id), database_pool).await.ok();
       return Err(oauth_error_response);
@@ -702,7 +702,7 @@ pub async fn delete_app_authorization(app_authorization: &AppAuthorization, http
 
   }
 
-  let delete_app_authorizations_action = match get_action_by_name("slashstep.appAuthorizations.delete", &http_transaction, &database_pool).await {
+  let delete_app_authorizations_action = match get_action_by_name("appAuthorizations.delete", &http_transaction, &database_pool).await {
 
     Ok(delete_app_authorizations_action) => delete_app_authorizations_action,
 
@@ -932,13 +932,13 @@ async fn handle_create_oauth_access_token_request(
       }
 
     }
-    let delete_app_authorization_credentials_action = match get_action_by_name("slashstep.appAuthorizationCredentials.delete", &http_transaction, &state.database_pool).await {
+    let delete_app_authorization_credentials_action = match get_action_by_name("appAuthorizationCredentials.delete", &http_transaction, &state.database_pool).await {
 
       Ok(delete_app_authorization_credentials_action) => delete_app_authorization_credentials_action,
 
       Err(error) => {
 
-        let oauth_error_response = OAuthTokenErrorResponse::new(&OAuthTokenError::InternalServerError, &format!("Failed to get action \"slashstep.appAuthorizationCredentials.delete\": {:?}", error), None, None);
+        let oauth_error_response = OAuthTokenErrorResponse::new(&OAuthTokenError::InternalServerError, &format!("Failed to get action \"appAuthorizationCredentials.delete\": {:?}", error), None, None);
         let http_error = oauth_error_response.clone().into();
         ServerLogEntry::from_http_error(&http_error, Some(&http_transaction.id), &state.database_pool).await.ok();
         return Err(oauth_error_response);
@@ -1053,7 +1053,7 @@ async fn handle_create_oauth_access_token_request(
     app_authorization_credential_id: app_authorization_credential.id
   };
 
-  let create_app_authorization_credentials_action = match get_action_by_name("slashstep.appAuthorizationCredentials.create", &http_transaction, &state.database_pool).await {
+  let create_app_authorization_credentials_action = match get_action_by_name("appAuthorizationCredentials.create", &http_transaction, &state.database_pool).await {
 
     Ok(create_app_authorization_credentials_action) => create_app_authorization_credentials_action,
 

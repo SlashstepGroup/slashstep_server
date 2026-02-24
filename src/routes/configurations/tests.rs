@@ -35,16 +35,16 @@ async fn verify_returned_resource_list_without_query() -> Result<(), TestSlashst
   initialize_predefined_roles(&test_environment.database_pool).await?;
   initialize_predefined_configurations(&test_environment.database_pool).await?;
   
-  // Grant access to the "slashstep.configurations.get" action to the user.
+  // Grant access to the "configurations.get" action to the user.
   let user = test_environment.create_random_user().await?;
   let session = test_environment.create_random_session(Some(&user.id)).await?;
   let json_web_token_private_key = get_json_web_token_private_key().await?;
   let session_token = session.generate_json_web_token(&json_web_token_private_key).await?;
-  let get_configurations_action = Action::get_by_name("slashstep.configurations.get", &test_environment.database_pool).await?;
+  let get_configurations_action = Action::get_by_name("configurations.get", &test_environment.database_pool).await?;
   test_environment.create_server_access_policy(&user.id, &get_configurations_action.id, &ActionPermissionLevel::User).await?;
 
-  // Grant access to the "slashstep.configurations.list" action to the user.
-  let list_configurations_action = Action::get_by_name("slashstep.configurations.list", &test_environment.database_pool).await?;
+  // Grant access to the "configurations.list" action to the user.
+  let list_configurations_action = Action::get_by_name("configurations.list", &test_environment.database_pool).await?;
   test_environment.create_server_access_policy(&user.id, &list_configurations_action.id, &ActionPermissionLevel::User).await?;
 
   // Create dummy resources.
@@ -96,16 +96,16 @@ async fn verify_returned_resource_list_with_query() -> Result<(), TestSlashstepS
   initialize_predefined_roles(&test_environment.database_pool).await?;
   initialize_predefined_configurations(&test_environment.database_pool).await?;
   
-  // Grant access to the "slashstep.configurations.get" action to the user.
+  // Grant access to the "configurations.get" action to the user.
   let user = test_environment.create_random_user().await?;
   let session = test_environment.create_random_session(Some(&user.id)).await?;
   let json_web_token_private_key = get_json_web_token_private_key().await?;
   let session_token = session.generate_json_web_token(&json_web_token_private_key).await?;
-  let get_configurations_action = Action::get_by_name("slashstep.configurations.get", &test_environment.database_pool).await?;
+  let get_configurations_action = Action::get_by_name("configurations.get", &test_environment.database_pool).await?;
   test_environment.create_server_access_policy(&user.id, &get_configurations_action.id, &ActionPermissionLevel::User).await?;
 
-  // Grant access to the "slashstep.configurations.list" action to the user.
-  let list_configurations_action = Action::get_by_name("slashstep.configurations.list", &test_environment.database_pool).await?;
+  // Grant access to the "configurations.list" action to the user.
+  let list_configurations_action = Action::get_by_name("configurations.list", &test_environment.database_pool).await?;
   test_environment.create_server_access_policy(&user.id, &list_configurations_action.id, &ActionPermissionLevel::User).await?;
 
   // Create dummy resources.
@@ -157,16 +157,16 @@ async fn verify_default_resource_list_limit() -> Result<(), TestSlashstepServerE
   initialize_predefined_roles(&test_environment.database_pool).await?;
   initialize_predefined_configurations(&test_environment.database_pool).await?;
   
-  // Grant access to the "slashstep.configurations.get" action to the user.
+  // Grant access to the "configurations.get" action to the user.
   let user = test_environment.create_random_user().await?;
   let session = test_environment.create_random_session(Some(&user.id)).await?;
   let json_web_token_private_key = get_json_web_token_private_key().await?;
   let session_token = session.generate_json_web_token(&json_web_token_private_key).await?;
-  let get_configurations_action = Action::get_by_name("slashstep.configurations.get", &test_environment.database_pool).await?;
+  let get_configurations_action = Action::get_by_name("configurations.get", &test_environment.database_pool).await?;
   test_environment.create_server_access_policy(&user.id, &get_configurations_action.id, &ActionPermissionLevel::User).await?;
 
-  // Grant access to the "slashstep.configurations.list" action to the user.
-  let list_configurations_action = Action::get_by_name("slashstep.configurations.list", &test_environment.database_pool).await?;
+  // Grant access to the "configurations.list" action to the user.
+  let list_configurations_action = Action::get_by_name("configurations.list", &test_environment.database_pool).await?;
   test_environment.create_server_access_policy(&user.id, &list_configurations_action.id, &ActionPermissionLevel::User).await?;
 
   // Create dummy actions.
@@ -209,16 +209,16 @@ async fn verify_maximum_resource_list_limit() -> Result<(), TestSlashstepServerE
   initialize_predefined_roles(&test_environment.database_pool).await?;
   initialize_predefined_configurations(&test_environment.database_pool).await?;
   
-  // Grant access to the "slashstep.configurations.get" action to the user.
+  // Grant access to the "configurations.get" action to the user.
   let user = test_environment.create_random_user().await?;
   let session = test_environment.create_random_session(Some(&user.id)).await?;
   let json_web_token_private_key = get_json_web_token_private_key().await?;
   let session_token = session.generate_json_web_token(&json_web_token_private_key).await?;
-  let get_configurations_action = Action::get_by_name("slashstep.configurations.get", &test_environment.database_pool).await?;
+  let get_configurations_action = Action::get_by_name("configurations.get", &test_environment.database_pool).await?;
   test_environment.create_server_access_policy(&user.id, &get_configurations_action.id, &ActionPermissionLevel::User).await?;
 
-  // Grant access to the "slashstep.configurations.list" action to the user.
-  let list_configurations_action = Action::get_by_name("slashstep.configurations.list", &test_environment.database_pool).await?;
+  // Grant access to the "configurations.list" action to the user.
+  let list_configurations_action = Action::get_by_name("configurations.list", &test_environment.database_pool).await?;
   test_environment.create_server_access_policy(&user.id, &list_configurations_action.id, &ActionPermissionLevel::User).await?;
 
   // Set up the server and send the request.
@@ -250,16 +250,16 @@ async fn verify_query_when_listing_resources() -> Result<(), TestSlashstepServer
   initialize_predefined_roles(&test_environment.database_pool).await?;
   initialize_predefined_configurations(&test_environment.database_pool).await?;
   
-  // Grant access to the "slashstep.configurations.get" action to the user.
+  // Grant access to the "configurations.get" action to the user.
   let user = test_environment.create_random_user().await?;
   let session = test_environment.create_random_session(Some(&user.id)).await?;
   let json_web_token_private_key = get_json_web_token_private_key().await?;
   let session_token = session.generate_json_web_token(&json_web_token_private_key).await?;
-  let get_configurations_action = Action::get_by_name("slashstep.configurations.get", &test_environment.database_pool).await?;
+  let get_configurations_action = Action::get_by_name("configurations.get", &test_environment.database_pool).await?;
   test_environment.create_server_access_policy(&user.id, &get_configurations_action.id, &ActionPermissionLevel::User).await?;
 
-  // Grant access to the "slashstep.configurations.list" action to the user.
-  let list_configurations_action = Action::get_by_name("slashstep.configurations.list", &test_environment.database_pool).await?;
+  // Grant access to the "configurations.list" action to the user.
+  let list_configurations_action = Action::get_by_name("configurations.list", &test_environment.database_pool).await?;
   test_environment.create_server_access_policy(&user.id, &list_configurations_action.id, &ActionPermissionLevel::User).await?;
 
   // Set up the server and send the request.

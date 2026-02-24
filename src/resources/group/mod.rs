@@ -22,7 +22,7 @@ pub const UUID_QUERY_KEYS: &[&str] = &[
 ];
 pub const RESOURCE_NAME: &str = "Group";
 pub const DATABASE_TABLE_NAME: &str = "groups";
-pub const GET_RESOURCE_ACTION_NAME: &str = "slashstep.groups.get";
+pub const GET_RESOURCE_ACTION_NAME: &str = "groups.get";
 
 #[derive(Debug, Clone, ToSql, FromSql, Serialize, Deserialize, PartialEq, Eq, Default)]
 #[postgres(name = "group_parent_resource_type")]

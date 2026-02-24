@@ -23,7 +23,7 @@ pub const UUID_QUERY_KEYS: &[&str] = &[
 ];
 pub const RESOURCE_NAME: &str = "Session";
 pub const DATABASE_TABLE_NAME: &str = "sessions";
-pub const GET_RESOURCE_ACTION_NAME: &str = "slashstep.sessions.get";
+pub const GET_RESOURCE_ACTION_NAME: &str = "sessions.get";
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Session {

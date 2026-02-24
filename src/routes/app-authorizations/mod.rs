@@ -45,7 +45,7 @@ async fn handle_list_app_authorizations_request(
     None, 
     |query, database_pool, individual_principal| Box::new(AppAuthorization::count(query, database_pool, individual_principal)),
     |query, database_pool, individual_principal| Box::new(AppAuthorization::list(query, database_pool, individual_principal)),
-    "slashstep.appAuthorizations.list", 
+    "appAuthorizations.list", 
     DEFAULT_MAXIMUM_APP_AUTHORIZATION_LIST_LIMIT,
     "app authorizations",
     "app authorization"

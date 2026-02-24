@@ -50,7 +50,7 @@ async fn verify_returned_action_by_id() -> Result<(), TestSlashstepServerError> 
   let session = test_environment.create_random_session(Some(&user.id)).await?;
   let json_web_token_private_key = get_json_web_token_private_key().await?;
   let session_token = session.generate_json_web_token(&json_web_token_private_key).await?;
-  let get_actions_action = Action::get_by_name("slashstep.actions.get", &test_environment.database_pool).await?;
+  let get_actions_action = Action::get_by_name("actions.get", &test_environment.database_pool).await?;
   let access_policy_properties = InitialAccessPolicyProperties {
     action_id: get_actions_action.id,
     permission_level: ActionPermissionLevel::User,
@@ -219,8 +219,8 @@ async fn verify_successful_deletion_when_deleting_action_by_id() -> Result<(), T
   let json_web_token_private_key = get_json_web_token_private_key().await?;
   let session_token = session.generate_json_web_token(&json_web_token_private_key).await?;
 
-  // Grant access to the "slashstep.actions.delete" action to the user.
-  let delete_actions_action = Action::get_by_name("slashstep.actions.delete", &test_environment.database_pool).await?;
+  // Grant access to the "actions.delete" action to the user.
+  let delete_actions_action = Action::get_by_name("actions.delete", &test_environment.database_pool).await?;
   AccessPolicy::create(&InitialAccessPolicyProperties {
     action_id: delete_actions_action.id,
     permission_level: ActionPermissionLevel::User,
@@ -397,7 +397,7 @@ async fn verify_successful_patch_action_by_id() -> Result<(), TestSlashstepServe
   let session = test_environment.create_random_session(Some(&user.id)).await?;
   let json_web_token_private_key = get_json_web_token_private_key().await?;
   let session_token = session.generate_json_web_token(&json_web_token_private_key).await?;
-  let get_actions_action = Action::get_by_name("slashstep.actions.update", &test_environment.database_pool).await?;
+  let get_actions_action = Action::get_by_name("actions.update", &test_environment.database_pool).await?;
   test_environment.create_server_access_policy(&user.id, &get_actions_action.id, &ActionPermissionLevel::User).await?;
 
   // Set up the server and send the request.
@@ -663,16 +663,16 @@ async fn verify_name_is_under_maximum_length() -> Result<(), TestSlashstepServer
   initialize_predefined_actions(&test_environment.database_pool).await?;
   initialize_predefined_configurations(&test_environment.database_pool).await?;
 
-  // Give the user access to the "slashstep.actions.update" action.
+  // Give the user access to the "actions.update" action.
   let user = test_environment.create_random_user().await?;
   let session = test_environment.create_random_session(Some(&user.id)).await?;
   let json_web_token_private_key = get_json_web_token_private_key().await?;
   let session_token = session.generate_json_web_token(&json_web_token_private_key).await?;
-  let update_actions_action = Action::get_by_name("slashstep.actions.update", &test_environment.database_pool).await?;
+  let update_actions_action = Action::get_by_name("actions.update", &test_environment.database_pool).await?;
   test_environment.create_server_access_policy(&user.id, &update_actions_action.id, &ActionPermissionLevel::User).await?;
 
   // Set up the server and send the request.
-  let maximum_name_length_configuration = Configuration::get_by_name("slashstep.actions.maximumNameLength", &test_environment.database_pool).await?;
+  let maximum_name_length_configuration = Configuration::get_by_name("actions.maximumNameLength", &test_environment.database_pool).await?;
   maximum_name_length_configuration.update(&EditableConfigurationProperties {
     number_value: Some(Decimal::from(0 as i64)),
     ..Default::default()
@@ -709,16 +709,16 @@ async fn verify_display_name_is_under_maximum_length() -> Result<(), TestSlashst
   initialize_predefined_actions(&test_environment.database_pool).await?;
   initialize_predefined_configurations(&test_environment.database_pool).await?;
 
-  // Give the user access to the "slashstep.actions.update" action.
+  // Give the user access to the "actions.update" action.
   let user = test_environment.create_random_user().await?;
   let session = test_environment.create_random_session(Some(&user.id)).await?;
   let json_web_token_private_key = get_json_web_token_private_key().await?;
   let session_token = session.generate_json_web_token(&json_web_token_private_key).await?;
-  let update_actions_action = Action::get_by_name("slashstep.actions.update", &test_environment.database_pool).await?;
+  let update_actions_action = Action::get_by_name("actions.update", &test_environment.database_pool).await?;
   test_environment.create_server_access_policy(&user.id, &update_actions_action.id, &ActionPermissionLevel::User).await?;
 
   // Set up the server and send the request.
-  let maximum_display_name_length_configuration = Configuration::get_by_name("slashstep.actions.maximumDisplayNameLength", &test_environment.database_pool).await?;
+  let maximum_display_name_length_configuration = Configuration::get_by_name("actions.maximumDisplayNameLength", &test_environment.database_pool).await?;
   maximum_display_name_length_configuration.update(&EditableConfigurationProperties {
     number_value: Some(Decimal::from(0 as i64)),
     ..Default::default()

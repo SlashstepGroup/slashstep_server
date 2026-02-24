@@ -253,11 +253,11 @@ async fn verify_list_resources_without_query_and_filter_based_on_requestor_permi
 
   }
 
-  // Get the "slashstep.fields.get" action one time.
+  // Get the "fields.get" action one time.
   let user = test_environment.create_random_user().await?;
-  let get_fields_action = Action::get_by_name("slashstep.fields.get", &test_environment.database_pool).await?;
+  let get_fields_action = Action::get_by_name("fields.get", &test_environment.database_pool).await?;
 
-  // Grant access to the "slashstep.fields.get" action to the user for half of the actions.
+  // Grant access to the "fields.get" action to the user for half of the actions.
   let allowed_action_count = current_fields.len() / 2;
   let mut allowed_fields = Vec::new();
   for index in 0..allowed_action_count {

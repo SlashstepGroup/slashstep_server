@@ -29,16 +29,16 @@ async fn verify_returned_list_without_query() -> Result<(), TestSlashstepServerE
   initialize_predefined_roles(&test_environment.database_pool).await?;
   initialize_predefined_configurations(&test_environment.database_pool).await?;
   
-  // Give the user access to the "slashstep.appCredentials.get" action.
+  // Give the user access to the "appCredentials.get" action.
   let user = test_environment.create_random_user().await?;
   let session = test_environment.create_random_session(Some(&user.id)).await?;
   let json_web_token_private_key = get_json_web_token_private_key().await?;
   let session_token = session.generate_json_web_token(&json_web_token_private_key).await?;
-  let get_app_credentials_action = Action::get_by_name("slashstep.appCredentials.get", &test_environment.database_pool).await?;
+  let get_app_credentials_action = Action::get_by_name("appCredentials.get", &test_environment.database_pool).await?;
   test_environment.create_server_access_policy(&user.id, &get_app_credentials_action.id, &ActionPermissionLevel::User).await?;
 
-  // Give the user access to the "slashstep.appCredentials.list" action.
-  let list_app_credentials_action = Action::get_by_name("slashstep.appCredentials.list", &test_environment.database_pool).await?;
+  // Give the user access to the "appCredentials.list" action.
+  let list_app_credentials_action = Action::get_by_name("appCredentials.list", &test_environment.database_pool).await?;
   test_environment.create_server_access_policy(&user.id, &list_app_credentials_action.id, &ActionPermissionLevel::User).await?;
 
   // Create dummy resources.
@@ -86,16 +86,16 @@ async fn verify_returned_list_with_query() -> Result<(), TestSlashstepServerErro
   initialize_predefined_roles(&test_environment.database_pool).await?;
   initialize_predefined_configurations(&test_environment.database_pool).await?;
   
-  // Give the user access to the "slashstep.appCredentials.get" action.
+  // Give the user access to the "appCredentials.get" action.
   let user = test_environment.create_random_user().await?;
   let session = test_environment.create_random_session(Some(&user.id)).await?;
   let json_web_token_private_key = get_json_web_token_private_key().await?;
   let session_token = session.generate_json_web_token(&json_web_token_private_key).await?;
-  let get_app_credentials_action = Action::get_by_name("slashstep.appCredentials.get", &test_environment.database_pool).await?;
+  let get_app_credentials_action = Action::get_by_name("appCredentials.get", &test_environment.database_pool).await?;
   test_environment.create_server_access_policy(&user.id, &get_app_credentials_action.id, &ActionPermissionLevel::User).await?;
 
-  // Give the user access to the "slashstep.appCredentials.list" action.
-  let list_app_credentials_action = Action::get_by_name("slashstep.appCredentials.list", &test_environment.database_pool).await?;
+  // Give the user access to the "appCredentials.list" action.
+  let list_app_credentials_action = Action::get_by_name("appCredentials.list", &test_environment.database_pool).await?;
   test_environment.create_server_access_policy(&user.id, &list_app_credentials_action.id, &ActionPermissionLevel::User).await?;
 
   // Create dummy resources.
@@ -145,16 +145,16 @@ async fn verify_default_list_limit() -> Result<(), TestSlashstepServerError> {
   initialize_predefined_roles(&test_environment.database_pool).await?;
   initialize_predefined_configurations(&test_environment.database_pool).await?;
   
-  // Grant access to the "slashstep.appCredentials.get" action to the user.
+  // Grant access to the "appCredentials.get" action to the user.
   let user = test_environment.create_random_user().await?;
   let session = test_environment.create_random_session(Some(&user.id)).await?;
   let json_web_token_private_key = get_json_web_token_private_key().await?;
   let session_token = session.generate_json_web_token(&json_web_token_private_key).await?;
-  let get_app_credentials_action = Action::get_by_name("slashstep.appCredentials.get", &test_environment.database_pool).await?;
+  let get_app_credentials_action = Action::get_by_name("appCredentials.get", &test_environment.database_pool).await?;
   test_environment.create_server_access_policy(&user.id, &get_app_credentials_action.id, &ActionPermissionLevel::User).await?;
 
-  // Grant access to the "slashstep.appCredentials.list" action to the user.
-  let list_app_credentials_action = Action::get_by_name("slashstep.appCredentials.list", &test_environment.database_pool).await?;
+  // Grant access to the "appCredentials.list" action to the user.
+  let list_app_credentials_action = Action::get_by_name("appCredentials.list", &test_environment.database_pool).await?;
   test_environment.create_server_access_policy(&user.id, &list_app_credentials_action.id, &ActionPermissionLevel::User).await?;
 
   // Create dummy resources.
@@ -198,16 +198,16 @@ async fn verify_maximum_list_limit() -> Result<(), TestSlashstepServerError> {
   initialize_predefined_roles(&test_environment.database_pool).await?;
   initialize_predefined_configurations(&test_environment.database_pool).await?;
   
-  // Grant access to the "slashstep.appCredentials.get" action to the user.
+  // Grant access to the "appCredentials.get" action to the user.
   let user = test_environment.create_random_user().await?;
   let session = test_environment.create_random_session(Some(&user.id)).await?;
   let json_web_token_private_key = get_json_web_token_private_key().await?;
   let session_token = session.generate_json_web_token(&json_web_token_private_key).await?;
-  let get_app_credentials_action = Action::get_by_name("slashstep.appCredentials.get", &test_environment.database_pool).await?;
+  let get_app_credentials_action = Action::get_by_name("appCredentials.get", &test_environment.database_pool).await?;
   test_environment.create_server_access_policy(&user.id, &get_app_credentials_action.id, &ActionPermissionLevel::User).await?;
 
-  // Grant access to the "slashstep.appCredentials.list" action to the user.
-  let list_app_credentials_action = Action::get_by_name("slashstep.appCredentials.list", &test_environment.database_pool).await?;
+  // Grant access to the "appCredentials.list" action to the user.
+  let list_app_credentials_action = Action::get_by_name("appCredentials.list", &test_environment.database_pool).await?;
   test_environment.create_server_access_policy(&user.id, &list_app_credentials_action.id, &ActionPermissionLevel::User).await?;
 
   // Create dummy resources.
@@ -242,16 +242,16 @@ async fn verify_query_when_listing_resources() -> Result<(), TestSlashstepServer
   initialize_predefined_roles(&test_environment.database_pool).await?;
   initialize_predefined_configurations(&test_environment.database_pool).await?;
   
-  // Grant access to the "slashstep.appCredentials.get" action to the user.
+  // Grant access to the "appCredentials.get" action to the user.
   let user = test_environment.create_random_user().await?;
   let session = test_environment.create_random_session(Some(&user.id)).await?;
   let json_web_token_private_key = get_json_web_token_private_key().await?;
   let session_token = session.generate_json_web_token(&json_web_token_private_key).await?;
-  let get_app_credentials_action = Action::get_by_name("slashstep.appCredentials.get", &test_environment.database_pool).await?;
+  let get_app_credentials_action = Action::get_by_name("appCredentials.get", &test_environment.database_pool).await?;
   test_environment.create_server_access_policy(&user.id, &get_app_credentials_action.id, &ActionPermissionLevel::User).await?;
 
-  // Grant access to the "slashstep.appCredentials.list" action to the user.
-  let list_app_credentials_action = Action::get_by_name("slashstep.appCredentials.list", &test_environment.database_pool).await?;
+  // Grant access to the "appCredentials.list" action to the user.
+  let list_app_credentials_action = Action::get_by_name("appCredentials.list", &test_environment.database_pool).await?;
   test_environment.create_server_access_policy(&user.id, &list_app_credentials_action.id, &ActionPermissionLevel::User).await?;
 
   // Create dummy resources.
@@ -415,12 +415,12 @@ async fn verify_successful_creation() -> Result<(), TestSlashstepServerError> {
   initialize_predefined_roles(&test_environment.database_pool).await?;
   initialize_predefined_configurations(&test_environment.database_pool).await?;
 
-  // Give the user access to the "slashstep.apps.create" action.
+  // Give the user access to the "apps.create" action.
   let user = test_environment.create_random_user().await?;
   let session = test_environment.create_random_session(Some(&user.id)).await?;
   let json_web_token_private_key = get_json_web_token_private_key().await?;
   let session_token = session.generate_json_web_token(&json_web_token_private_key).await?;
-  let create_app_credentials_action = Action::get_by_name("slashstep.appCredentials.create", &test_environment.database_pool).await?;
+  let create_app_credentials_action = Action::get_by_name("appCredentials.create", &test_environment.database_pool).await?;
   test_environment.create_server_access_policy(&user.id, &create_app_credentials_action.id, &ActionPermissionLevel::User).await?;
 
   // Create a dummy app.

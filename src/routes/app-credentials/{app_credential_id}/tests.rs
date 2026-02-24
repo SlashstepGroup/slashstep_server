@@ -46,7 +46,7 @@ async fn verify_returned_resource_by_id() -> Result<(), TestSlashstepServerError
   let session = test_environment.create_random_session(Some(&user.id)).await?;
   let json_web_token_private_key = get_json_web_token_private_key().await?;
   let session_token = session.generate_json_web_token(&json_web_token_private_key).await?;
-  let get_app_credentials_action = Action::get_by_name("slashstep.appCredentials.get", &test_environment.database_pool).await?;
+  let get_app_credentials_action = Action::get_by_name("appCredentials.get", &test_environment.database_pool).await?;
   test_environment.create_server_access_policy(&user.id, &get_app_credentials_action.id, &ActionPermissionLevel::User).await?;
   
   let app_credential = test_environment.create_random_app_credential(None).await?;
@@ -204,8 +204,8 @@ async fn verify_successful_deletion_when_deleting_resource_by_id() -> Result<(),
   let json_web_token_private_key = get_json_web_token_private_key().await?;
   let session_token = session.generate_json_web_token(&json_web_token_private_key).await?;
 
-  // Grant access to the "slashstep.appCredentials.delete" action to the user.
-  let delete_app_credentials_action = Action::get_by_name("slashstep.appCredentials.delete", &test_environment.database_pool).await?;
+  // Grant access to the "appCredentials.delete" action to the user.
+  let delete_app_credentials_action = Action::get_by_name("appCredentials.delete", &test_environment.database_pool).await?;
   test_environment.create_server_access_policy(&user.id, &delete_app_credentials_action.id, &ActionPermissionLevel::User).await?;
 
   // Set up the server and send the request.

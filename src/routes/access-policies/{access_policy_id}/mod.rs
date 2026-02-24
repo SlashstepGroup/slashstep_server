@@ -142,7 +142,7 @@ async fn handle_get_access_policy_request(
   let access_policy = get_access_policy(&access_policy_id, &http_transaction, &state.database_pool).await?;
 
   // Make sure the delegate and principal have access to the resource.
-  let action = get_action_by_name("slashstep.accessPolicies.get", &http_transaction, &state.database_pool).await?;
+  let action = get_action_by_name("accessPolicies.get", &http_transaction, &state.database_pool).await?;
   verify_delegate_permissions(authenticated_app_authorization.as_ref().map(|app_authorization| &app_authorization.id), &action.id, &http_transaction.id, &ActionPermissionLevel::User, &state.database_pool).await?;
   let resource_hierarchy = get_resource_hierarchy(&access_policy, &http_transaction, &state.database_pool).await?;
   let authenticated_principal = get_authenticated_principal(authenticated_user.as_ref(), authenticated_app.as_ref())?;
@@ -189,7 +189,7 @@ async fn handle_patch_access_policy_request(
   // Make sure the delegate and principal have access to the resource.
   let access_policy = get_access_policy(&access_policy_id, &http_transaction, &state.database_pool).await?;
   let resource_hierarchy = get_resource_hierarchy(&access_policy, &http_transaction, &state.database_pool).await?;
-  let update_access_policy_action = get_action_by_name("slashstep.accessPolicies.update", &http_transaction, &state.database_pool).await?;
+  let update_access_policy_action = get_action_by_name("accessPolicies.update", &http_transaction, &state.database_pool).await?;
   verify_delegate_permissions(authenticated_app_authorization.as_ref().map(|app_authorization| &app_authorization.id), &update_access_policy_action.id, &http_transaction.id, &ActionPermissionLevel::User, &state.database_pool).await?;
   let authenticated_principal = get_authenticated_principal(authenticated_user.as_ref(), authenticated_app.as_ref())?;
   verify_principal_permissions(&authenticated_principal, &update_access_policy_action, &resource_hierarchy, &http_transaction, &ActionPermissionLevel::User, &state.database_pool).await?;
@@ -260,7 +260,7 @@ async fn handle_delete_access_policy_request(
     Extension(authenticated_app_authorization),
     None,
     &access_policy_id, 
-    "slashstep.accessPolicies.delete",
+    "accessPolicies.delete",
     "access policy", 
     &ActionLogEntryTargetResourceType::AccessPolicy,
     |app_authorization_credential_id, database_pool| Box::new(AccessPolicy::get_by_id(app_authorization_credential_id, database_pool))

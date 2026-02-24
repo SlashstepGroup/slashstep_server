@@ -36,12 +36,12 @@ async fn verify_returned_list_without_query() -> Result<(), TestSlashstepServerE
   initialize_predefined_roles(&test_environment.database_pool).await?;
   initialize_predefined_configurations(&test_environment.database_pool).await?;
   
-  // Grant access to the "slashstep.apps.get" action to the user.
+  // Grant access to the "apps.get" action to the user.
   let user = test_environment.create_random_user().await?;
   let session = test_environment.create_random_session(Some(&user.id)).await?;
   let json_web_token_private_key = get_json_web_token_private_key().await?;
   let session_token = session.generate_json_web_token(&json_web_token_private_key).await?;
-  let get_actions_action = Action::get_by_name("slashstep.apps.get", &test_environment.database_pool).await?;
+  let get_actions_action = Action::get_by_name("apps.get", &test_environment.database_pool).await?;
   AccessPolicy::create(&InitialAccessPolicyProperties {
     action_id: get_actions_action.id,
     permission_level: ActionPermissionLevel::User,
@@ -52,8 +52,8 @@ async fn verify_returned_list_without_query() -> Result<(), TestSlashstepServerE
     ..Default::default()
   }, &test_environment.database_pool).await?;
 
-  // Grant access to the "slashstep.apps.list" action to the user.
-  let list_actions_action = Action::get_by_name("slashstep.apps.list", &test_environment.database_pool).await?;
+  // Grant access to the "apps.list" action to the user.
+  let list_actions_action = Action::get_by_name("apps.list", &test_environment.database_pool).await?;
   AccessPolicy::create(&InitialAccessPolicyProperties {
     action_id: list_actions_action.id,
     permission_level: ActionPermissionLevel::User,
@@ -113,12 +113,12 @@ async fn verify_returned_list_with_query() -> Result<(), TestSlashstepServerErro
   initialize_predefined_roles(&test_environment.database_pool).await?;
   initialize_predefined_configurations(&test_environment.database_pool).await?;
   
-  // Grant access to the "slashstep.apps.get" action to the user.
+  // Grant access to the "apps.get" action to the user.
   let user = test_environment.create_random_user().await?;
   let session = test_environment.create_random_session(Some(&user.id)).await?;
   let json_web_token_private_key = get_json_web_token_private_key().await?;
   let session_token = session.generate_json_web_token(&json_web_token_private_key).await?;
-  let get_actions_action = Action::get_by_name("slashstep.apps.get", &test_environment.database_pool).await?;
+  let get_actions_action = Action::get_by_name("apps.get", &test_environment.database_pool).await?;
   AccessPolicy::create(&InitialAccessPolicyProperties {
     action_id: get_actions_action.id,
     permission_level: ActionPermissionLevel::User,
@@ -129,8 +129,8 @@ async fn verify_returned_list_with_query() -> Result<(), TestSlashstepServerErro
     ..Default::default()
   }, &test_environment.database_pool).await?;
 
-  // Grant access to the "slashstep.apps.list" action to the user.
-  let list_actions_action = Action::get_by_name("slashstep.apps.list", &test_environment.database_pool).await?;
+  // Grant access to the "apps.list" action to the user.
+  let list_actions_action = Action::get_by_name("apps.list", &test_environment.database_pool).await?;
   AccessPolicy::create(&InitialAccessPolicyProperties {
     action_id: list_actions_action.id,
     permission_level: ActionPermissionLevel::User,
@@ -193,12 +193,12 @@ async fn verify_default_list_limit() -> Result<(), TestSlashstepServerError> {
   initialize_predefined_roles(&test_environment.database_pool).await?;
   initialize_predefined_configurations(&test_environment.database_pool).await?;
   
-  // Grant access to the "slashstep.apps.get" action to the user.
+  // Grant access to the "apps.get" action to the user.
   let user = test_environment.create_random_user().await?;
   let session = test_environment.create_random_session(Some(&user.id)).await?;
   let json_web_token_private_key = get_json_web_token_private_key().await?;
   let session_token = session.generate_json_web_token(&json_web_token_private_key).await?;
-  let get_actions_action = Action::get_by_name("slashstep.apps.get", &test_environment.database_pool).await?;
+  let get_actions_action = Action::get_by_name("apps.get", &test_environment.database_pool).await?;
   AccessPolicy::create(&InitialAccessPolicyProperties {
     action_id: get_actions_action.id,
     permission_level: ActionPermissionLevel::User,
@@ -209,8 +209,8 @@ async fn verify_default_list_limit() -> Result<(), TestSlashstepServerError> {
     ..Default::default()
   }, &test_environment.database_pool).await?;
 
-  // Grant access to the "slashstep.apps.list" action to the user.
-  let list_actions_action = Action::get_by_name("slashstep.apps.list", &test_environment.database_pool).await?;
+  // Grant access to the "apps.list" action to the user.
+  let list_actions_action = Action::get_by_name("apps.list", &test_environment.database_pool).await?;
   AccessPolicy::create(&InitialAccessPolicyProperties {
     action_id: list_actions_action.id,
     permission_level: ActionPermissionLevel::User,
@@ -261,12 +261,12 @@ async fn verify_maximum_list_limit() -> Result<(), TestSlashstepServerError> {
   initialize_predefined_roles(&test_environment.database_pool).await?;
   initialize_predefined_configurations(&test_environment.database_pool).await?;
   
-  // Grant access to the "slashstep.apps.get" action to the user.
+  // Grant access to the "apps.get" action to the user.
   let user = test_environment.create_random_user().await?;
   let session = test_environment.create_random_session(Some(&user.id)).await?;
   let json_web_token_private_key = get_json_web_token_private_key().await?;
   let session_token = session.generate_json_web_token(&json_web_token_private_key).await?;
-  let get_actions_action = Action::get_by_name("slashstep.apps.get", &test_environment.database_pool).await?;
+  let get_actions_action = Action::get_by_name("apps.get", &test_environment.database_pool).await?;
   AccessPolicy::create(&InitialAccessPolicyProperties {
     action_id: get_actions_action.id,
     permission_level: ActionPermissionLevel::User,
@@ -277,8 +277,8 @@ async fn verify_maximum_list_limit() -> Result<(), TestSlashstepServerError> {
     ..Default::default()
   }, &test_environment.database_pool).await?;
 
-  // Grant access to the "slashstep.apps.list" action to the user.
-  let list_actions_action = Action::get_by_name("slashstep.apps.list", &test_environment.database_pool).await?;
+  // Grant access to the "apps.list" action to the user.
+  let list_actions_action = Action::get_by_name("apps.list", &test_environment.database_pool).await?;
   AccessPolicy::create(&InitialAccessPolicyProperties {
     action_id: list_actions_action.id,
     permission_level: ActionPermissionLevel::User,
@@ -318,12 +318,12 @@ async fn verify_query_validity() -> Result<(), TestSlashstepServerError> {
   initialize_predefined_roles(&test_environment.database_pool).await?;
   initialize_predefined_configurations(&test_environment.database_pool).await?;
   
-  // Grant access to the "slashstep.apps.get" action to the user.
+  // Grant access to the "apps.get" action to the user.
   let user = test_environment.create_random_user().await?;
   let session = test_environment.create_random_session(Some(&user.id)).await?;
   let json_web_token_private_key = get_json_web_token_private_key().await?;
   let session_token = session.generate_json_web_token(&json_web_token_private_key).await?;
-  let get_actions_action = Action::get_by_name("slashstep.apps.get", &test_environment.database_pool).await?;
+  let get_actions_action = Action::get_by_name("apps.get", &test_environment.database_pool).await?;
   AccessPolicy::create(&InitialAccessPolicyProperties {
     action_id: get_actions_action.id,
     permission_level: ActionPermissionLevel::User,
@@ -334,8 +334,8 @@ async fn verify_query_validity() -> Result<(), TestSlashstepServerError> {
     ..Default::default()
   }, &test_environment.database_pool).await?;
 
-  // Grant access to the "slashstep.apps.list" action to the user.
-  let list_actions_action = Action::get_by_name("slashstep.apps.list", &test_environment.database_pool).await?;
+  // Grant access to the "apps.list" action to the user.
+  let list_actions_action = Action::get_by_name("apps.list", &test_environment.database_pool).await?;
   AccessPolicy::create(&InitialAccessPolicyProperties {
     action_id: list_actions_action.id,
     permission_level: ActionPermissionLevel::User,
@@ -468,12 +468,12 @@ async fn verify_successful_app_creation_with_public_client() -> Result<(), TestS
   initialize_predefined_actions(&test_environment.database_pool).await?;
   initialize_predefined_configurations(&test_environment.database_pool).await?;
 
-  // Give the user access to the "slashstep.apps.create" action.
+  // Give the user access to the "apps.create" action.
   let user = test_environment.create_random_user().await?;
   let session = test_environment.create_random_session(Some(&user.id)).await?;
   let json_web_token_private_key = get_json_web_token_private_key().await?;
   let session_token = session.generate_json_web_token(&json_web_token_private_key).await?;
-  let create_apps_action = Action::get_by_name("slashstep.apps.create", &test_environment.database_pool).await?;
+  let create_apps_action = Action::get_by_name("apps.create", &test_environment.database_pool).await?;
   test_environment.create_server_access_policy(&user.id, &create_apps_action.id, &ActionPermissionLevel::User).await?;
 
   // Set up the server and send the request.
@@ -517,12 +517,12 @@ async fn verify_successful_app_creation_with_confidential_client() -> Result<(),
   initialize_predefined_actions(&test_environment.database_pool).await?;
   initialize_predefined_configurations(&test_environment.database_pool).await?;
 
-  // Give the user access to the "slashstep.apps.create" action.
+  // Give the user access to the "apps.create" action.
   let user = test_environment.create_random_user().await?;
   let session = test_environment.create_random_session(Some(&user.id)).await?;
   let json_web_token_private_key = get_json_web_token_private_key().await?;
   let session_token = session.generate_json_web_token(&json_web_token_private_key).await?;
-  let create_apps_action = Action::get_by_name("slashstep.apps.create", &test_environment.database_pool).await?;
+  let create_apps_action = Action::get_by_name("apps.create", &test_environment.database_pool).await?;
   test_environment.create_server_access_policy(&user.id, &create_apps_action.id, &ActionPermissionLevel::User).await?;
 
   // Set up the server and send the request.
@@ -566,16 +566,16 @@ async fn verify_app_name_matches_regex() -> Result<(), TestSlashstepServerError>
   initialize_predefined_actions(&test_environment.database_pool).await?;
   initialize_predefined_configurations(&test_environment.database_pool).await?;
 
-  // Give the user access to the "slashstep.apps.create" action.
+  // Give the user access to the "apps.create" action.
   let user = test_environment.create_random_user().await?;
   let session = test_environment.create_random_session(Some(&user.id)).await?;
   let json_web_token_private_key = get_json_web_token_private_key().await?;
   let session_token = session.generate_json_web_token(&json_web_token_private_key).await?;
-  let create_apps_action = Action::get_by_name("slashstep.apps.create", &test_environment.database_pool).await?;
+  let create_apps_action = Action::get_by_name("apps.create", &test_environment.database_pool).await?;
   test_environment.create_server_access_policy(&user.id, &create_apps_action.id, &ActionPermissionLevel::User).await?;
 
   // Set up the server and send the request.
-  let app_name_regex_configuration = Configuration::get_by_name("slashstep.apps.allowedNameRegex", &test_environment.database_pool).await?;
+  let app_name_regex_configuration = Configuration::get_by_name("apps.allowedNameRegex", &test_environment.database_pool).await?;
   app_name_regex_configuration.update(&EditableConfigurationProperties {
     text_value: Some("^$".to_string()), // This regex pattern doesn't allow any names, so this should cause a validation error.
     ..Default::default()
@@ -613,16 +613,16 @@ async fn verify_app_display_name_matches_regex() -> Result<(), TestSlashstepServ
   initialize_predefined_actions(&test_environment.database_pool).await?;
   initialize_predefined_configurations(&test_environment.database_pool).await?;
 
-  // Give the user access to the "slashstep.apps.create" action.
+  // Give the user access to the "apps.create" action.
   let user = test_environment.create_random_user().await?;
   let session = test_environment.create_random_session(Some(&user.id)).await?;
   let json_web_token_private_key = get_json_web_token_private_key().await?;
   let session_token = session.generate_json_web_token(&json_web_token_private_key).await?;
-  let create_apps_action = Action::get_by_name("slashstep.apps.create", &test_environment.database_pool).await?;
+  let create_apps_action = Action::get_by_name("apps.create", &test_environment.database_pool).await?;
   test_environment.create_server_access_policy(&user.id, &create_apps_action.id, &ActionPermissionLevel::User).await?;
 
   // Set up the server and send the request.
-  let app_display_name_regex_configuration = Configuration::get_by_name("slashstep.apps.allowedDisplayNameRegex", &test_environment.database_pool).await?;
+  let app_display_name_regex_configuration = Configuration::get_by_name("apps.allowedDisplayNameRegex", &test_environment.database_pool).await?;
   app_display_name_regex_configuration.update(&EditableConfigurationProperties {
     text_value: Some("^$".to_string()), // This regex pattern doesn't allow any display names, so this should cause a validation error.
     ..Default::default()
@@ -661,16 +661,16 @@ async fn verify_app_display_name_is_under_maximum_length() -> Result<(), TestSla
   initialize_predefined_actions(&test_environment.database_pool).await?;
   initialize_predefined_configurations(&test_environment.database_pool).await?;
 
-  // Give the user access to the "slashstep.apps.create" action.
+  // Give the user access to the "apps.create" action.
   let user = test_environment.create_random_user().await?;
   let session = test_environment.create_random_session(Some(&user.id)).await?;
   let json_web_token_private_key = get_json_web_token_private_key().await?;
   let session_token = session.generate_json_web_token(&json_web_token_private_key).await?;
-  let create_apps_action = Action::get_by_name("slashstep.apps.create", &test_environment.database_pool).await?;
+  let create_apps_action = Action::get_by_name("apps.create", &test_environment.database_pool).await?;
   test_environment.create_server_access_policy(&user.id, &create_apps_action.id, &ActionPermissionLevel::User).await?;
 
   // Set up the server and send the request.
-  let maximum_app_display_name_length_configuration = Configuration::get_by_name("slashstep.apps.maximumDisplayNameLength", &test_environment.database_pool).await?;
+  let maximum_app_display_name_length_configuration = Configuration::get_by_name("apps.maximumDisplayNameLength", &test_environment.database_pool).await?;
   maximum_app_display_name_length_configuration.update(&EditableConfigurationProperties {
     number_value: Some(Decimal::from(0 as i64)),
     ..Default::default()
@@ -709,16 +709,16 @@ async fn verify_app_name_is_under_maximum_length() -> Result<(), TestSlashstepSe
   initialize_predefined_actions(&test_environment.database_pool).await?;
   initialize_predefined_configurations(&test_environment.database_pool).await?;
 
-  // Give the user access to the "slashstep.apps.create" action.
+  // Give the user access to the "apps.create" action.
   let user = test_environment.create_random_user().await?;
   let session = test_environment.create_random_session(Some(&user.id)).await?;
   let json_web_token_private_key = get_json_web_token_private_key().await?;
   let session_token = session.generate_json_web_token(&json_web_token_private_key).await?;
-  let create_apps_action = Action::get_by_name("slashstep.apps.create", &test_environment.database_pool).await?;
+  let create_apps_action = Action::get_by_name("apps.create", &test_environment.database_pool).await?;
   test_environment.create_server_access_policy(&user.id, &create_apps_action.id, &ActionPermissionLevel::User).await?;
 
   // Set up the server and send the request.
-  let maximum_app_name_length_configuration = Configuration::get_by_name("slashstep.apps.maximumNameLength", &test_environment.database_pool).await?;
+  let maximum_app_name_length_configuration = Configuration::get_by_name("apps.maximumNameLength", &test_environment.database_pool).await?;
   maximum_app_name_length_configuration.update(&EditableConfigurationProperties {
     number_value: Some(Decimal::from(0 as i64)),
     ..Default::default()

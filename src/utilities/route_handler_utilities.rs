@@ -11,7 +11,7 @@ use uuid::Uuid;
 pub async fn get_action_log_entry_expiration_timestamp(http_transaction: &HTTPTransaction, database_pool: &deadpool_postgres::Pool) -> Result<Option<DateTime<Utc>>, HTTPError> {
 
   ServerLogEntry::trace("Getting configuration to determine whether action log entries should expire...", Some(&http_transaction.id), database_pool).await.ok();
-  let should_action_log_entries_expire_configuration = match Configuration::list(&format!("name = {} LIMIT 1", quote_literal("slashstep.actionLogEntries.shouldExpire")), &database_pool, None).await {
+  let should_action_log_entries_expire_configuration = match Configuration::list(&format!("name = {} LIMIT 1", quote_literal("actionLogEntries.shouldExpire")), &database_pool, None).await {
 
     Ok(configurations) => match configurations.into_iter().next() {
 
@@ -19,7 +19,7 @@ pub async fn get_action_log_entry_expiration_timestamp(http_transaction: &HTTPTr
 
       None => {
 
-        let http_error = HTTPError::InternalServerError(Some("Missing configuration for slashstep.actionLogEntries.shouldExpire. It may have been deleted by a user or an app. Restart the server to restore this configuration.".to_string()));
+        let http_error = HTTPError::InternalServerError(Some("Missing configuration for actionLogEntries.shouldExpire. It may have been deleted by a user or an app. Restart the server to restore this configuration.".to_string()));
         ServerLogEntry::from_http_error(&http_error, Some(&http_transaction.id), &database_pool).await.ok();
         return Err(http_error);
 
@@ -45,7 +45,7 @@ pub async fn get_action_log_entry_expiration_timestamp(http_transaction: &HTTPTr
   }
 
   ServerLogEntry::trace("Getting configuration to determine the expiration duration for action log entries...", Some(&http_transaction.id), database_pool).await.ok();
-  let action_log_entry_expiration_duration_configuration = match Configuration::list(&format!("name = {} LIMIT 1", quote_literal("slashstep.actionLogEntries.expirationDurationMilliseconds")), &database_pool, None).await {
+  let action_log_entry_expiration_duration_configuration = match Configuration::list(&format!("name = {} LIMIT 1", quote_literal("actionLogEntries.expirationDurationMilliseconds")), &database_pool, None).await {
 
     Ok(configurations) => match configurations.into_iter().next() {
 
@@ -53,7 +53,7 @@ pub async fn get_action_log_entry_expiration_timestamp(http_transaction: &HTTPTr
 
       None => {
 
-        let http_error = HTTPError::InternalServerError(Some("Missing configuration for slashstep.actionLogEntries.expirationDurationMilliseconds. It may have been deleted by a user or an app. Restart the server to restore this configuration.".to_string()));
+        let http_error = HTTPError::InternalServerError(Some("Missing configuration for actionLogEntries.expirationDurationMilliseconds. It may have been deleted by a user or an app. Restart the server to restore this configuration.".to_string()));
         ServerLogEntry::from_http_error(&http_error, Some(&http_transaction.id), &database_pool).await.ok();
         return Err(http_error);
 
@@ -879,7 +879,7 @@ pub async fn get_configuration_by_name(configuration_name: &str, http_transactio
 
 pub async fn validate_action_name_length(name: &str, http_transaction: &HTTPTransaction, database_pool: &deadpool_postgres::Pool) -> Result<(), HTTPError> {
 
-  let maximum_name_length_configuration = get_configuration_by_name("slashstep.actions.maximumNameLength", http_transaction, database_pool).await?;
+  let maximum_name_length_configuration = get_configuration_by_name("actions.maximumNameLength", http_transaction, database_pool).await?;
   let maximum_name_length = match maximum_name_length_configuration.number_value.or(maximum_name_length_configuration.default_number_value) {
 
     Some(maximum_name_length) => match maximum_name_length.to_usize() {
@@ -888,7 +888,7 @@ pub async fn validate_action_name_length(name: &str, http_transaction: &HTTPTran
 
       None => {
 
-        let http_error = HTTPError::InternalServerError(Some("Invalid number value for configuration slashstep.actions.maximumNameLength. The value must be a positive integer that can be represented as a usize.".to_string()));
+        let http_error = HTTPError::InternalServerError(Some("Invalid number value for configuration actions.maximumNameLength. The value must be a positive integer that can be represented as a usize.".to_string()));
         ServerLogEntry::from_http_error(&http_error, Some(&http_transaction.id), database_pool).await.ok();
         return Err(http_error);
 
@@ -898,7 +898,7 @@ pub async fn validate_action_name_length(name: &str, http_transaction: &HTTPTran
 
     None => {
 
-      ServerLogEntry::warning("Missing value and default value for configuration slashstep.actions.maximumNameLength. This is a security risk. Consider setting a restrictive maximum name length in the configuration.", Some(&http_transaction.id), database_pool).await.ok();
+      ServerLogEntry::warning("Missing value and default value for configuration actions.maximumNameLength. This is a security risk. Consider setting a restrictive maximum name length in the configuration.", Some(&http_transaction.id), database_pool).await.ok();
       return Ok(());
 
     }
@@ -921,7 +921,7 @@ pub async fn validate_action_name_length(name: &str, http_transaction: &HTTPTran
 
 pub async fn validate_action_display_name_length(name: &str, http_transaction: &HTTPTransaction, database_pool: &deadpool_postgres::Pool) -> Result<(), HTTPError> {
 
-  let maximum_name_length_configuration = get_configuration_by_name("slashstep.actions.maximumDisplayNameLength", http_transaction, database_pool).await?;
+  let maximum_name_length_configuration = get_configuration_by_name("actions.maximumDisplayNameLength", http_transaction, database_pool).await?;
   let maximum_name_length = match maximum_name_length_configuration.number_value.or(maximum_name_length_configuration.default_number_value) {
 
     Some(maximum_name_length) => match maximum_name_length.to_usize() {
@@ -930,7 +930,7 @@ pub async fn validate_action_display_name_length(name: &str, http_transaction: &
 
       None => {
 
-        let http_error = HTTPError::InternalServerError(Some("Invalid number value for configuration slashstep.actions.maximumDisplayNameLength. The value must be a positive integer that can be represented as a usize.".to_string()));
+        let http_error = HTTPError::InternalServerError(Some("Invalid number value for configuration actions.maximumDisplayNameLength. The value must be a positive integer that can be represented as a usize.".to_string()));
         ServerLogEntry::from_http_error(&http_error, Some(&http_transaction.id), database_pool).await.ok();
         return Err(http_error);
 
@@ -940,7 +940,7 @@ pub async fn validate_action_display_name_length(name: &str, http_transaction: &
 
     None => {
 
-      ServerLogEntry::warning("Missing value and default value for configuration slashstep.actions.maximumDisplayNameLength. This is a security risk. Consider setting a restrictive maximum display name length in the configuration.", Some(&http_transaction.id), database_pool).await.ok();
+      ServerLogEntry::warning("Missing value and default value for configuration actions.maximumDisplayNameLength. This is a security risk. Consider setting a restrictive maximum display name length in the configuration.", Some(&http_transaction.id), database_pool).await.ok();
       return Ok(());
 
     }

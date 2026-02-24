@@ -24,14 +24,14 @@ async fn verify_successful_creation() -> Result<(), TestSlashstepServerError> {
   initialize_predefined_roles(&test_environment.database_pool).await?;
   initialize_predefined_configurations(&test_environment.database_pool).await?;
 
-  // Give the user access to the "slashstep.apps.create" action.
+  // Give the user access to the "apps.create" action.
   let user = test_environment.create_random_user().await?;
   let session = test_environment.create_random_session(Some(&user.id)).await?;
   let json_web_token_private_key = get_json_web_token_private_key().await?;
   let session_token = session.generate_json_web_token(&json_web_token_private_key).await?;
-  let create_oauth_authorizations_action = Action::get_by_name("slashstep.oauthAuthorizations.create", &test_environment.database_pool).await?;
+  let create_oauth_authorizations_action = Action::get_by_name("oauthAuthorizations.create", &test_environment.database_pool).await?;
   test_environment.create_server_access_policy(&user.id, &create_oauth_authorizations_action.id, &ActionPermissionLevel::User).await?;
-  let authorize_app_action = Action::get_by_name("slashstep.apps.authorize", &test_environment.database_pool).await?;
+  let authorize_app_action = Action::get_by_name("apps.authorize", &test_environment.database_pool).await?;
   test_environment.create_server_access_policy(&user.id, &authorize_app_action.id, &ActionPermissionLevel::User).await?;
 
   // Create a dummy app.

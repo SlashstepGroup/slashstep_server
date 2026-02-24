@@ -235,11 +235,11 @@ async fn verify_list_resources_without_query_and_filter_based_on_requestor_permi
 
   }
 
-  // Get the "slashstep.appAuthorizations.get" action one time.
+  // Get the "appAuthorizations.get" action one time.
   let user = test_environment.create_random_user().await?;
-  let get_app_authorizations_action = Action::get_by_name("slashstep.appAuthorizations.get", &test_environment.database_pool).await?;
+  let get_app_authorizations_action = Action::get_by_name("appAuthorizations.get", &test_environment.database_pool).await?;
 
-  // Grant access to the "slashstep.appAuthorizations.get" action to the user for half of the actions.
+  // Grant access to the "appAuthorizations.get" action to the user for half of the actions.
   let allowed_action_count = current_app_authorizations.len() / 2;
   let mut allowed_app_authorizations = Vec::new();
   for index in 0..allowed_action_count {

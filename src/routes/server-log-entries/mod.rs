@@ -45,7 +45,7 @@ mod tests;
 //     None, 
 //     |query, database_pool, individual_principal| Box::new(App::count(query, database_pool, individual_principal)),
 //     |query, database_pool, individual_principal| Box::new(App::list(query, database_pool, individual_principal)),
-//     "slashstep.apps.list", 
+//     "apps.list", 
 //     DEFAULT_MAXIMUM_APP_LIST_LIMIT,
 //     "apps",
 //     "app"

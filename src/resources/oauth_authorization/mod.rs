@@ -11,7 +11,7 @@ pub const ALLOWED_QUERY_KEYS: &[&str] = &[];
 pub const UUID_QUERY_KEYS: &[&str] = &[];
 pub const RESOURCE_NAME: &str = "OAuthAuthorization";
 pub const DATABASE_TABLE_NAME: &str = "oauth_authorizations";
-pub const GET_RESOURCE_ACTION_NAME: &str = "slashstep.delegationPolicies.get";
+pub const GET_RESOURCE_ACTION_NAME: &str = "delegationPolicies.get";
 
 /// A authorization that allows an app to trade a short-lived code for a longer-lived access token.
 /// 

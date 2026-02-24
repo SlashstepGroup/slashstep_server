@@ -43,7 +43,7 @@ async fn handle_get_membership_request(
   let membership_id = get_uuid_from_string(&membership_id, "membership", &http_transaction, &state.database_pool).await?;
   let target_membership = get_membership_by_id(&membership_id, &http_transaction, &state.database_pool).await?;
   let resource_hierarchy = get_resource_hierarchy(&target_membership, &AccessPolicyResourceType::Membership, &target_membership.id, &http_transaction, &state.database_pool).await?;
-  let get_memberships_action = get_action_by_name("slashstep.memberships.get", &http_transaction, &state.database_pool).await?;
+  let get_memberships_action = get_action_by_name("memberships.get", &http_transaction, &state.database_pool).await?;
   verify_delegate_permissions(authenticated_app_authorization.as_ref().map(|app_authorization| &app_authorization.id), &get_memberships_action.id, &http_transaction.id, &ActionPermissionLevel::User, &state.database_pool).await?;
   let authenticated_principal = get_authenticated_principal(authenticated_user.as_ref(), authenticated_app.as_ref())?;
   verify_principal_permissions(&authenticated_principal, &get_memberships_action, &resource_hierarchy, &http_transaction, &ActionPermissionLevel::User, &state.database_pool).await?;
@@ -88,7 +88,7 @@ async fn handle_get_membership_request(
 //     Extension(authenticated_app_authorization),
 //     Some(&AccessPolicyResourceType::App),
 //     &membership_id, 
-//     "slashstep.apps.delete",
+//     "apps.delete",
 //     "app",
 //     &ActionLogEntryTargetResourceType::App,
 //     |membership_id, database_pool| Box::new(App::get_by_id(membership_id, database_pool))
@@ -144,7 +144,7 @@ async fn handle_get_membership_request(
 
 //   let original_target_field = get_app_by_id(&membership_id, &http_transaction, &state.database_pool).await?;
 //   let resource_hierarchy = get_resource_hierarchy(&original_target_field, &AccessPolicyResourceType::App, &original_target_field.id, &http_transaction, &state.database_pool).await?;
-//   let update_access_policy_action = get_action_by_name("slashstep.apps.update", &http_transaction, &state.database_pool).await?;
+//   let update_access_policy_action = get_action_by_name("apps.update", &http_transaction, &state.database_pool).await?;
 //   verify_delegate_permissions(authenticated_app_authorization.as_ref().map(|app_authorization| &app_authorization.id), &update_access_policy_action.id, &http_transaction.id, &ActionPermissionLevel::User, &state.database_pool).await?;
 //   let authenticated_principal = get_authenticated_principal(authenticated_user.as_ref(), authenticated_app.as_ref())?;
 //   verify_principal_permissions(&authenticated_principal, &update_access_policy_action, &resource_hierarchy, &http_transaction, &ActionPermissionLevel::User, &state.database_pool).await?;
