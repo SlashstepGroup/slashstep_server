@@ -67,37 +67,37 @@ async fn handle_get_field_value_request(
 
 }
 
-// /// DELETE /field-values/{field_value_id}
-// /// 
-// /// Deletes an app by its ID.
-// #[axum::debug_handler]
-// async fn handle_delete_app_request(
-//   Path(field_value_id): Path<String>,
-//   State(state): State<AppState>, 
-//   Extension(http_transaction): Extension<Arc<HTTPTransaction>>,
-//   Extension(authenticated_user): Extension<Option<Arc<User>>>,
-//   Extension(authenticated_app): Extension<Option<Arc<App>>>,
-//   Extension(authenticated_app_authorization): Extension<Option<Arc<AppAuthorization>>>
-// ) -> Result<StatusCode, HTTPError> {
+/// DELETE /field-values/{field_value_id}
+/// 
+/// Deletes a field value by its ID.
+#[axum::debug_handler]
+async fn handle_delete_field_value_request(
+  Path(field_value_id): Path<String>,
+  State(state): State<AppState>, 
+  Extension(http_transaction): Extension<Arc<HTTPTransaction>>,
+  Extension(authenticated_user): Extension<Option<Arc<User>>>,
+  Extension(authenticated_app): Extension<Option<Arc<App>>>,
+  Extension(authenticated_app_authorization): Extension<Option<Arc<AppAuthorization>>>
+) -> Result<StatusCode, HTTPError> {
 
-//   let field_value_id = get_uuid_from_string(&field_value_id, "app", &http_transaction, &state.database_pool).await?;
-//   let response = delete_resource(
-//     State(state), 
-//     Extension(http_transaction), 
-//     Extension(authenticated_user), 
-//     Extension(authenticated_app), 
-//     Extension(authenticated_app_authorization),
-//     Some(&AccessPolicyResourceType::App),
-//     &field_value_id, 
-//     "apps.delete",
-//     "app",
-//     &ActionLogEntryTargetResourceType::App,
-//     |field_value_id, database_pool| Box::new(App::get_by_id(field_value_id, database_pool))
-//   ).await;
+  let field_value_id = get_uuid_from_string(&field_value_id, "field value", &http_transaction, &state.database_pool).await?;
+  let response = delete_resource(
+    State(state), 
+    Extension(http_transaction), 
+    Extension(authenticated_user), 
+    Extension(authenticated_app), 
+    Extension(authenticated_app_authorization),
+    Some(&AccessPolicyResourceType::FieldValue),
+    &field_value_id, 
+    "fieldValues.delete",
+    "field value",
+    &ActionLogEntryTargetResourceType::FieldValue,
+    |field_value_id, database_pool| Box::new(FieldValue::get_by_id(field_value_id, database_pool))
+  ).await;
 
-//   return response;
+  return response;
 
-// }
+}
 
 // /// PATCH /field-values/{field_value_id}
 // /// 
@@ -185,7 +185,7 @@ pub fn get_router(state: AppState) -> Router<AppState> {
 
   let router = Router::<AppState>::new()
     .route("/field-values/{field_value_id}", axum::routing::get(handle_get_field_value_request))
-    // .route("/field-values/{field_value_id}", axum::routing::delete(handle_delete_app_request))
+    .route("/field-values/{field_value_id}", axum::routing::delete(handle_delete_field_value_request))
     // .route("/field-values/{field_value_id}", axum::routing::patch(handle_patch_app_request))
     .layer(axum::middleware::from_fn_with_state(state.clone(), authentication_middleware::authenticate_user))
     .layer(axum::middleware::from_fn_with_state(state.clone(), authentication_middleware::authenticate_app))
