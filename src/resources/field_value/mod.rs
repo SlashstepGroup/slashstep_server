@@ -91,6 +91,35 @@ pub struct InitialFieldValueProperties {
 
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct EditableFieldValueProperties {
+
+  /// The field choice's text value, if applicable.
+  pub text_value: Option<Option<String>>,
+
+  /// The field choice's number value, if applicable.
+  pub number_value: Option<Option<Decimal>>,
+
+  /// The field choice's boolean value, if applicable.
+  pub boolean_value: Option<Option<bool>>,
+
+  /// The field choice's date time value, if applicable.
+  pub timestamp_value: Option<Option<DateTime<Utc>>>,
+
+  /// The field choice's stakeholder type, if applicable.
+  pub stakeholder_type: Option<Option<StakeholderType>>,
+
+  /// The field choice's stakeholder user ID, if applicable.
+  pub stakeholder_user_id: Option<Option<Uuid>>,
+
+  /// The field choice's stakeholder group ID, if applicable.
+  pub stakeholder_group_id: Option<Option<Uuid>>,
+
+  /// The field choice's stakeholder app ID, if applicable.
+  pub stakeholder_app_id: Option<Option<Uuid>>
+
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, ToSql, FromSql)]
 pub struct FieldValue {
 
@@ -295,6 +324,35 @@ impl FieldValue {
     let rows = database_client.query(&query, &parameters).await?;
     let actions = rows.iter().map(Self::convert_from_row).collect();
     return Ok(actions);
+
+  }
+
+  /// Updates this field value and returns a new instance of the field value.
+  pub async fn update(&self, properties: &EditableFieldValueProperties, database_pool: &deadpool_postgres::Pool) -> Result<Self, ResourceError> {
+
+    let query = String::from("UPDATE field_values SET ");
+    let parameter_boxes: Vec<Box<dyn ToSql + Sync + Send>> = Vec::new();
+    let database_client = database_pool.get().await?;
+
+    database_client.query("BEGIN;", &[]).await?;
+    let (parameter_boxes, query) = slashstepql::add_parameter_to_query(parameter_boxes, query, "text_value", properties.text_value.as_ref());
+    let (parameter_boxes, query) = slashstepql::add_parameter_to_query(parameter_boxes, query, "number_value", properties.number_value.as_ref());
+    let (parameter_boxes, query) = slashstepql::add_parameter_to_query(parameter_boxes, query, "boolean_value", properties.boolean_value.as_ref());
+    let (parameter_boxes, query) = slashstepql::add_parameter_to_query(parameter_boxes, query, "timestamp_value", properties.timestamp_value.as_ref());
+    let (parameter_boxes, query) = slashstepql::add_parameter_to_query(parameter_boxes, query, "stakeholder_type", properties.stakeholder_type.as_ref());
+    let (parameter_boxes, query) = slashstepql::add_parameter_to_query(parameter_boxes, query, "stakeholder_user_id", properties.stakeholder_user_id.as_ref());
+    let (parameter_boxes, query) = slashstepql::add_parameter_to_query(parameter_boxes, query, "stakeholder_group_id", properties.stakeholder_group_id.as_ref());
+    let (parameter_boxes, query) = slashstepql::add_parameter_to_query(parameter_boxes, query, "stakeholder_app_id", properties.stakeholder_app_id.as_ref());
+    let (mut parameter_boxes, mut query) = (parameter_boxes, query);
+
+    query.push_str(format!(" WHERE id = ${} RETURNING *;", parameter_boxes.len() + 1).as_str());
+    parameter_boxes.push(Box::new(&self.id));
+    let parameters: Vec<&(dyn ToSql + Sync)> = parameter_boxes.iter().map(|parameter| parameter.as_ref() as &(dyn ToSql + Sync)).collect();
+    let row = database_client.query_one(&query, &parameters).await?;
+    database_client.query("COMMIT;", &[]).await?;
+
+    let field_value = Self::convert_from_row(&row);
+    return Ok(field_value);
 
   }
 
