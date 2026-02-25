@@ -120,7 +120,7 @@ async fn verify_uuid_when_getting_action_log_entry_by_id() -> Result<(), TestSla
   let response = test_server.get("/action-log-entries/not-a-uuid")
     .await;
   
-  assert_eq!(response.status_code(), 400);
+  assert_eq!(response.status_code(), StatusCode::BAD_REQUEST);
   return Ok(());
 
 }
@@ -294,7 +294,7 @@ async fn verify_uuid_when_deleting_action_log_entry_by_id() -> Result<(), TestSl
   let response = test_server.delete("/action-log-entries/not-a-uuid")
     .await;
   
-  assert_eq!(response.status_code(), 400);
+  assert_eq!(response.status_code(), StatusCode::BAD_REQUEST);
   return Ok(());
 
 }

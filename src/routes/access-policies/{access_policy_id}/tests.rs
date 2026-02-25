@@ -112,7 +112,7 @@ async fn verify_uuid_when_getting_access_policy_by_id() -> Result<(), TestSlashs
   let response = test_server.get("/access-policies/not-a-uuid")
     .await;
   
-  assert_eq!(response.status_code(), 400);
+  assert_eq!(response.status_code(), StatusCode::BAD_REQUEST);
   return Ok(());
 
 }
@@ -282,7 +282,7 @@ async fn verify_uuid_when_deleting_access_policy_by_id() -> Result<(), TestSlash
   let response = test_server.delete("/access-policies/not-a-uuid")
     .await;
   
-  assert_eq!(response.status_code(), 400);
+  assert_eq!(response.status_code(), StatusCode::BAD_REQUEST);
   return Ok(());
 
 }
@@ -467,7 +467,7 @@ async fn verify_content_type_when_patching_access_policy_by_id() -> Result<(), T
   let response = test_server.patch("/access-policies/not-a-uuid")
     .await;
   
-  assert_eq!(response.status_code(), 400);
+  assert_eq!(response.status_code(), StatusCode::BAD_REQUEST);
   return Ok(());
 
 }
@@ -494,7 +494,7 @@ async fn verify_request_body_exists_when_patching_access_policy_by_id() -> Resul
     .add_header("Content-Type", "application/json")
     .await;
   
-  assert_eq!(response.status_code(), 400);
+  assert_eq!(response.status_code(), StatusCode::BAD_REQUEST);
   return Ok(());
 
 }
@@ -526,7 +526,7 @@ async fn verify_request_body_json_when_patching_access_policy_by_id() -> Result<
     }))
     .await;
   
-  assert_eq!(response.status_code(), 400);
+  assert_eq!(response.status_code(), StatusCode::BAD_REQUEST);
   return Ok(());
 
 }
@@ -557,7 +557,7 @@ async fn verify_uuid_when_patching_access_policy_by_id() -> Result<(), TestSlash
     }))
     .await;
   
-  assert_eq!(response.status_code(), 400);
+  assert_eq!(response.status_code(), StatusCode::BAD_REQUEST);
   return Ok(());
 
 }

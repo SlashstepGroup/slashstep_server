@@ -12,6 +12,7 @@
 use std::net::SocketAddr;
 use axum_extra::extract::cookie::Cookie;
 use axum_test::TestServer;
+use reqwest::StatusCode;
 use crate::{AppState, get_json_web_token_private_key, initialize_required_tables, predefinitions::{initialize_predefined_actions, initialize_predefined_configurations, initialize_predefined_roles}, resources::{access_policy::ActionPermissionLevel, action::Action, oauth_authorization::{InitialOAuthAuthorizationPropertiesForPredefinedAuthorizer},}, routes::users::user_id::oauth_authorizations::CreateOAuthAuthorizationResponseBody, tests::{TestEnvironment, TestSlashstepServerError}};
 
 /// Verifies that the router can return a 201 status code and the created resource.
@@ -59,7 +60,7 @@ async fn verify_successful_creation() -> Result<(), TestSlashstepServerError> {
     .await;
   
   // Verify the response.
-  assert_eq!(response.status_code(), 201);
+  assert_eq!(response.status_code(), StatusCode::CREATED);
 
   let response_oauth_authorization: CreateOAuthAuthorizationResponseBody = response.json();
   assert_eq!(initial_oauth_authorization_properties.app_id, response_oauth_authorization.oauth_authorization.app_id);

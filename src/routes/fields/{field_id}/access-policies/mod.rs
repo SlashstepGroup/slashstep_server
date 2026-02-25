@@ -56,7 +56,7 @@ async fn handle_list_access_policies_request(
     Extension(authenticated_app), 
     Extension(authenticated_app_authorization),
     resource_hierarchy, 
-    ActionLogEntryTargetResourceType::AccessPolicy, 
+    ActionLogEntryTargetResourceType::Field, 
     Some(target_field.id), 
     |query, database_pool, individual_principal| Box::new(AccessPolicy::count(query, database_pool, individual_principal)),
     |query, database_pool, individual_principal| Box::new(AccessPolicy::list(query, database_pool, individual_principal)),
