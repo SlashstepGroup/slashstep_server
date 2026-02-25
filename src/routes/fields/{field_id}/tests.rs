@@ -1,6 +1,6 @@
 /**
  * 
- * Any test cases for /fields/{app_id} should be handled here.
+ * Any test cases for /fields/{field_id} should be handled here.
  * 
  * Programmers: 
  * - Christian Toney (https://christiantoney.com)
@@ -23,7 +23,7 @@ use crate::{
   }, resources::{
     ResourceError, access_policy::{
       AccessPolicy, AccessPolicyPrincipalType, AccessPolicyResourceType, ActionPermissionLevel, InitialAccessPolicyProperties
-    }, app::App, configuration::{Configuration, EditableConfigurationProperties}, field::{EditableFieldProperties, Field, InitialFieldProperties}
+    }, app::App, configuration::{Configuration, EditableConfigurationProperties}, field::{EditableFieldProperties, Field}
   }, tests::{TestEnvironment, TestSlashstepServerError}
 };
 

@@ -19,7 +19,7 @@ use crate::{
   resources::{
     access_policy::{AccessPolicyResourceType, ActionPermissionLevel}, action_log_entry::{ActionLogEntry, ActionLogEntryActorType, ActionLogEntryTargetResourceType, InitialActionLogEntryProperties}, app::{App, EditableAppProperties}, app_authorization::AppAuthorization, http_transaction::HTTPTransaction, server_log_entry::ServerLogEntry, user::User
   }, 
-  utilities::{reusable_route_handlers::delete_resource, route_handler_utilities::{AuthenticatedPrincipal, get_action_by_name, get_action_log_entry_expiration_timestamp, get_app_by_id, get_authenticated_principal, get_request_body_without_json_rejection, get_resource_hierarchy, get_uuid_from_string, validate_resource_display_name_length, validate_resource_name_length, verify_delegate_permissions, verify_principal_permissions}}
+  utilities::{reusable_route_handlers::delete_resource, route_handler_utilities::{AuthenticatedPrincipal, get_action_by_name, get_action_log_entry_expiration_timestamp, get_app_by_id, get_authenticated_principal, get_request_body_without_json_rejection, get_resource_hierarchy, get_uuid_from_string, validate_field_length, verify_delegate_permissions, verify_principal_permissions}}
 };
 
 #[path = "./access-policies/mod.rs"]
@@ -119,12 +119,12 @@ async fn handle_patch_app_request(
   let updated_app_properties = get_request_body_without_json_rejection(body, &http_transaction, &state.database_pool).await?;
   if let Some(updated_app_name) = &updated_app_properties.name { 
     
-    validate_resource_name_length(updated_app_name, "apps.maximumNameLength", "App", &http_transaction, &state.database_pool).await?;
+    validate_field_length(updated_app_name, "apps.maximumNameLength", "name", &http_transaction, &state.database_pool).await?;
   
   };
   if let Some(updated_app_display_name) = &updated_app_properties.display_name { 
 
-    validate_resource_display_name_length(updated_app_display_name, "apps.maximumDisplayNameLength", "App", &http_transaction, &state.database_pool).await?;
+    validate_field_length(updated_app_display_name, "apps.maximumDisplayNameLength", "display_name", &http_transaction, &state.database_pool).await?;
   
   };
 
@@ -136,9 +136,9 @@ async fn handle_patch_app_request(
   verify_principal_permissions(&authenticated_principal, &update_access_policy_action, &resource_hierarchy, &http_transaction, &ActionPermissionLevel::User, &state.database_pool).await?;
 
   ServerLogEntry::trace(&format!("Updating authenticated_app {}...", original_target_app.id), Some(&http_transaction.id), &state.database_pool).await.ok();
-  let updated_target_action = match original_target_app.update(&updated_app_properties, &state.database_pool).await {
+  let updated_target_app = match original_target_app.update(&updated_app_properties, &state.database_pool).await {
 
-    Ok(updated_target_action) => updated_target_action,
+    Ok(updated_target_app) => updated_target_app,
 
     Err(error) => {
 
@@ -158,22 +158,22 @@ async fn handle_patch_app_request(
     actor_type: if let AuthenticatedPrincipal::User(_) = &authenticated_principal { ActionLogEntryActorType::User } else { ActionLogEntryActorType::App },
     actor_user_id: if let AuthenticatedPrincipal::User(authenticated_user) = &authenticated_principal { Some(authenticated_user.id.clone()) } else { None },
     actor_app_id: if let AuthenticatedPrincipal::App(authenticated_app) = &authenticated_principal { Some(authenticated_app.id.clone()) } else { None },
-    target_resource_type: ActionLogEntryTargetResourceType::Action,
-    target_action_id: Some(updated_target_action.id),
+    target_resource_type: ActionLogEntryTargetResourceType::App,
+    target_app_id: Some(updated_target_app.id),
     ..Default::default()
   }, &state.database_pool).await.ok();
-  ServerLogEntry::success(&format!("Successfully updated action {}.", updated_target_action.id), Some(&http_transaction.id), &state.database_pool).await.ok();
+  ServerLogEntry::success(&format!("Successfully updated app {}.", updated_target_app.id), Some(&http_transaction.id), &state.database_pool).await.ok();
 
-  return Ok(Json(updated_target_action));
+  return Ok(Json(updated_target_app));
 
 }
 
 pub fn get_router(state: AppState) -> Router<AppState> {
 
   let router = Router::<AppState>::new()
-    .route("/apps/{action_id}", axum::routing::get(handle_get_app_request))
-    .route("/apps/{action_id}", axum::routing::delete(handle_delete_app_request))
-    .route("/apps/{action_id}", axum::routing::patch(handle_patch_app_request))
+    .route("/apps/{app_id}", axum::routing::get(handle_get_app_request))
+    .route("/apps/{app_id}", axum::routing::delete(handle_delete_app_request))
+    .route("/apps/{app_id}", axum::routing::patch(handle_patch_app_request))
     .layer(axum::middleware::from_fn_with_state(state.clone(), authentication_middleware::authenticate_user))
     .layer(axum::middleware::from_fn_with_state(state.clone(), authentication_middleware::authenticate_app))
     .layer(axum::middleware::from_fn_with_state(state.clone(), http_request_middleware::create_http_request))

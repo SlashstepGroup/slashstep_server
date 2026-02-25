@@ -23,7 +23,7 @@ use crate::{
     }, action_log_entry::{ActionLogEntry, ActionLogEntryActorType, ActionLogEntryTargetResourceType, InitialActionLogEntryProperties}, app::App, app_authorization::AppAuthorization, http_transaction::HTTPTransaction, server_log_entry::ServerLogEntry, user::User
   }, 
   utilities::{reusable_route_handlers::delete_resource, route_handler_utilities::{
-      AuthenticatedPrincipal, get_action_by_id, get_action_by_name, get_action_log_entry_expiration_timestamp, get_authenticated_principal, get_request_body_without_json_rejection, get_resource_hierarchy, get_uuid_from_string, validate_action_display_name, validate_action_name, validate_resource_display_name_length, validate_resource_name_length, verify_delegate_permissions, verify_principal_permissions
+      AuthenticatedPrincipal, get_action_by_id, get_action_by_name, get_action_log_entry_expiration_timestamp, get_authenticated_principal, get_request_body_without_json_rejection, get_resource_hierarchy, get_uuid_from_string, validate_field_length, validate_resource_display_name, validate_resource_name, verify_delegate_permissions, verify_principal_permissions
     }}
 };
 
@@ -85,10 +85,18 @@ async fn handle_patch_action_request(
 
   let http_transaction = http_transaction.clone();
   let updated_action_properties = get_request_body_without_json_rejection(body, &http_transaction, &state.database_pool).await?;
-  if let Some(updated_action_name) = &updated_action_properties.name { validate_resource_name_length(updated_action_name, "actions.maximumNameLength", "Action", &http_transaction, &state.database_pool).await?; };
-  if let Some(updated_action_display_name) = &updated_action_properties.display_name { validate_resource_display_name_length(updated_action_display_name, "actions.maximumDisplayNameLength", "Action", &http_transaction, &state.database_pool).await?; };
-  if let Some(updated_action_name) = &updated_action_properties.name { validate_action_name(updated_action_name, &http_transaction, &state.database_pool).await?; };
-  if let Some(updated_action_display_name) = &updated_action_properties.display_name { validate_action_display_name(updated_action_display_name, &http_transaction, &state.database_pool).await?; }
+  if let Some(updated_action_name) = &updated_action_properties.name { 
+    
+    validate_field_length(updated_action_name, "actions.maximumNameLength", "name", &http_transaction, &state.database_pool).await?;
+    validate_resource_name(updated_action_name, "actions.allowedNameRegex", "Action", &http_transaction, &state.database_pool).await?;
+  
+  };
+  if let Some(updated_action_display_name) = &updated_action_properties.display_name { 
+    
+    validate_field_length(updated_action_display_name, "actions.maximumDisplayNameLength", "name", &http_transaction, &state.database_pool).await?;
+    validate_resource_display_name(updated_action_display_name, "actions.allowedDisplayNameRegex", "Action", &http_transaction, &state.database_pool).await?;
+  
+  };
   let original_target_action = get_action_by_id(&action_id, &http_transaction, &state.database_pool).await?;
   let resource_hierarchy = get_resource_hierarchy(&original_target_action, &AccessPolicyResourceType::Action, &original_target_action.id, &http_transaction, &state.database_pool).await?;
   let update_access_policy_action = get_action_by_name("actions.update", &http_transaction, &state.database_pool).await?;
