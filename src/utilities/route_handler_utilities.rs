@@ -877,7 +877,7 @@ pub async fn get_configuration_by_name(configuration_name: &str, http_transactio
 
 }
 
-pub async fn validate_resource_name_length(name: &str, configuration_name: &str, resource_type_name_singular: &str, http_transaction: &HTTPTransaction, database_pool: &deadpool_postgres::Pool) -> Result<(), HTTPError> {
+pub async fn validate_field_length(name: &str, configuration_name: &str, field_name: &str, http_transaction: &HTTPTransaction, database_pool: &deadpool_postgres::Pool) -> Result<(), HTTPError> {
 
   let maximum_name_length_configuration = get_configuration_by_name(configuration_name, http_transaction, database_pool).await?;
   let maximum_name_length = match maximum_name_length_configuration.number_value.or(maximum_name_length_configuration.default_number_value) {
@@ -905,10 +905,10 @@ pub async fn validate_resource_name_length(name: &str, configuration_name: &str,
 
   };
 
-  ServerLogEntry::trace(&format!("Validating {} name length...", resource_type_name_singular.to_lowercase()), Some(&http_transaction.id), database_pool).await.ok();
+  ServerLogEntry::trace(&format!("Validating \"{}\" field length...", field_name), Some(&http_transaction.id), database_pool).await.ok();
   if name.len() > maximum_name_length {
 
-    let http_error = HTTPError::UnprocessableEntity(Some(format!("{} names must be at most {} characters long.", resource_type_name_singular, maximum_name_length)));
+    let http_error = HTTPError::UnprocessableEntity(Some(format!("The \"{}\" field must be at most {} characters long.", field_name, maximum_name_length)));
     ServerLogEntry::from_http_error(&http_error, Some(&http_transaction.id), database_pool).await.ok();
     return Err(http_error);
 
@@ -919,72 +919,30 @@ pub async fn validate_resource_name_length(name: &str, configuration_name: &str,
 
 }
 
-pub async fn validate_resource_display_name_length(name: &str, configuration_name: &str, resource_type_name_singular: &str, http_transaction: &HTTPTransaction, database_pool: &deadpool_postgres::Pool) -> Result<(), HTTPError> {
+pub async fn validate_resource_name(name: &str, configuration_name: &str, resource_type_name_singular: &str, http_transaction: &HTTPTransaction, database_pool: &deadpool_postgres::Pool) -> Result<(), HTTPError> {
 
-  let maximum_display_name_length_configuration = get_configuration_by_name(configuration_name, http_transaction, database_pool).await?;
-  let maximum_name_length = match maximum_display_name_length_configuration.number_value.or(maximum_display_name_length_configuration.default_number_value) {
-
-    Some(maximum_name_length) => match maximum_name_length.to_usize() {
-
-      Some(maximum_name_length) => maximum_name_length,
-
-      None => {
-
-        let http_error = HTTPError::InternalServerError(Some(format!("Invalid number value for configuration {}. The value must be a positive integer that can be represented as a usize.", configuration_name)));
-        ServerLogEntry::from_http_error(&http_error, Some(&http_transaction.id), database_pool).await.ok();
-        return Err(http_error);
-
-      }
-
-    },
-
-    None => {
-
-      ServerLogEntry::warning(&format!("Missing value and default value for configuration {}. This is a security risk. Consider setting a restrictive maximum display name length in the configuration.", configuration_name), Some(&http_transaction.id), database_pool).await.ok();
-      return Ok(());
-
-    }
-
-  };
-
-  ServerLogEntry::trace(&format!("Validating {} display name length...", resource_type_name_singular.to_lowercase()), Some(&http_transaction.id), database_pool).await.ok();
-  if name.len() > maximum_name_length {
-
-    let http_error = HTTPError::UnprocessableEntity(Some(format!("{} display names must be at most {} characters long.", resource_type_name_singular, maximum_name_length)));
-    ServerLogEntry::from_http_error(&http_error, Some(&http_transaction.id), database_pool).await.ok();
-    return Err(http_error);
-
-  }
-  
-
-  Ok(())
-
-}
-
-pub async fn validate_action_name(name: &str, http_transaction: &HTTPTransaction, database_pool: &deadpool_postgres::Pool) -> Result<(), HTTPError> {
-
-  let allowed_name_regex_configuration = get_configuration_by_name("actions.allowedNameRegex", http_transaction, database_pool).await?;
+  let allowed_name_regex_configuration = get_configuration_by_name(configuration_name, http_transaction, database_pool).await?;
   let allowed_name_regex_string = match allowed_name_regex_configuration.text_value.or(allowed_name_regex_configuration.default_text_value) {
 
     Some(allowed_name_regex_string) => allowed_name_regex_string,
 
     None => {
 
-      ServerLogEntry::warning("Missing value and default value for configuration actions.allowedNameRegex. Consider setting a regex pattern in the configuration for better security.", Some(&http_transaction.id), database_pool).await.ok();
+      ServerLogEntry::warning(&format!("Missing value and default value for configuration {}. Consider setting a regex pattern in the configuration for better security.", configuration_name), Some(&http_transaction.id), database_pool).await.ok();
       return Ok(());
 
     }
 
   };
 
-  ServerLogEntry::trace("Creating regex for validating action names...", Some(&http_transaction.id), database_pool).await.ok();
+  ServerLogEntry::trace(&format!("Creating regex for validating {} names...", resource_type_name_singular.to_lowercase()), Some(&http_transaction.id), database_pool).await.ok();
   let regex = match regex::Regex::new(&allowed_name_regex_string) {
 
     Ok(regex) => regex,
 
     Err(error) => {
 
-      let http_error = HTTPError::InternalServerError(Some(format!("Failed to create regex for validating action names: {:?}", error)));
+      let http_error = HTTPError::InternalServerError(Some(format!("Failed to create regex for validating {} names: {:?}", resource_type_name_singular.to_lowercase(), error)));
       ServerLogEntry::from_http_error(&http_error, Some(&http_transaction.id), database_pool).await.ok();
       return Err(http_error)
 
@@ -992,10 +950,10 @@ pub async fn validate_action_name(name: &str, http_transaction: &HTTPTransaction
 
   };
 
-  ServerLogEntry::trace("Validating action name against regex...", Some(&http_transaction.id), database_pool).await.ok();
+  ServerLogEntry::trace(&format!("Validating {} name against regex...", resource_type_name_singular.to_lowercase()), Some(&http_transaction.id), database_pool).await.ok();
   if !regex.is_match(name) {
 
-    let http_error = HTTPError::UnprocessableEntity(Some(format!("Action names must match the allowed pattern: {}", allowed_name_regex_string)));
+    let http_error = HTTPError::UnprocessableEntity(Some(format!("{} names must match the allowed pattern: {}", resource_type_name_singular, allowed_name_regex_string)));
     ServerLogEntry::from_http_error(&http_error, Some(&http_transaction.id), database_pool).await.ok();
     return Err(http_error);
 
@@ -1005,30 +963,30 @@ pub async fn validate_action_name(name: &str, http_transaction: &HTTPTransaction
 
 }
 
-pub async fn validate_action_display_name(name: &str, http_transaction: &HTTPTransaction, database_pool: &deadpool_postgres::Pool) -> Result<(), HTTPError> {
+pub async fn validate_resource_display_name(name: &str, configuration_name: &str, resource_type_name_singular: &str, http_transaction: &HTTPTransaction, database_pool: &deadpool_postgres::Pool) -> Result<(), HTTPError> {
 
-  let allowed_display_name_regex_configuration = get_configuration_by_name("actions.allowedDisplayNameRegex", http_transaction, database_pool).await?;
+  let allowed_display_name_regex_configuration = get_configuration_by_name(configuration_name, http_transaction, database_pool).await?;
   let allowed_display_name_regex_string = match allowed_display_name_regex_configuration.text_value.or(allowed_display_name_regex_configuration.default_text_value) {
 
     Some(allowed_display_name_regex_string) => allowed_display_name_regex_string,
 
     None => {
 
-      ServerLogEntry::warning("Missing value and default value for configuration actions.allowedDisplayNameRegex. Consider setting a regex pattern in the configuration for better security.", Some(&http_transaction.id), database_pool).await.ok();
+      ServerLogEntry::warning(&format!("Missing value and default value for configuration {}. Consider setting a regex pattern in the configuration for better security.", configuration_name), Some(&http_transaction.id), database_pool).await.ok();
       return Ok(());
 
     }
 
   };
 
-  ServerLogEntry::trace("Creating regex for validating action display names...", Some(&http_transaction.id), database_pool).await.ok();
+  ServerLogEntry::trace(&format!("Creating regex for validating {} display names...", resource_type_name_singular.to_lowercase()), Some(&http_transaction.id), database_pool).await.ok();
   let regex = match regex::Regex::new(&allowed_display_name_regex_string) {
 
     Ok(regex) => regex,
 
     Err(error) => {
 
-      let http_error = HTTPError::InternalServerError(Some(format!("Failed to create regex for validating action display names: {:?}", error)));
+      let http_error = HTTPError::InternalServerError(Some(format!("Failed to create regex for validating {} display names: {:?}", resource_type_name_singular.to_lowercase(), error)));
       ServerLogEntry::from_http_error(&http_error, Some(&http_transaction.id), database_pool).await.ok();
       return Err(http_error)
 
@@ -1036,54 +994,10 @@ pub async fn validate_action_display_name(name: &str, http_transaction: &HTTPTra
 
   };
 
-  ServerLogEntry::trace("Validating action display name against regex...", Some(&http_transaction.id), database_pool).await.ok();
+  ServerLogEntry::trace(&format!("Validating {} display name against regex...", resource_type_name_singular.to_lowercase()), Some(&http_transaction.id), database_pool).await.ok();
   if !regex.is_match(name) {
 
-    let http_error = HTTPError::UnprocessableEntity(Some(format!("Action display names must match the allowed pattern: {}", allowed_display_name_regex_string)));
-    ServerLogEntry::from_http_error(&http_error, Some(&http_transaction.id), database_pool).await.ok();
-    return Err(http_error);
-
-  }
-
-  Ok(())
-
-}
-
-pub async fn validate_field_name(name: &str, http_transaction: &HTTPTransaction, database_pool: &deadpool_postgres::Pool) -> Result<(), HTTPError> {
-
-  let allowed_field_name_regex_configuration = get_configuration_by_name("fields.allowedNameRegex", http_transaction, database_pool).await?;
-  let allowed_field_name_regex_string = match allowed_field_name_regex_configuration.text_value.or(allowed_field_name_regex_configuration.default_text_value) {
-
-    Some(allowed_field_name_regex_string) => allowed_field_name_regex_string,
-
-    None => {
-
-      ServerLogEntry::warning("Missing value and default value for configuration fields.allowedNameRegex. Consider setting a regex pattern in the configuration for better security.", Some(&http_transaction.id), database_pool).await.ok();
-      return Ok(());
-
-    }
-
-  };
-
-  ServerLogEntry::trace("Creating regex for validating field names...", Some(&http_transaction.id), database_pool).await.ok();
-  let regex = match regex::Regex::new(&allowed_field_name_regex_string) {
-
-    Ok(regex) => regex,
-
-    Err(error) => {
-
-      let http_error = HTTPError::InternalServerError(Some(format!("Failed to create regex for validating field names: {:?}", error)));
-      ServerLogEntry::from_http_error(&http_error, Some(&http_transaction.id), database_pool).await.ok();
-      return Err(http_error)
-
-    }
-
-  };
-
-  ServerLogEntry::trace("Validating field name against regex...", Some(&http_transaction.id), database_pool).await.ok();
-  if !regex.is_match(name) {
-
-    let http_error = HTTPError::UnprocessableEntity(Some(format!("Field names must match the allowed pattern: {}", allowed_field_name_regex_string)));
+    let http_error = HTTPError::UnprocessableEntity(Some(format!("{} display names must match the allowed pattern: {}", resource_type_name_singular, allowed_display_name_regex_string)));
     ServerLogEntry::from_http_error(&http_error, Some(&http_transaction.id), database_pool).await.ok();
     return Err(http_error);
 

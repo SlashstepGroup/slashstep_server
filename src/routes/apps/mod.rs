@@ -18,12 +18,11 @@ use std::sync::Arc;
 use argon2::{Argon2, PasswordHasher, password_hash::{SaltString, rand_core::{OsRng, le}}};
 use axum::{Extension, Json, Router, extract::{Query, State, rejection::JsonRejection}};
 use axum_extra::response::ErasedJson;
-use rand::{Rng, RngExt, distr::Alphanumeric};
+use rand::{RngExt, distr::Alphanumeric};
 use reqwest::StatusCode;
-use rust_decimal::prelude::ToPrimitive;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
-use crate::{AppState, HTTPError, middleware::{authentication_middleware, http_request_middleware}, resources::{ResourceError, access_policy::{AccessPolicyResourceType, ActionPermissionLevel, ResourceHierarchy}, action_log_entry::{ActionLogEntry, ActionLogEntryActorType, ActionLogEntryTargetResourceType, InitialActionLogEntryProperties}, app::{App, AppClientType, AppParentResourceType, DEFAULT_MAXIMUM_APP_LIST_LIMIT, InitialAppProperties}, app_authorization::AppAuthorization, configuration::Configuration, http_transaction::HTTPTransaction, server_log_entry::ServerLogEntry, user::User}, utilities::{reusable_route_handlers::{ResourceListQueryParameters, list_resources}, route_handler_utilities::{AuthenticatedPrincipal, get_action_by_id, get_action_by_name, get_action_log_entry_expiration_timestamp, get_authenticated_principal, get_configuration_by_name, get_request_body_without_json_rejection, validate_resource_display_name_length, validate_resource_name_length, verify_delegate_permissions, verify_principal_permissions}}};
+use crate::{AppState, HTTPError, middleware::{authentication_middleware, http_request_middleware}, resources::{access_policy::{AccessPolicyResourceType, ActionPermissionLevel, ResourceHierarchy}, action_log_entry::{ActionLogEntry, ActionLogEntryActorType, ActionLogEntryTargetResourceType, InitialActionLogEntryProperties}, app::{App, AppClientType, AppParentResourceType, DEFAULT_MAXIMUM_APP_LIST_LIMIT, InitialAppProperties}, app_authorization::AppAuthorization, http_transaction::HTTPTransaction, server_log_entry::ServerLogEntry, user::User}, utilities::{reusable_route_handlers::{ResourceListQueryParameters, list_resources}, route_handler_utilities::{AuthenticatedPrincipal, get_action_by_name, get_action_log_entry_expiration_timestamp, get_authenticated_principal, get_configuration_by_name, get_request_body_without_json_rejection, validate_field_length, verify_delegate_permissions, verify_principal_permissions}}};
 
 #[derive(Debug, Serialize, Deserialize, Default)]
 pub struct InitialAppPropertiesWithoutClientSecretHash {
@@ -189,9 +188,9 @@ async fn handle_create_app_request(
   let http_transaction = http_transaction.clone();
   let app_properties_json = get_request_body_without_json_rejection(body, &http_transaction, &state.database_pool).await?;
   validate_app_name(&app_properties_json.name, &http_transaction, &state.database_pool).await?;
-  validate_resource_name_length(&app_properties_json.name, "apps.maximumNameLength", "App", &http_transaction, &state.database_pool).await?;
+  validate_field_length(&app_properties_json.name, "apps.maximumNameLength", "name", &http_transaction, &state.database_pool).await?;
   validate_app_display_name(&app_properties_json.display_name, &http_transaction, &state.database_pool).await?;
-  validate_resource_display_name_length(&app_properties_json.display_name, "apps.maximumDisplayNameLength", "App", &http_transaction, &state.database_pool).await?;
+  validate_field_length(&app_properties_json.display_name, "apps.maximumDisplayNameLength", "display_name", &http_transaction, &state.database_pool).await?;
 
   // Make sure the authenticated_user can create apps for the target action log entry.
   let resource_hierarchy: ResourceHierarchy = vec![(AccessPolicyResourceType::Server, None)];
