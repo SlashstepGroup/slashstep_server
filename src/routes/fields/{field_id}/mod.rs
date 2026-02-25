@@ -11,6 +11,8 @@
 
 #[path = "./access-policies/mod.rs"]
 mod access_policies;
+#[path = "./field-choices/mod.rs"]
+mod field_choices;
 #[cfg(test)]
 mod tests;
 

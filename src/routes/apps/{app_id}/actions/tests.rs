@@ -56,7 +56,7 @@ async fn verify_successful_creation() -> Result<(), TestSlashstepServerError> {
     .await;
   
   // Verify the response.
-  assert_eq!(response.status_code(), 201);
+  assert_eq!(response.status_code(), StatusCode::CREATED);
 
   let response_action: Action = response.json();
   assert_eq!(initial_action_properties.name, response_action.name);
@@ -100,7 +100,7 @@ async fn verify_request_body_json_when_creating_resource() -> Result<(), TestSla
     .await;
   
   // Verify the response.
-  assert_eq!(response.status_code(), 400);
+  assert_eq!(response.status_code(), StatusCode::BAD_REQUEST);
   return Ok(());
 
 }

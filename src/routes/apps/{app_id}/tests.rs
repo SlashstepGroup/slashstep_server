@@ -103,7 +103,7 @@ async fn verify_uuid_when_getting_app_by_id() -> Result<(), TestSlashstepServerE
   let response = test_server.get("/apps/not-a-uuid")
     .await;
   
-  assert_eq!(response.status_code(), 400);
+  assert_eq!(response.status_code(), StatusCode::BAD_REQUEST);
   return Ok(());
 
 }
@@ -280,7 +280,7 @@ async fn verify_uuid_when_deleting_by_id() -> Result<(), TestSlashstepServerErro
   let response = test_server.delete("/apps/not-a-uuid")
     .await;
   
-  assert_eq!(response.status_code(), 400);
+  assert_eq!(response.status_code(), StatusCode::BAD_REQUEST);
   return Ok(());
 
 }
@@ -472,7 +472,7 @@ async fn verify_content_type_when_patching_by_id() -> Result<(), TestSlashstepSe
     .await;
   
   // Verify the response.
-  assert_eq!(response.status_code(), 400);
+  assert_eq!(response.status_code(), StatusCode::BAD_REQUEST);
   return Ok(());
 
 }
@@ -500,7 +500,7 @@ async fn verify_request_body_exists_when_patching_by_id() -> Result<(), TestSlas
     .await;
   
   // Verify the response.
-  assert_eq!(response.status_code(), 400);
+  assert_eq!(response.status_code(), StatusCode::BAD_REQUEST);
   return Ok(());
 
 }
@@ -533,7 +533,7 @@ async fn verify_request_body_json_when_patching_by_id() -> Result<(), TestSlashs
     .await;
   
   // Verify the response.
-  assert_eq!(response.status_code(), 400);
+  assert_eq!(response.status_code(), StatusCode::BAD_REQUEST);
   return Ok(());
 
 }
@@ -561,7 +561,7 @@ async fn verify_uuid_when_patching_by_id() -> Result<(), TestSlashstepServerErro
     }))
     .await;
   
-  assert_eq!(response.status_code(), 400);
+  assert_eq!(response.status_code(), StatusCode::BAD_REQUEST);
   return Ok(());
 
 }

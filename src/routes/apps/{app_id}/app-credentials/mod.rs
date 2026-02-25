@@ -70,7 +70,7 @@ pub async fn handle_list_app_credentials_request(
     Extension(authenticated_app), 
     Extension(authenticated_app_authorization),
     resource_hierarchy, 
-    ActionLogEntryTargetResourceType::Action, 
+    ActionLogEntryTargetResourceType::App, 
     Some(app.id), 
     |query, database_pool, individual_principal| Box::new(AppCredential::count(query, database_pool, individual_principal)),
     |query, database_pool, individual_principal| Box::new(AppCredential::list(query, database_pool, individual_principal)),
@@ -144,7 +144,7 @@ async fn handle_create_app_credential_request(
 
     Err(error) => {
 
-      let http_error = HTTPError::InternalServerError(Some(format!("Failed to create authenticated_app credential: {:?}", error)));
+      let http_error = HTTPError::InternalServerError(Some(format!("Failed to create app credential: {:?}", error)));
       ServerLogEntry::from_http_error(&http_error, Some(&http_transaction.id), &state.database_pool).await.ok();
       return Err(http_error);
 
@@ -159,7 +159,7 @@ async fn handle_create_app_credential_request(
 
     Err(error) => {
 
-      let http_error = HTTPError::InternalServerError(Some(format!("Failed to create authenticated_app credential: {:?}", error)));
+      let http_error = HTTPError::InternalServerError(Some(format!("Failed to create app credential: {:?}", error)));
       ServerLogEntry::from_http_error(&http_error, Some(&http_transaction.id), &state.database_pool).await.ok();
       return Err(http_error);
 
@@ -167,8 +167,8 @@ async fn handle_create_app_credential_request(
 
   };
 
-  // Create the authenticated_app credential.
-  ServerLogEntry::trace(&format!("Creating authenticated_app credential for authenticated_app {}...", target_app.id), Some(&http_transaction.id), &state.database_pool).await.ok();
+  // Create the authenticated app credential.
+  ServerLogEntry::trace(&format!("Creating app credential for app {}...", target_app.id), Some(&http_transaction.id), &state.database_pool).await.ok();
 
   let created_app_credential = match AppCredential::create(&InitialAppCredentialProperties {
     app_id: target_app.id,
@@ -182,7 +182,7 @@ async fn handle_create_app_credential_request(
 
     Err(error) => {
 
-      let http_error = HTTPError::InternalServerError(Some(format!("Failed to create authenticated_app credential: {:?}", error)));
+      let http_error = HTTPError::InternalServerError(Some(format!("Failed to create app credential: {:?}", error)));
       ServerLogEntry::from_http_error(&http_error, Some(&http_transaction.id), &state.database_pool).await.ok();
       return Err(http_error)
 

@@ -102,7 +102,7 @@ async fn verify_uuid_when_getting_action_by_id() -> Result<(), TestSlashstepServ
   let response = test_server.get("/actions/not-a-uuid")
     .await;
   
-  assert_eq!(response.status_code(), 400);
+  assert_eq!(response.status_code(), StatusCode::BAD_REQUEST);
   return Ok(());
 
 }
@@ -279,7 +279,7 @@ async fn verify_uuid_when_deleting_action_by_id() -> Result<(), TestSlashstepSer
   let response = test_server.delete("/actions/not-a-uuid")
     .await;
   
-  assert_eq!(response.status_code(), 400);
+  assert_eq!(response.status_code(), StatusCode::BAD_REQUEST);
   return Ok(());
 
 }
@@ -459,7 +459,7 @@ async fn verify_content_type_when_patching_action_by_id() -> Result<(), TestSlas
     .await;
   
   // Verify the response.
-  assert_eq!(response.status_code(), 400);
+  assert_eq!(response.status_code(), StatusCode::BAD_REQUEST);
   return Ok(());
 
 }
@@ -487,7 +487,7 @@ async fn verify_request_body_exists_when_patching_action_by_id() -> Result<(), T
     .await;
   
   // Verify the response.
-  assert_eq!(response.status_code(), 400);
+  assert_eq!(response.status_code(), StatusCode::BAD_REQUEST);
   return Ok(());
 
 }
@@ -520,7 +520,7 @@ async fn verify_request_body_json_when_patching_action_by_id() -> Result<(), Tes
     .await;
   
   // Verify the response.
-  assert_eq!(response.status_code(), 400);
+  assert_eq!(response.status_code(), StatusCode::BAD_REQUEST);
   return Ok(());
 
 }
@@ -548,7 +548,7 @@ async fn verify_uuid_when_patching_action_by_id() -> Result<(), TestSlashstepSer
     }))
     .await;
   
-  assert_eq!(response.status_code(), 400);
+  assert_eq!(response.status_code(), StatusCode::BAD_REQUEST);
   return Ok(());
 
 }
