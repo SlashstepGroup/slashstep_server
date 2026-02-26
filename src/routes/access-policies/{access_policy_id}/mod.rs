@@ -138,7 +138,6 @@ async fn handle_get_access_policy_request(
 ) -> Result<Json<AccessPolicy>, HTTPError> {
 
   // Make sure the access policy exists.
-  let http_transaction = http_transaction.clone();
   let access_policy = get_access_policy(&access_policy_id, &http_transaction, &state.database_pool).await?;
 
   // Make sure the delegate and principal have access to the resource.
@@ -182,7 +181,6 @@ async fn handle_patch_access_policy_request(
   body: Result<Json<EditableAccessPolicyProperties>, JsonRejection>
 ) -> Result<Json<AccessPolicy>, HTTPError> {
 
-  let http_transaction = http_transaction.clone();
 
   let updated_access_policy_properties = get_request_body_without_json_rejection(body, &http_transaction, &state.database_pool).await?;
 

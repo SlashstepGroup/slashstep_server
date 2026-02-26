@@ -39,7 +39,6 @@ async fn handle_get_membership_request(
   Extension(authenticated_app_authorization): Extension<Option<Arc<AppAuthorization>>>
 ) -> Result<Json<Membership>, HTTPError> {
 
-  let http_transaction = http_transaction.clone();
   let membership_id = get_uuid_from_string(&membership_id, "membership", &http_transaction, &state.database_pool).await?;
   let target_membership = get_membership_by_id(&membership_id, &http_transaction, &state.database_pool).await?;
   let resource_hierarchy = get_resource_hierarchy(&target_membership, &AccessPolicyResourceType::Membership, &target_membership.id, &http_transaction, &state.database_pool).await?;

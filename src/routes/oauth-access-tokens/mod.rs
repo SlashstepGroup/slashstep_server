@@ -755,7 +755,6 @@ async fn handle_create_oauth_access_token_request(
   Query(query_parameters): Query<CreateOAuthAccessTokenQueryParameters>,
 ) -> Result<(StatusCode, Json<CreateAccessTokenResponseBody>), OAuthTokenErrorResponse> {
   
-  let http_transaction = http_transaction.clone();
   let client_id = convert_client_id_string_to_uuid(&query_parameters.client_id, &http_transaction.id, &state.database_pool).await?;
   let app = get_app_by_client_id(&client_id, &http_transaction.id, &state.database_pool).await?;
 

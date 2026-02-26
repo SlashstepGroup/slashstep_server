@@ -42,7 +42,6 @@ async fn handle_get_app_authorization_credential_request(
   Extension(authenticated_app_authorization): Extension<Option<Arc<AppAuthorization>>>
 ) -> Result<Json<AppAuthorizationCredential>, HTTPError> {
 
-  let http_transaction = http_transaction.clone();
   let target_app_authorization_credential = get_app_authorization_credential_by_id(&app_authorization_credential_id, &http_transaction, &state.database_pool).await?;
   let resource_hierarchy = get_resource_hierarchy(&target_app_authorization_credential, &AccessPolicyResourceType::AppAuthorizationCredential, &target_app_authorization_credential.id, &http_transaction, &state.database_pool).await?;
   let get_app_authorizations_action = get_action_by_name("appAuthorizationCredentials.get", &http_transaction, &state.database_pool).await?;

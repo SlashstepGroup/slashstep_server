@@ -43,7 +43,6 @@ async fn handle_get_action_request(
   Extension(authenticated_app_authorization): Extension<Option<Arc<AppAuthorization>>>
 ) -> Result<Json<Action>, HTTPError> {
 
-  let http_transaction = http_transaction.clone();
   let target_action = get_action_by_id(&action_id, &http_transaction, &state.database_pool).await?;
   let resource_hierarchy = get_resource_hierarchy(&target_action, &AccessPolicyResourceType::Action, &target_action.id, &http_transaction, &state.database_pool).await?;
   let get_actions_action = get_action_by_name("actions.get", &http_transaction, &state.database_pool).await?;
@@ -83,7 +82,6 @@ async fn handle_patch_action_request(
   body: Result<Json<EditableActionProperties>, JsonRejection>
 ) -> Result<Json<Action>, HTTPError> {
 
-  let http_transaction = http_transaction.clone();
   let updated_action_properties = get_request_body_without_json_rejection(body, &http_transaction, &state.database_pool).await?;
   if let Some(updated_action_name) = &updated_action_properties.name { 
     

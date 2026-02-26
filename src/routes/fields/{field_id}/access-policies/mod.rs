@@ -33,7 +33,6 @@ async fn handle_list_access_policies_request(
   Extension(authenticated_app_authorization): Extension<Option<Arc<AppAuthorization>>>
 ) -> Result<ErasedJson, HTTPError> {
 
-  let http_transaction = http_transaction.clone();
   let field_id = get_uuid_from_string(&field_id, "field", &http_transaction, &state.database_pool).await?;
   let target_field = get_field_by_id(&field_id, &http_transaction, &state.database_pool).await?;
   let resource_hierarchy = get_resource_hierarchy(&target_field, &AccessPolicyResourceType::Field, &target_field.id, &http_transaction, &state.database_pool).await?;
@@ -84,7 +83,6 @@ async fn handle_create_access_policy_request(
   body: Result<Json<InitialAccessPolicyPropertiesForPredefinedScope>, JsonRejection>
 ) -> Result<(StatusCode, Json<AccessPolicy>), HTTPError> {
 
-  let http_transaction = http_transaction.clone();
   let access_policy_properties_json = get_request_body_without_json_rejection(body, &http_transaction, &state.database_pool).await?;
 
   // Make sure the user can create access policies for the target action.

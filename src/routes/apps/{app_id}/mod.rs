@@ -43,7 +43,6 @@ async fn handle_get_app_request(
   Extension(authenticated_app_authorization): Extension<Option<Arc<AppAuthorization>>>
 ) -> Result<Json<App>, HTTPError> {
 
-  let http_transaction = http_transaction.clone();
   let target_app = get_app_by_id(&app_id, &http_transaction, &state.database_pool).await?;
   let resource_hierarchy = get_resource_hierarchy(&target_app, &AccessPolicyResourceType::App, &target_app.id, &http_transaction, &state.database_pool).await?;
   let get_apps_action = get_action_by_name("apps.get", &http_transaction, &state.database_pool).await?;
@@ -115,7 +114,6 @@ async fn handle_patch_app_request(
   body: Result<Json<EditableAppProperties>, JsonRejection>
 ) -> Result<Json<App>, HTTPError> {
 
-  let http_transaction = http_transaction.clone();
   let updated_app_properties = get_request_body_without_json_rejection(body, &http_transaction, &state.database_pool).await?;
   if let Some(updated_app_name) = &updated_app_properties.name { 
     

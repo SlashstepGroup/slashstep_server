@@ -40,7 +40,6 @@ async fn handle_get_milestone_request(
   Extension(authenticated_app_authorization): Extension<Option<Arc<AppAuthorization>>>
 ) -> Result<Json<Milestone>, HTTPError> {
 
-  let http_transaction = http_transaction.clone();
   let milestone_id = get_uuid_from_string(&milestone_id, "milestone", &http_transaction, &state.database_pool).await?;
   let target_milestone = get_milestone_by_id(&milestone_id, &http_transaction, &state.database_pool).await?;
   let resource_hierarchy = get_resource_hierarchy(&target_milestone, &AccessPolicyResourceType::Milestone, &target_milestone.id, &http_transaction, &state.database_pool).await?;

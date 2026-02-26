@@ -16,7 +16,8 @@ pub const ALLOWED_QUERY_KEYS: &[&str] = &[
   "parent_resource_type",
   "parent_workspace_id",
   "parent_project_id",
-  "parent_group_id"
+  "parent_group_id",
+  "protected_role_type"
 ];
 pub const UUID_QUERY_KEYS: &[&str] = &[
   "id",
@@ -36,6 +37,35 @@ pub enum RoleParentResourceType {
   Workspace,
   Project,
   Group
+}
+
+#[derive(Debug, Clone, Serialize, ToSql, FromSql, Deserialize)]
+#[postgres(name = "protected_role_type")]
+pub enum ProtectedRoleType {
+  
+  /// A role intended for unauthenticated users.
+  /// 
+  /// This role is automatically created when Slashstep Server is initialized. 
+  /// 
+  /// This role should be protected from deletion because deleting this role may cause the server to break.
+  AnonymousUsers,
+
+  /// A role intended for group admins.
+  /// 
+  /// This role is automatically created when a group is created.
+  /// 
+  /// This role should be protected from deletion in case there is an update to
+  /// the default permissions.
+  GroupAdmins,
+
+  /// A role intended for group members.
+  /// 
+  /// This role is automatically created when a group is created.
+  /// 
+  /// This role should be protected from deletion in case there is an update to
+  /// the default permissions.
+  GroupMembers
+
 }
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
@@ -62,8 +92,17 @@ pub struct InitialRoleProperties {
   /// The role's parent group ID, if applicable.
   pub parent_group_id: Option<Uuid>,
 
-  /// Whether the role is predefined.
-  pub is_predefined: bool
+  /// The role's protected role type, if applicable.
+  /// 
+  /// If the role has a protected role type, then the role cannot be deleted directly
+  /// using Slashstep Server's REST API. 
+  ///
+  /// If one *really* needs to delete a protected role, 
+  /// one should delete the parent resource. One technically can delete it through other means 
+  /// (i.e. querying the database, editing Slashstep Server source code, etc.); but,
+  /// deleting the role may cause a worse user experience, require admin intervention, 
+  /// or even break the server.
+  pub protected_role_type: Option<ProtectedRoleType>
   
 }
 
@@ -93,9 +132,18 @@ pub struct Role {
 
   /// The role's parent group ID, if applicable.
   pub parent_group_id: Option<Uuid>,
-  
-  /// Whether the role is predefined.
-  pub is_predefined: bool,
+
+  /// The role's protected role type, if applicable.
+  /// 
+  /// If the role has a protected role type, then the role cannot be deleted directly
+  /// using Slashstep Server's REST API. 
+  ///
+  /// If one *really* needs to delete a protected role, 
+  /// one should delete the parent resource. One technically can delete it through other means 
+  /// (i.e. querying the database, editing Slashstep Server source code, etc.); but,
+  /// deleting the role may cause a worse user experience, require admin intervention, 
+  /// or even break the server.
+  pub protected_role_type: Option<ProtectedRoleType>
 }
 
 impl Role {
@@ -187,7 +235,7 @@ impl Role {
       parent_workspace_id: row.get("parent_workspace_id"),
       parent_project_id: row.get("parent_project_id"),
       parent_group_id: row.get("parent_group_id"),
-      is_predefined: row.get("is_predefined")
+      protected_role_type: row.get("protected_role_type")
     };
 
   }
@@ -214,7 +262,7 @@ impl Role {
       &initial_properties.parent_group_id,
       &initial_properties.parent_workspace_id,
       &initial_properties.parent_project_id,
-      &initial_properties.is_predefined
+      &initial_properties.protected_role_type
     ];
     let database_client = database_pool.get().await?;
     let row = database_client.query_one(query, parameters).await.map_err(|error| {

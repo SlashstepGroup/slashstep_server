@@ -1,4 +1,4 @@
-use crate::resources::{ResourceError, action::{Action, InitialActionProperties}, configuration::{Configuration, ConfigurationValueType, InitialConfigurationProperties}, role::{InitialRoleProperties, Role}};
+use crate::resources::{ResourceError, action::{Action, InitialActionProperties}, configuration::{Configuration, ConfigurationValueType, InitialConfigurationProperties}, role::{InitialRoleProperties, ProtectedRoleType, Role}};
 use colored::Colorize;
 use rust_decimal::Decimal;
 
@@ -554,6 +554,12 @@ pub async fn initialize_predefined_actions(database_pool: &deadpool_postgres::Po
       ..Default::default()
     },
     InitialActionProperties {
+      name: "memberships.renounce".to_string(),
+      display_name: "Renounce memberships".to_string(),
+      description: "Renounce memberships on a particular scope. This action that allows principals to remove themselves from groups or roles.".to_string(),
+      ..Default::default()
+    },
+    InitialActionProperties {
       name: "milestones.get".to_string(),
       display_name: "Get milestones".to_string(),
       description: "Get a specific milestone on a particular scope.".to_string(),
@@ -844,6 +850,7 @@ pub async fn initialize_predefined_roles(database_pool: &deadpool_postgres::Pool
       display_name: "Anonymous Users".to_string(),
       description: Some("Users who have not logged in. Registered users should not be assigned this role.".to_string()),
       parent_resource_type: crate::resources::role::RoleParentResourceType::Server,
+      protected_role_type: Some(ProtectedRoleType::AnonymousUsers),
       ..Default::default()
     }
   ];

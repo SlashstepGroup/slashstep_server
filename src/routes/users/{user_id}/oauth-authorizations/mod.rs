@@ -96,7 +96,6 @@ async fn handle_create_oauth_authorization_request(
   body: Result<Json<InitialOAuthAuthorizationPropertiesForPredefinedAuthorizer>, JsonRejection>
 ) -> Result<(StatusCode, Json<CreateOAuthAuthorizationResponseBody>), HTTPError> {
 
-  let http_transaction = http_transaction.clone();
   ServerLogEntry::trace("Validating request body...", Some(&http_transaction.id), &state.database_pool).await.ok();
   let initial_oauth_authorization_properties_json = match body {
 

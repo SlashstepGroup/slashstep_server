@@ -86,7 +86,6 @@ async fn handle_get_action_log_entry_request(
   Extension(authenticated_app_authorization): Extension<Option<Arc<AppAuthorization>>>
 ) -> Result<Json<ActionLogEntry>, HTTPError> {
 
-  let http_transaction = http_transaction.clone();
   let action_log_entry = get_action_log_entry_by_id(&action_log_entry_id, &http_transaction, &state.database_pool).await?;
   let resource_hierarchy = get_resource_hierarchy(&action_log_entry, &AccessPolicyResourceType::ActionLogEntry, &action_log_entry.id, &http_transaction, &state.database_pool).await?;
   let get_action_log_entries_action = get_action_by_name("actionLogEntries.get", &http_transaction, &state.database_pool).await?;

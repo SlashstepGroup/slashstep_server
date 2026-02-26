@@ -9,6 +9,14 @@ BEGIN
     );
   END IF;
 
+  IF NOT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'protected_role_type') THEN
+    CREATE TYPE protected_role_type AS ENUM (
+      'AnonymousUsers',
+      'GroupAdmins',
+      'GroupMembers'
+    );
+  END IF;
+
   CREATE TABLE IF NOT EXISTS roles (
     /* Fields */
     id UUID DEFAULT uuidv7() PRIMARY KEY,
@@ -19,7 +27,7 @@ BEGIN
     parent_group_id UUID REFERENCES groups(id) ON DELETE CASCADE,
     parent_workspace_id UUID REFERENCES workspaces(id) ON DELETE CASCADE,
     parent_project_id UUID REFERENCES projects(id) ON DELETE CASCADE,
-    is_predefined BOOLEAN NOT NULL,
+    protected_role_type protected_role_type,
 
     /* Constraints */
     CONSTRAINT one_parent_type CHECK (
