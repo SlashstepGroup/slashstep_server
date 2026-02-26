@@ -40,7 +40,6 @@ async fn handle_get_group_request(
   Extension(authenticated_app_authorization): Extension<Option<Arc<AppAuthorization>>>
 ) -> Result<Json<Group>, HTTPError> {
 
-  let http_transaction = http_transaction.clone();
   let group_id = get_uuid_from_string(&group_id, "group", &http_transaction, &state.database_pool).await?;
   let target_group = get_group_by_id(&group_id, &http_transaction, &state.database_pool).await?;
   let resource_hierarchy = get_resource_hierarchy(&target_group, &AccessPolicyResourceType::Group, &target_group.id, &http_transaction, &state.database_pool).await?;
@@ -113,7 +112,6 @@ async fn handle_patch_group_request(
   body: Result<Json<EditableGroupProperties>, JsonRejection>
 ) -> Result<Json<Group>, HTTPError> {
 
-  let http_transaction = http_transaction.clone();
   let updated_group_properties = get_request_body_without_json_rejection(body, &http_transaction, &state.database_pool).await?;
   let group_id = get_uuid_from_string(&group_id, "group", &http_transaction, &state.database_pool).await?;
   let original_target_group = get_group_by_id(&group_id, &http_transaction, &state.database_pool).await?;

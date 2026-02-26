@@ -38,7 +38,6 @@ async fn handle_get_app_authorization_request(
   Extension(authenticated_app_authorization): Extension<Option<Arc<AppAuthorization>>>
 ) -> Result<Json<AppAuthorization>, HTTPError> {
 
-  let http_transaction = http_transaction.clone();
   let target_app_authorization = get_app_authorization_by_id(&app_authorization_id, &http_transaction, &state.database_pool).await?;
   let resource_hierarchy = get_resource_hierarchy(&target_app_authorization, &AccessPolicyResourceType::AppAuthorization, &target_app_authorization.id, &http_transaction, &state.database_pool).await?;
   let get_app_authorizations_action = get_action_by_name("appAuthorizations.get", &http_transaction, &state.database_pool).await?;

@@ -39,7 +39,6 @@ async fn handle_get_item_connection_type_request(
   Extension(authenticated_app_authorization): Extension<Option<Arc<AppAuthorization>>>
 ) -> Result<Json<ItemConnectionType>, HTTPError> {
 
-  let http_transaction = http_transaction.clone();
   let item_connection_type_id = get_uuid_from_string(&item_connection_type_id, "item connection type", &http_transaction, &state.database_pool).await?;
   let target_item_connection_type = get_item_connection_type_by_id(&item_connection_type_id, &http_transaction, &state.database_pool).await?;
   let get_item_connection_types_action = get_action_by_name("itemConnectionTypes.get", &http_transaction, &state.database_pool).await?;

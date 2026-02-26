@@ -27,7 +27,6 @@ async fn handle_list_actions_request(
   Extension(authenticated_app_authorization): Extension<Option<Arc<AppAuthorization>>>
 ) -> Result<ErasedJson, HTTPError> {
 
-  let http_transaction = http_transaction.clone();
   let app = get_app_by_id(&app_id, &http_transaction, &state.database_pool).await?;
   let resource_hierarchy = get_resource_hierarchy(&app, &AccessPolicyResourceType::App, &app.id, &http_transaction, &state.database_pool).await?;
 
@@ -74,7 +73,6 @@ async fn handle_create_action_request(
   body: Result<Json<InitialActionPropertiesForPredefinedScope>, JsonRejection>
 ) -> Result<(StatusCode, Json<Action>), HTTPError> {
 
-  let http_transaction = http_transaction.clone();
   ServerLogEntry::trace("Verifying request body...", Some(&http_transaction.id), &state.database_pool).await.ok();
   let action_properties_json = match body {
 

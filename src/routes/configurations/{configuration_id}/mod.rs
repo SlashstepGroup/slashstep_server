@@ -40,7 +40,6 @@ async fn handle_get_configuration_request(
   Extension(authenticated_app_authorization): Extension<Option<Arc<AppAuthorization>>>
 ) -> Result<Json<Configuration>, HTTPError> {
 
-  let http_transaction = http_transaction.clone();
   let configuration_id = get_uuid_from_string(&configuration_id, "configuration", &http_transaction, &state.database_pool).await?;
   let target_configuration = get_configuration_by_id(&configuration_id, &http_transaction, &state.database_pool).await?;
   let resource_hierarchy = get_resource_hierarchy(&target_configuration, &AccessPolicyResourceType::Configuration, &target_configuration.id, &http_transaction, &state.database_pool).await?;
@@ -113,7 +112,6 @@ async fn handle_patch_configuration_request(
   body: Result<Json<EditableConfigurationProperties>, JsonRejection>
 ) -> Result<Json<Configuration>, HTTPError> {
 
-  let http_transaction = http_transaction.clone();
 
   ServerLogEntry::trace("Verifying request body...", Some(&http_transaction.id), &state.database_pool).await.ok();
   let updated_configuration_properties = match body {

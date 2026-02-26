@@ -40,7 +40,6 @@ async fn handle_get_field_choice_request(
   Extension(authenticated_app_authorization): Extension<Option<Arc<AppAuthorization>>>
 ) -> Result<Json<FieldChoice>, HTTPError> {
 
-  let http_transaction = http_transaction.clone();
   let field_choice_id = get_uuid_from_string(&field_choice_id, "field choice", &http_transaction, &state.database_pool).await?;
   let target_field_choice = get_field_choice_by_id(&field_choice_id, &http_transaction, &state.database_pool).await?;
   let resource_hierarchy = get_resource_hierarchy(&target_field_choice, &AccessPolicyResourceType::FieldChoice, &target_field_choice.id, &http_transaction, &state.database_pool).await?;
@@ -113,7 +112,6 @@ async fn handle_patch_field_choice_request(
   body: Result<Json<EditableFieldChoiceProperties>, JsonRejection>
 ) -> Result<Json<FieldChoice>, HTTPError> {
 
-  let http_transaction = http_transaction.clone();
   let updated_field_choice_properties = get_request_body_without_json_rejection(body, &http_transaction, &state.database_pool).await?;
   let field_choice_id = get_uuid_from_string(&field_choice_id, "field choice", &http_transaction, &state.database_pool).await?;
   let original_target_field_choice = get_field_choice_by_id(&field_choice_id, &http_transaction, &state.database_pool).await?;

@@ -70,7 +70,6 @@ pub async fn handle_list_field_choices_request(
   Extension(authenticated_app_authorization): Extension<Option<Arc<AppAuthorization>>>
 ) -> Result<ErasedJson, HTTPError> {
 
-  let http_transaction = http_transaction.clone();
   let field_id = get_uuid_from_string(&field_id, "field", &http_transaction, &state.database_pool).await?;
   let field = get_field_by_id(&field_id, &http_transaction, &state.database_pool).await?;
   let resource_hierarchy = get_resource_hierarchy(&field, &AccessPolicyResourceType::Field, &field.id, &http_transaction, &state.database_pool).await?;
@@ -121,7 +120,6 @@ async fn handle_create_field_choice_request(
   body: Result<Json<InitialFieldChoicePropertiesWithPredefinedFieldID>, JsonRejection>
 ) -> Result<(StatusCode, Json<FieldChoice>), HTTPError> {
 
-  let http_transaction = http_transaction.clone();
   let field_choice_properties_json = get_request_body_without_json_rejection(body, &http_transaction, &state.database_pool).await?;
 
   let field_id = get_uuid_from_string(&field_id, "field", &http_transaction, &state.database_pool).await?;

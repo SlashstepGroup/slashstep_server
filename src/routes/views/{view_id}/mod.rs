@@ -40,7 +40,6 @@ async fn handle_get_view_request(
   Extension(authenticated_app_authorization): Extension<Option<Arc<AppAuthorization>>>
 ) -> Result<Json<View>, HTTPError> {
 
-  let http_transaction = http_transaction.clone();
   let view_id = get_uuid_from_string(&view_id, "view", &http_transaction, &state.database_pool).await?;
   let target_view = get_view_by_id(&view_id, &http_transaction, &state.database_pool).await?;
   let resource_hierarchy = get_resource_hierarchy(&target_view, &AccessPolicyResourceType::View, &target_view.id, &http_transaction, &state.database_pool).await?;

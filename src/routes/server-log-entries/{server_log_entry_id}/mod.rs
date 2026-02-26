@@ -39,7 +39,6 @@ async fn handle_get_server_log_entry_request(
   Extension(authenticated_app_authorization): Extension<Option<Arc<AppAuthorization>>>
 ) -> Result<Json<ServerLogEntry>, HTTPError> {
 
-  let http_transaction = http_transaction.clone();
   let server_log_entry_id = get_uuid_from_string(&server_log_entry_id, "server log entry", &http_transaction, &state.database_pool).await?;
   let target_server_log_entry = get_server_log_entry_by_id(&server_log_entry_id, &http_transaction, &state.database_pool).await?;
   let get_server_log_entry_action = get_action_by_name("serverLogEntries.get", &http_transaction, &state.database_pool).await?;

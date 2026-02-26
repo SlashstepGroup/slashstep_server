@@ -6,7 +6,7 @@ INSERT INTO roles (
   parent_group_id,
   parent_workspace_id,
   parent_project_id,
-  is_predefined
+  protected_role_type
 ) VALUES (
   $1,
   $2,

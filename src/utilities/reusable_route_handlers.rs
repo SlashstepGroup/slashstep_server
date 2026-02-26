@@ -38,7 +38,6 @@ pub async fn list_resources<ResourceType: Serialize, CountResourcesFunction, Lis
   ListResourcesFunction: for<'a> Fn(&'a str, &'a deadpool_postgres::Pool, Option<&'a IndividualPrincipal>) -> Box<dyn Future<Output = Result<Vec<ResourceType>, ResourceError>> + 'a + Send>
 {
 
-  let http_transaction = http_transaction.clone();
   let list_resources_action = get_action_by_name(list_resources_action_name, &http_transaction, &state.database_pool).await?;
   verify_delegate_permissions(authenticated_app_authorization.as_ref().map(|app_authorization| &app_authorization.id), &list_resources_action.id, &http_transaction.id, &ActionPermissionLevel::User, &state.database_pool).await?;
   let authenticated_principal = get_authenticated_principal(authenticated_user.as_ref(), authenticated_app.as_ref())?;
@@ -149,7 +148,6 @@ pub async fn delete_resource<ResourceStruct, GetResourceByIDFunction>(
   GetResourceByIDFunction: for<'a> Fn(&'a Uuid, &'a deadpool_postgres::Pool) -> Box<dyn Future<Output = Result<ResourceStruct, ResourceError>> + 'a + Send>
 {
 
-  let http_transaction = http_transaction.clone();
   let target_resource = get_resource_by_id::<ResourceStruct, GetResourceByIDFunction>(&resource_type_name_singular, &resource_id, &http_transaction, &state.database_pool, get_resource_by_id_function).await?;
   let resource_hierarchy = match resource_type {
     

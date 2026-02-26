@@ -67,7 +67,6 @@ async fn handle_create_access_policy_request(
   body: Result<Json<InitialAccessPolicyPropertiesForPredefinedScope>, JsonRejection>
 ) -> Result<(StatusCode, Json<AccessPolicy>), HTTPError> {
 
-  let http_transaction = http_transaction.clone();
   let access_policy_properties_json = get_request_body_without_json_rejection(body, &http_transaction, &state.database_pool).await?;
 
   // Make sure the authenticated_user can create access policies for the target action log entry.

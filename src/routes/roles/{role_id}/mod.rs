@@ -39,7 +39,6 @@ async fn handle_get_role_request(
   Extension(authenticated_app_authorization): Extension<Option<Arc<AppAuthorization>>>
 ) -> Result<Json<Role>, HTTPError> {
 
-  let http_transaction = http_transaction.clone();
   let role_id = get_uuid_from_string(&role_id, "role", &http_transaction, &state.database_pool).await?;
   let target_role = get_role_by_id(&role_id, &http_transaction, &state.database_pool).await?;
   let resource_hierarchy = get_resource_hierarchy(&target_role, &AccessPolicyResourceType::Role, &target_role.id, &http_transaction, &state.database_pool).await?;

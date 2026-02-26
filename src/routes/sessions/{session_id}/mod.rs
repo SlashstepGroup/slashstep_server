@@ -39,7 +39,6 @@ async fn handle_get_session_request(
   Extension(authenticated_app_authorization): Extension<Option<Arc<AppAuthorization>>>
 ) -> Result<Json<Session>, HTTPError> {
 
-  let http_transaction = http_transaction.clone();
   let session_id = get_uuid_from_string(&session_id, "session", &http_transaction, &state.database_pool).await?;
   let target_session = get_session_by_id(&session_id, &http_transaction, &state.database_pool).await?;
   let get_session_action = get_action_by_name("sessions.get", &http_transaction, &state.database_pool).await?;

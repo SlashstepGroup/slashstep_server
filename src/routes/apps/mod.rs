@@ -185,7 +185,6 @@ async fn handle_create_app_request(
   body: Result<Json<InitialAppPropertiesWithoutClientSecretHash>, JsonRejection>
 ) -> Result<(StatusCode, Json<AppWithClientSecret>), HTTPError> {
 
-  let http_transaction = http_transaction.clone();
   let app_properties_json = get_request_body_without_json_rejection(body, &http_transaction, &state.database_pool).await?;
   validate_app_name(&app_properties_json.name, &http_transaction, &state.database_pool).await?;
   validate_field_length(&app_properties_json.name, "apps.maximumNameLength", "name", &http_transaction, &state.database_pool).await?;

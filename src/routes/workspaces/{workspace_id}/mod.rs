@@ -40,7 +40,6 @@ async fn handle_get_workspace_request(
   Extension(authenticated_app_authorization): Extension<Option<Arc<AppAuthorization>>>
 ) -> Result<Json<Workspace>, HTTPError> {
 
-  let http_transaction = http_transaction.clone();
   let workspace_id = get_uuid_from_string(&workspace_id, "workspace", &http_transaction, &state.database_pool).await?;
   let target_workspace = get_workspace_by_id(&workspace_id, &http_transaction, &state.database_pool).await?;
   let resource_hierarchy = get_resource_hierarchy(&target_workspace, &AccessPolicyResourceType::Workspace, &target_workspace.id, &http_transaction, &state.database_pool).await?;

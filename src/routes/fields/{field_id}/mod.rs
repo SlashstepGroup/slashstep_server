@@ -42,7 +42,6 @@ async fn handle_get_field_request(
   Extension(authenticated_app_authorization): Extension<Option<Arc<AppAuthorization>>>
 ) -> Result<Json<Field>, HTTPError> {
 
-  let http_transaction = http_transaction.clone();
   let field_id = get_uuid_from_string(&field_id, "field", &http_transaction, &state.database_pool).await?;
   let target_field = get_field_by_id(&field_id, &http_transaction, &state.database_pool).await?;
   let resource_hierarchy = get_resource_hierarchy(&target_field, &AccessPolicyResourceType::Field, &target_field.id, &http_transaction, &state.database_pool).await?;
@@ -115,7 +114,6 @@ async fn handle_patch_field_request(
   body: Result<Json<EditableFieldProperties>, JsonRejection>
 ) -> Result<Json<Field>, HTTPError> {
 
-  let http_transaction = http_transaction.clone();
   let updated_field_properties = get_request_body_without_json_rejection(body, &http_transaction, &state.database_pool).await?;
   if let Some(field_name) = &updated_field_properties.name { 
     

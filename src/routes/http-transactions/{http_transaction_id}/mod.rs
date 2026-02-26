@@ -44,7 +44,6 @@ async fn handle_get_http_transaction_request(
   Extension(authenticated_app_authorization): Extension<Option<Arc<AppAuthorization>>>
 ) -> Result<Json<HTTPTransaction>, HTTPError> {
 
-  let http_transaction = http_transaction.clone();
   let http_transaction_id = get_uuid_from_string(&http_transaction_id, "HTTP transaction", &http_transaction, &state.database_pool).await?;
   let target_http_transaction = get_http_transaction_by_id(&http_transaction_id, &http_transaction, &state.database_pool).await?;
   let resource_hierarchy = get_resource_hierarchy(&target_http_transaction, &AccessPolicyResourceType::HTTPTransaction, &target_http_transaction.id, &http_transaction, &state.database_pool).await?;

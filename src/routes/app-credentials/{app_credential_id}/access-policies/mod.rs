@@ -33,7 +33,6 @@ async fn handle_list_access_policies_request(
   Extension(authenticated_app_authorization): Extension<Option<Arc<AppAuthorization>>>
 ) -> Result<ErasedJson, HTTPError> {
 
-  let http_transaction = http_transaction.clone();
   let target_app_credential = get_app_credential_by_id(&app_credential_id, &http_transaction, &state.database_pool).await?;
   let resource_hierarchy = get_resource_hierarchy(&target_app_credential, &AccessPolicyResourceType::AppCredential, &target_app_credential.id, &http_transaction, &state.database_pool).await?;
 
@@ -83,7 +82,6 @@ async fn handle_create_access_policy_request(
   body: Result<Json<InitialAccessPolicyPropertiesForPredefinedScope>, JsonRejection>
 ) -> Result<(StatusCode, Json<AccessPolicy>), HTTPError> {
 
-  let http_transaction = http_transaction.clone();
   let access_policy_properties_json = get_request_body_without_json_rejection(body, &http_transaction, &state.database_pool).await?;
 
   // Make sure the user can create access policies for the target action.

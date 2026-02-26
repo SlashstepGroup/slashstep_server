@@ -14,6 +14,7 @@ use axum_extra::extract::cookie::Cookie;
 use axum_test::TestServer;
 use pg_escape::quote_literal;
 use reqwest::StatusCode;
+use uuid::Uuid;
 use crate::{
   AppState, get_json_web_token_private_key, initialize_required_tables, predefinitions::{
     initialize_predefined_actions, initialize_predefined_configurations, 
@@ -21,7 +22,7 @@ use crate::{
   }, resources::{
     access_policy::{
       ActionPermissionLevel, IndividualPrincipal
-    }, action::Action, group::{DEFAULT_MAXIMUM_RESOURCE_LIST_LIMIT, DEFAULT_RESOURCE_LIST_LIMIT, Group},
+    }, action::Action, group::{DEFAULT_MAXIMUM_RESOURCE_LIST_LIMIT, DEFAULT_RESOURCE_LIST_LIMIT, Group, InitialGroupProperties},
   }, tests::{TestEnvironment, TestSlashstepServerError}, utilities::reusable_route_handlers::ListResourcesResponseBody
 };
 
@@ -373,6 +374,54 @@ async fn verify_permission() -> Result<(), TestSlashstepServerError> {
   
   // Verify the response.
   assert_eq!(response.status_code(), StatusCode::FORBIDDEN);
+
+  return Ok(());
+
+}
+
+/// Verifies that the server can create a group on the server level and return a 201 status code.
+#[tokio::test]
+async fn verify_successful_group_creation() -> Result<(), TestSlashstepServerError> {
+
+  let test_environment = TestEnvironment::new().await?;
+  initialize_required_tables(&test_environment.database_pool).await?;
+  initialize_predefined_actions(&test_environment.database_pool).await?;
+  initialize_predefined_roles(&test_environment.database_pool).await?;
+  initialize_predefined_configurations(&test_environment.database_pool).await?;
+
+  // Give the user access to the "groups.create" action.
+  let user = test_environment.create_random_user().await?;
+  let session = test_environment.create_random_session(Some(&user.id)).await?;
+  let json_web_token_private_key = get_json_web_token_private_key().await?;
+  let session_token = session.generate_json_web_token(&json_web_token_private_key).await?;
+  let create_groups_action = Action::get_by_name("groups.create", &test_environment.database_pool).await?;
+  test_environment.create_server_access_policy(&user.id, &create_groups_action.id, &ActionPermissionLevel::User).await?;
+
+  // Set up the server and send the request.
+  let initial_group_properties = InitialGroupProperties {
+    name: Uuid::now_v7().to_string().replace("-", "_"),
+    display_name: Uuid::now_v7().to_string(),
+    ..Default::default()
+  };
+  let state = AppState {
+    database_pool: test_environment.database_pool.clone(),
+  };
+  let router = super::get_router(state.clone())
+    .with_state(state)
+    .into_make_service_with_connect_info::<SocketAddr>();
+  let test_server = TestServer::new(router)?;
+  let response = test_server.post(&format!("/groups"))
+    .add_cookie(Cookie::new("sessionToken", format!("Bearer {}", session_token)))
+    .json(&serde_json::json!(initial_group_properties))
+    .await;
+  
+  // Verify the response.
+  assert_eq!(response.status_code(), StatusCode::CREATED);
+
+  let response_group: Group = response.json();
+  assert_eq!(initial_group_properties.name, response_group.name);
+  assert_eq!(initial_group_properties.display_name, response_group.display_name);
+  assert_eq!(initial_group_properties.description, response_group.description);
 
   return Ok(());
 

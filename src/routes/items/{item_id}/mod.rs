@@ -40,7 +40,6 @@ async fn handle_get_item_request(
   Extension(authenticated_app_authorization): Extension<Option<Arc<AppAuthorization>>>
 ) -> Result<Json<Item>, HTTPError> {
 
-  let http_transaction = http_transaction.clone();
   let item_id = get_uuid_from_string(&item_id, "item", &http_transaction, &state.database_pool).await?;
   let target_item = get_item_by_id(&item_id, &http_transaction, &state.database_pool).await?;
   let resource_hierarchy = get_resource_hierarchy(&target_item, &AccessPolicyResourceType::Item, &target_item.id, &http_transaction, &state.database_pool).await?;

@@ -29,7 +29,7 @@ pub enum GroupParentResourceType {
   Group
 }
 
-#[derive(Debug, Clone, ToSql, FromSql, Default)]
+#[derive(Debug, Clone, ToSql, FromSql, Default, Serialize, Deserialize)]
 pub struct InitialGroupProperties {
 
   /// The group's name.

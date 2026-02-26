@@ -40,7 +40,6 @@ async fn handle_get_project_request(
   Extension(authenticated_app_authorization): Extension<Option<Arc<AppAuthorization>>>
 ) -> Result<Json<Project>, HTTPError> {
 
-  let http_transaction = http_transaction.clone();
   let project_id = get_uuid_from_string(&project_id, "project", &http_transaction, &state.database_pool).await?;
   let target_project = get_project_by_id(&project_id, &http_transaction, &state.database_pool).await?;
   let resource_hierarchy = get_resource_hierarchy(&target_project, &AccessPolicyResourceType::Project, &target_project.id, &http_transaction, &state.database_pool).await?;

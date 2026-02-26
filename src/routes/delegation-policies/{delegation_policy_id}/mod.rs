@@ -40,7 +40,6 @@ async fn handle_get_delegation_policy_request(
   Extension(authenticated_app_authorization): Extension<Option<Arc<AppAuthorization>>>
 ) -> Result<Json<DelegationPolicy>, HTTPError> {
 
-  let http_transaction = http_transaction.clone();
   let delegation_policy_id = get_uuid_from_string(&delegation_policy_id, "delegation policy", &http_transaction, &state.database_pool).await?;
   let target_delegation_policy = get_delegation_policy_by_id(&delegation_policy_id, &http_transaction, &state.database_pool).await?;
   let resource_hierarchy = get_resource_hierarchy(&target_delegation_policy, &AccessPolicyResourceType::DelegationPolicy, &target_delegation_policy.id, &http_transaction, &state.database_pool).await?;
@@ -113,7 +112,6 @@ async fn handle_patch_delegation_policy_request(
   body: Result<Json<EditableDelegationPolicyProperties>, JsonRejection>
 ) -> Result<Json<DelegationPolicy>, HTTPError> {
 
-  let http_transaction = http_transaction.clone();
   let updated_delegation_policy_properties = get_request_body_without_json_rejection(body, &http_transaction, &state.database_pool).await?;
   let delegation_policy_id = get_uuid_from_string(&delegation_policy_id, "delegation policy", &http_transaction, &state.database_pool).await?;
   let original_target_delegation_policy = get_delegation_policy_by_id(&delegation_policy_id, &http_transaction, &state.database_pool).await?;

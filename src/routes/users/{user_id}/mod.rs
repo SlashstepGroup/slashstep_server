@@ -28,7 +28,6 @@ async fn handle_get_user_request(
   Extension(authenticated_app_authorization): Extension<Option<Arc<AppAuthorization>>>
 ) -> Result<Json<User>, HTTPError> {
 
-  let http_transaction = http_transaction.clone();
   let user_id = get_uuid_from_string(&user_id, "user", &http_transaction, &state.database_pool).await?;
   let target_user = get_user_by_id(&user_id, &http_transaction, &state.database_pool).await?;
   let get_user_action = get_action_by_name("users.get", &http_transaction, &state.database_pool).await?;
