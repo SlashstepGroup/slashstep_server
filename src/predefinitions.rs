@@ -913,14 +913,14 @@ pub async fn initialize_predefined_configurations(database_pool: &deadpool_postg
       name: "actions.maximumNameLength".to_string(),
       description: Some("The maximum length of action names in characters. Slashstep Group recommends keeping this value at a reasonable length to maintain performance.".to_string()),
       value_type: ConfigurationValueType::Number,
-      default_number_value: Some(Decimal::from(128 as i64)),
+      default_number_value: Some(Decimal::from(2_i64.pow(7))),
       ..Default::default()
     },
     InitialConfigurationProperties {
       name: "actions.maximumDisplayNameLength".to_string(),
       description: Some("The maximum length of action display names in characters. Slashstep Group recommends keeping this value at a reasonable length to maintain performance.".to_string()),
       value_type: ConfigurationValueType::Number,
-      default_number_value: Some(Decimal::from(128 as i64)),
+      default_number_value: Some(Decimal::from(2_i64.pow(7))),
       ..Default::default()
     },
     InitialConfigurationProperties {
@@ -934,7 +934,7 @@ pub async fn initialize_predefined_configurations(database_pool: &deadpool_postg
       name: "actionLogEntries.defaultMaximumLifetimeMilliseconds".to_string(),
       description: Some("The default maximum lifetime of action log entries in milliseconds. This configuration only has an effect if the \"actionLogEntries.shouldExpire\" configuration is set to true.".to_string()),
       value_type: ConfigurationValueType::Number,
-      default_number_value: Some(Decimal::from(31536000000 as i64)), // 365 days in milliseconds
+      default_number_value: Some(Decimal::from(31536000000_i64)), // 365 days in milliseconds
       ..Default::default()
     },
     InitialConfigurationProperties {
@@ -948,7 +948,7 @@ pub async fn initialize_predefined_configurations(database_pool: &deadpool_postg
       name: "apps.maximumNameLength".to_string(),
       description: Some("The maximum length of app names in characters. Slashstep Group recommends keeping this value at a reasonable length to maintain performance.".to_string()),
       value_type: ConfigurationValueType::Number,
-      default_number_value: Some(Decimal::from(32 as i64)),
+      default_number_value: Some(Decimal::from(2_i64.pow(5))),
       ..Default::default()
     },
     InitialConfigurationProperties {
@@ -962,21 +962,21 @@ pub async fn initialize_predefined_configurations(database_pool: &deadpool_postg
       name: "apps.maximumDisplayNameLength".to_string(),
       description: Some("The maximum length of app display names. Slashstep Group recommends setting this to a reasonable value to prevent abuse.".to_string()),
       value_type: ConfigurationValueType::Number,
-      default_number_value: Some(Decimal::from(64 as i64)),
+      default_number_value: Some(Decimal::from(2_i64.pow(6))),
       ..Default::default()
     },
     InitialConfigurationProperties {
       name: "appAuthorizationCredentials.accessTokenMaximumLifetimeMilliseconds".to_string(),
       description: Some("The maximum lifetime of app authorization credentials access tokens in milliseconds. Slashstep Group recommends keeping this value small, as OAuth access tokens should be short-lived.".to_string()),
       value_type: ConfigurationValueType::Number,
-      default_number_value: Some(Decimal::from(28800000 as i64)), // 8 hours in milliseconds
+      default_number_value: Some(Decimal::from(28800000_i64)), // 8 hours in milliseconds
       ..Default::default()
     },
     InitialConfigurationProperties {
       name: "appAuthorizationCredentials.refreshTokenMaximumLifetimeMilliseconds".to_string(),
       description: Some("The maximum lifetime of app authorization credentials refresh tokens in milliseconds. Slashstep Group recommends setting this to a reasonable value to prevent abuse.".to_string()),
       value_type: ConfigurationValueType::Number,
-      default_number_value: Some(Decimal::from(2592000000 as i64)), // 30 days in milliseconds
+      default_number_value: Some(Decimal::from(2592000000_i64)), // 30 days in milliseconds
       ..Default::default()
     },
     InitialConfigurationProperties {
@@ -997,28 +997,42 @@ pub async fn initialize_predefined_configurations(database_pool: &deadpool_postg
       name: "fields.maximumNameLength".to_string(),
       description: Some("The maximum length of field names in characters. Slashstep Group recommends keeping this value at a reasonable length to maintain performance.".to_string()),
       value_type: ConfigurationValueType::Number,
-      default_number_value: Some(Decimal::from(256 as i64)),
+      default_number_value: Some(Decimal::from(2_i64.pow(8))),
       ..Default::default()
     },
     InitialConfigurationProperties {
       name: "fields.maximumDescriptionLength".to_string(),
       description: Some("The maximum length of field descriptions in characters. Slashstep Group recommends keeping this value at a reasonable length to maintain performance.".to_string()),
       value_type: ConfigurationValueType::Number,
-      default_number_value: Some(Decimal::from(1024 as i64)),
+      default_number_value: Some(Decimal::from(2_i64.pow(10))),
       ..Default::default()
     },
     InitialConfigurationProperties {
       name: "fields.maximumDisplayNameLength".to_string(),
       description: Some("The maximum length of field display names in characters. Slashstep Group recommends keeping this value at a reasonable length to maintain performance.".to_string()),
       value_type: ConfigurationValueType::Number,
-      default_number_value: Some(Decimal::from(256 as i64)),
+      default_number_value: Some(Decimal::from(2_i64.pow(8))),
       ..Default::default()
     },
     InitialConfigurationProperties {
       name: "fieldValues.maximumTextValueLength".to_string(),
       description: Some("The maximum length of field value text values in characters. Slashstep Group recommends keeping this value at a reasonable length to maintain performance.".to_string()),
       value_type: ConfigurationValueType::Number,
-      default_number_value: Some(Decimal::from(32768 as i64)),
+      default_number_value: Some(Decimal::from(2_i64.pow(15))),
+      ..Default::default()
+    },
+    InitialConfigurationProperties {
+      name: "fieldValues.maximumNumberValue".to_string(),
+      description: Some("The maximum number value that is allowed for field values. Slashstep Group recommends keeping this value at a reasonable number to maintain performance.".to_string()),
+      value_type: ConfigurationValueType::Number,
+      default_number_value: Some(Decimal::from(i64::MAX)),
+      ..Default::default()
+    },
+    InitialConfigurationProperties {
+      name: "fieldValues.minimumNumberValue".to_string(),
+      description: Some("The minimum number value that is allowed for field values. Slashstep Group recommends keeping this value at a reasonable number to maintain performance.".to_string()),
+      value_type: ConfigurationValueType::Number,
+      default_number_value: Some(Decimal::from(i64::MIN)),
       ..Default::default()
     },
     InitialConfigurationProperties {
@@ -1032,7 +1046,7 @@ pub async fn initialize_predefined_configurations(database_pool: &deadpool_postg
       name: "httpTransactions.defaultMaximumLifetimeMilliseconds".to_string(),
       description: Some("The default maximum lifetime of HTTP transactions in milliseconds. This configuration only has an effect if the \"httpTransactions.shouldExpire\" configuration is set to true.".to_string()),
       value_type: ConfigurationValueType::Number,
-      default_number_value: Some(Decimal::from(31536000000 as i64)), // 365 days in milliseconds
+      default_number_value: Some(Decimal::from(31536000000_i64)), // 365 days in milliseconds
       ..Default::default()
     },
   ];

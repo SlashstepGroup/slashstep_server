@@ -696,3 +696,99 @@ async fn verify_text_value_is_at_most_at_maximum_length() -> Result<(), TestSlas
   return Ok(());
 
 }
+
+/// Verifies that the server returns a 422 status code when the field choice number is under the minimum value.
+#[tokio::test]
+async fn verify_number_value_is_at_least_at_minimum_value() -> Result<(), TestSlashstepServerError> {
+
+  let test_environment = TestEnvironment::new().await?;
+  initialize_required_tables(&test_environment.database_pool).await?;
+  initialize_predefined_actions(&test_environment.database_pool).await?;
+  initialize_predefined_configurations(&test_environment.database_pool).await?;
+
+  // Give the user access to the "fieldChoices.create" action.
+  let user = test_environment.create_random_user().await?;
+  let session = test_environment.create_random_session(Some(&user.id)).await?;
+  let json_web_token_private_key = get_json_web_token_private_key().await?;
+  let session_token = session.generate_json_web_token(&json_web_token_private_key).await?;
+  let create_field_choices_action = Action::get_by_name("fieldChoices.create", &test_environment.database_pool).await?;
+  test_environment.create_server_access_policy(&user.id, &create_field_choices_action.id, &ActionPermissionLevel::User).await?;
+
+  // Set up the server and send the request.
+  let dummy_field_choice = test_environment.create_random_field_choice(None).await?;
+  let minimum_field_value_number_length_configuration = Configuration::get_by_name("fieldValues.minimumNumberValue", &test_environment.database_pool).await?;
+  minimum_field_value_number_length_configuration.update(&EditableConfigurationProperties {
+    number_value: Some(Decimal::from(i64::MIN as i64)),
+    ..Default::default()
+  }, &test_environment.database_pool).await?;
+
+  let updated_field_choice_properties = EditableFieldChoiceProperties {
+    number_value: Some(Some(Decimal::from(i64::MIN as i128 - 1))),
+    ..Default::default()
+  };
+  let state = AppState {
+    database_pool: test_environment.database_pool.clone(),
+  };
+  let router = super::get_router(state.clone())
+    .with_state(state)
+    .into_make_service_with_connect_info::<SocketAddr>();
+  let test_server = TestServer::new(router)?;
+  let response = test_server.patch(&format!("/field-choices/{}", dummy_field_choice.id))
+    .add_cookie(Cookie::new("sessionToken", format!("Bearer {}", session_token)))
+    .json(&serde_json::json!(updated_field_choice_properties))
+    .await;
+  
+  // Verify the response.
+  assert_eq!(response.status_code(), StatusCode::UNPROCESSABLE_ENTITY);
+
+  return Ok(());
+
+}
+
+/// Verifies that the server returns a 422 status code when the field choice number is over the maximum value.
+#[tokio::test]
+async fn verify_number_value_is_at_most_at_maximum_value() -> Result<(), TestSlashstepServerError> {
+
+  let test_environment = TestEnvironment::new().await?;
+  initialize_required_tables(&test_environment.database_pool).await?;
+  initialize_predefined_actions(&test_environment.database_pool).await?;
+  initialize_predefined_configurations(&test_environment.database_pool).await?;
+
+  // Give the user access to the "fieldChoices.create" action.
+  let user = test_environment.create_random_user().await?;
+  let session = test_environment.create_random_session(Some(&user.id)).await?;
+  let json_web_token_private_key = get_json_web_token_private_key().await?;
+  let session_token = session.generate_json_web_token(&json_web_token_private_key).await?;
+  let create_field_choices_action = Action::get_by_name("fieldChoices.create", &test_environment.database_pool).await?;
+  test_environment.create_server_access_policy(&user.id, &create_field_choices_action.id, &ActionPermissionLevel::User).await?;
+
+  // Set up the server and send the request.
+  let dummy_field_choice = test_environment.create_random_field_choice(None).await?;
+  let maximum_field_value_number_length_configuration = Configuration::get_by_name("fieldValues.maximumNumberValue", &test_environment.database_pool).await?;
+  maximum_field_value_number_length_configuration.update(&EditableConfigurationProperties {
+    number_value: Some(Decimal::from(i64::MAX as i64)),
+    ..Default::default()
+  }, &test_environment.database_pool).await?;
+
+  let updated_field_choice_properties = EditableFieldChoiceProperties {
+    number_value: Some(Some(Decimal::from(i64::MAX as i128 + 1))),
+    ..Default::default()
+  };
+  let state = AppState {
+    database_pool: test_environment.database_pool.clone(),
+  };
+  let router = super::get_router(state.clone())
+    .with_state(state)
+    .into_make_service_with_connect_info::<SocketAddr>();
+  let test_server = TestServer::new(router)?;
+  let response = test_server.patch(&format!("/field-choices/{}", dummy_field_choice.id))
+    .add_cookie(Cookie::new("sessionToken", format!("Bearer {}", session_token)))
+    .json(&serde_json::json!(updated_field_choice_properties))
+    .await;
+  
+  // Verify the response.
+  assert_eq!(response.status_code(), StatusCode::UNPROCESSABLE_ENTITY);
+
+  return Ok(());
+
+}

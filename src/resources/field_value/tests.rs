@@ -1,7 +1,7 @@
 use uuid::Uuid;
 
 use crate::{
-  initialize_required_tables, predefinitions::initialize_predefined_actions, initialize_predefined_configurations, resources::{
+  initialize_required_tables, predefinitions::initialize_predefined_actions, resources::{
     DeletableResource, ResourceError, access_policy::{AccessPolicy, InitialAccessPolicyProperties}, action::{
       Action, DEFAULT_ACTION_LIST_LIMIT
     }
