@@ -5,7 +5,7 @@ use chrono::{DateTime, Utc};
 use colored::Colorize;
 use pg_escape::quote_literal;
 use postgres::error::SqlState;
-use rust_decimal::prelude::ToPrimitive;
+use rust_decimal::{Decimal, prelude::ToPrimitive};
 use uuid::Uuid;
 
 pub async fn get_action_log_entry_expiration_timestamp(http_transaction: &HTTPTransaction, database_pool: &deadpool_postgres::Pool) -> Result<Option<DateTime<Utc>>, HTTPError> {
@@ -998,6 +998,56 @@ pub async fn validate_resource_display_name(name: &str, configuration_name: &str
   if !regex.is_match(name) {
 
     let http_error = HTTPError::UnprocessableEntity(Some(format!("{} display names must match the allowed pattern: {}", resource_type_name_singular, allowed_display_name_regex_string)));
+    ServerLogEntry::from_http_error(&http_error, Some(&http_transaction.id), database_pool).await.ok();
+    return Err(http_error);
+
+  }
+
+  Ok(())
+
+}
+
+pub async fn validate_decimal_is_within_range(decimal: &Decimal, minimum_configuration_name: &str, maximum_configuration_name: &str, field_name: &str, http_transaction: &HTTPTransaction, database_pool: &deadpool_postgres::Pool) -> Result<(), HTTPError> {
+
+  let minimum_configuration = get_configuration_by_name(minimum_configuration_name, http_transaction, database_pool).await?;
+  let minimum = match minimum_configuration.number_value.or(minimum_configuration.default_number_value) {
+
+    Some(minimum) => Some(minimum),
+
+    None => {
+
+      ServerLogEntry::warning(&format!("Missing value and default value for configuration {}. This is a security risk. Consider setting a minimum value in the configuration for better validation.", minimum_configuration_name), Some(&http_transaction.id), database_pool).await.ok();
+      None
+
+    }
+
+  };
+
+  if minimum.and_then(|minimum| Some(decimal < &minimum)).unwrap_or(false) {
+
+    let http_error = HTTPError::UnprocessableEntity(Some(format!("The \"{}\" must be at least {}.", field_name, minimum.unwrap())));
+    ServerLogEntry::from_http_error(&http_error, Some(&http_transaction.id), database_pool).await.ok();
+    return Err(http_error);
+
+  }
+
+  let maximum_configuration = get_configuration_by_name(maximum_configuration_name, http_transaction, database_pool).await?;
+  let maximum = match maximum_configuration.number_value.or(maximum_configuration.default_number_value) {
+
+    Some(maximum) => Some(maximum),
+
+    None => {
+
+      ServerLogEntry::warning(&format!("Missing value and default value for configuration {}. This is a security risk. Consider setting a maximum value in the configuration for better validation.", maximum_configuration_name), Some(&http_transaction.id), database_pool).await.ok();
+      None
+
+    }
+
+  };
+
+  if maximum.and_then(|maximum| Some(decimal > &maximum)).unwrap_or(false) {
+
+    let http_error = HTTPError::UnprocessableEntity(Some(format!("The \"{}\" must be at most {}.", field_name, maximum.unwrap())));
     ServerLogEntry::from_http_error(&http_error, Some(&http_transaction.id), database_pool).await.ok();
     return Err(http_error);
 
